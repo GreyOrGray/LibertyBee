@@ -1,0 +1,735 @@
+<style>
+  :root{
+    --paper:#FBFAF7; --ink:#15130C; --ink-soft:#4A4638; --line:#E4DECF; --card:#FFF;
+    --amber:#A96A0C; --amber-soft:#F3E7CF; --survive:#3E7A5E; --die:#A6462F; --honey:#E8B84B;
+    --shadow:0 1px 2px rgba(21,19,12,.04),0 10px 30px rgba(21,19,12,.07); --maxw:680px;
+  }
+  /* Light theme only — theme switching intentionally disabled (viewer dark-mode is ignored). */
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;background:var(--paper);color:var(--ink);line-height:1.62;
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;-webkit-font-smoothing:antialiased;}
+  .sans{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px;}
+  .eyebrow{font-family:ui-sans-serif,system-ui,sans-serif;font-weight:700;letter-spacing:.13em;text-transform:uppercase;font-size:12px;color:var(--amber);margin:0 0 14px;}
+  h1{font-size:clamp(32px,6vw,54px);line-height:1.08;letter-spacing:-.02em;margin:0;text-wrap:balance;font-weight:600;}
+  h2{font-size:clamp(25px,4vw,36px);line-height:1.15;letter-spacing:-.012em;margin:0 0 18px;text-wrap:balance;font-weight:600;}
+  p{margin:0 0 18px;font-size:18px;} p.big{font-size:21px;color:var(--ink-soft);} p.big b{color:var(--ink);}
+  p.reasonlab{font-family:ui-sans-serif,system-ui,sans-serif;font-weight:700;font-size:15px;letter-spacing:.01em;color:var(--amber);margin:0 0 12px;}
+  p.sidenote{font-size:15px;color:var(--ink-soft);border-left:3px solid var(--line);padding:4px 0 4px 16px;margin:16px 0 0;}
+  p.sidenote b{color:var(--ink);}
+  a{color:var(--amber);}
+  .ph{font-family:ui-sans-serif,system-ui,sans-serif;font-weight:600;font-size:.9em;color:var(--amber);background:var(--amber-soft);padding:0 6px;border-radius:4px;border-bottom:1px dashed var(--amber);white-space:nowrap;}
+  sup.cite{font-size:.6em;font-weight:700;line-height:0;}
+  sup.cite a{font-family:ui-sans-serif,system-ui,sans-serif;color:var(--amber);text-decoration:none;padding:0 1px;}
+  sup.cite a:hover{text-decoration:underline;}
+
+  .wip{background:var(--amber-soft);color:var(--ink);font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;text-align:center;padding:8px 16px;border-bottom:1px solid var(--line);}
+  .wip b{color:var(--amber);}
+
+  /* chapter divider */
+  .chapter{border-top:2px solid var(--amber);background:var(--card);}
+  .chapter .wrap{padding:50px 24px;display:flex;align-items:baseline;gap:20px;}
+  .chapter .cnum{font-family:ui-sans-serif,system-ui,sans-serif;font-size:clamp(44px,10vw,84px);font-weight:800;line-height:.85;color:var(--amber);letter-spacing:-.04em;font-variant-numeric:tabular-nums;flex:0 0 auto;}
+  .chapter .clab{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--amber);margin:0 0 6px;}
+  .chapter h2{font-size:clamp(24px,4.4vw,36px);margin:0;font-weight:700;letter-spacing:-.018em;}
+  .chapter p.csub{color:var(--ink-soft);margin:12px 0 0;font-size:17px;}
+
+  /* hero */
+  .hero{min-height:82vh;display:flex;flex-direction:column;justify-content:center;padding:60px 0 40px;}
+  .mark{font-family:ui-sans-serif,system-ui,sans-serif;font-weight:700;letter-spacing:.16em;text-transform:uppercase;font-size:12px;color:var(--amber);display:flex;align-items:center;gap:8px;margin-bottom:30px;}
+  .mark .dot{width:8px;height:8px;border-radius:50%;background:var(--honey);box-shadow:0 0 0 4px var(--amber-soft);}
+  .hero p.sub{font-size:clamp(18px,2.4vw,21px);color:var(--ink-soft);margin:26px 0 0;}
+  .cue{font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;color:var(--amber);letter-spacing:.08em;margin-top:40px;animation:bob 2s ease-in-out infinite;}
+  @keyframes bob{0%,100%{transform:translateY(0);}50%{transform:translateY(5px);}}
+
+  section{padding:60px 0;}
+  section.beat{border-top:1px solid var(--line);}
+  .reveal{opacity:0;transform:translateY(22px);transition:opacity .7s ease,transform .7s ease;}
+  .reveal.in{opacity:1;transform:none;}
+
+  /* big stat */
+  .megastat{font-size:clamp(56px,13vw,120px);line-height:.95;font-weight:700;letter-spacing:-.03em;color:var(--amber);font-variant-numeric:tabular-nums;}
+  .megastat.g{color:var(--survive);}
+
+  .refuse{list-style:none;padding:0;margin:22px 0 0;}
+  .refuse li{padding:16px 0;border-bottom:1px solid var(--line);font-size:19px;display:flex;gap:14px;align-items:baseline;}
+  .refuse li:last-child{border-bottom:none;}
+  .refuse .no{font-family:ui-sans-serif,system-ui,sans-serif;font-weight:700;color:var(--die);font-size:13px;letter-spacing:.06em;text-transform:uppercase;flex:0 0 auto;padding-top:3px;}
+
+  /* data grid (the market underneath) */
+  .datagrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:26px 0 0;}
+  .datacell{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:var(--shadow);}
+  .datacell .dn{font-size:26px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
+  .datacell .dl{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px;color:var(--ink-soft);margin-top:5px;line-height:1.4;}
+  @media(max-width:560px){.datagrid{grid-template-columns:1fr 1fr;}}
+
+  .callout{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--amber);border-radius:10px;padding:18px 20px;margin:22px 0 0;box-shadow:var(--shadow);}
+  .callout.honest{border-left-color:var(--die);}
+  .callout .k{font-family:ui-sans-serif,system-ui,sans-serif;font-weight:700;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--amber);}
+  .callout.honest .k{color:var(--die);}
+  .callout p{margin:8px 0 0;font-size:17px;}
+
+  /* the "what this is not" scope box */
+  .scope{background:var(--card);border:1px solid var(--line);border-top:4px solid var(--die);border-radius:12px;padding:22px 24px;margin:0 0 4px;box-shadow:var(--shadow);}
+  .scope .k{font-family:ui-sans-serif,system-ui,sans-serif;font-weight:700;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--die);margin-bottom:10px;}
+  .scope h2{font-size:clamp(22px,3.6vw,30px);}
+  .scope p{font-size:17px;}
+  .scope p:last-child{margin-bottom:0;}
+
+  /* sticky scrolly for the S-curve */
+  .scrolly{position:relative;}
+  .sticky{position:sticky;top:0;height:100vh;display:flex;align-items:center;justify-content:center;}
+  .figure{width:100%;max-width:520px;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:20px 20px 12px;}
+  .figure canvas{width:100%;height:auto;display:block;}
+  .figcap{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12.5px;color:var(--ink-soft);text-align:center;margin-top:8px;}
+  .readout{font-family:ui-sans-serif,system-ui,sans-serif;text-align:center;margin-bottom:8px;}
+  .readout .rn{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;} .readout .rl{font-size:12.5px;color:var(--ink-soft);}
+  .steps{position:relative;z-index:2;pointer-events:none;}
+  .step{min-height:78vh;display:flex;align-items:center;}
+  .step .box{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;box-shadow:var(--shadow);max-width:400px;pointer-events:auto;opacity:.35;transition:opacity .4s;}
+  .step.on .box{opacity:1;}
+  .step .box p{margin:0;font-size:17px;}
+  .step .box .lab{font-family:ui-sans-serif,system-ui,sans-serif;font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;}
+
+  /* cliff heatmap */
+  .cliff{display:grid;grid-template-columns:auto repeat(6,1fr);gap:3px;margin:24px 0 8px;font-family:ui-sans-serif,system-ui,sans-serif;font-size:11px;}
+  .cliff .cell{aspect-ratio:1.6;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-variant-numeric:tabular-nums;}
+  .cliff .rowlab,.cliff .collab{color:var(--ink-soft);display:flex;align-items:center;justify-content:center;font-weight:600;}
+  .cliffnote{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px;color:var(--ink-soft);text-align:center;}
+
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:24px 0 0;}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;box-shadow:var(--shadow);}
+  .stat .n{font-size:28px;font-weight:700;letter-spacing:-.02em;} .stat .n.g{color:var(--survive);} .stat .n.a{color:var(--amber);}
+  .stat .lab{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12.5px;color:var(--ink-soft);margin-top:6px;line-height:1.4;}
+  @media(max-width:560px){.stats{grid-template-columns:1fr;}}
+
+  /* data charts + bars */
+  .chartcard{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:20px 20px 12px;margin:24px 0 0;}
+  .chartcard canvas{width:100%;height:auto;display:block;}
+  /* chart captions — smaller + muted so they never read as body text (matches .figcap/.cliffnote) */
+  .chartcap{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12.5px;line-height:1.5;color:var(--ink-soft);text-align:center;margin-top:10px;}
+  .chartcard .chartcap{margin-top:12px;padding-top:11px;border-top:1px solid var(--line);}
+  .barlist{margin:22px 0 0;font-family:ui-sans-serif,system-ui,sans-serif;font-size:12.5px;}
+  .barrow{display:flex;align-items:center;gap:10px;margin:3px 0;}
+  .barrow .bl{width:46px;text-align:right;color:var(--ink-soft);flex:0 0 auto;font-variant-numeric:tabular-nums;}
+  .barrow .bar{height:15px;background:var(--amber);border-radius:3px;min-width:2px;}
+  .barrow.knee .bar{background:var(--survive);}
+  .barrow .bv{color:var(--ink-soft);flex:0 0 auto;font-variant-numeric:tabular-nums;min-width:28px;}
+  .ladder{display:flex;gap:8px;margin:24px 0 8px;align-items:flex-end;}
+  .ladstep{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;}
+  .ladstep .lbar{width:100%;background:var(--amber);border-radius:5px 5px 0 0;}
+  .ladstep .lpct{font-family:ui-sans-serif,system-ui,sans-serif;font-weight:700;font-size:15px;color:var(--amber);}
+  .ladstep .llab{font-family:ui-sans-serif,system-ui,sans-serif;font-size:11px;color:var(--ink-soft);text-align:center;}
+  .tcssplit{display:flex;height:46px;border-radius:8px;overflow:hidden;margin:22px 0 12px;font-family:ui-sans-serif,system-ui,sans-serif;font-size:12.5px;font-weight:700;}
+  .tcssplit div{display:flex;align-items:center;justify-content:center;color:#fff;min-width:0;overflow:hidden;white-space:nowrap;}
+  .tcslegend{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12.5px;color:var(--ink-soft);display:flex;gap:18px;flex-wrap:wrap;}
+  .tcslegend span{display:flex;align-items:center;gap:6px;} .tcslegend i{width:11px;height:11px;border-radius:2px;display:inline-block;flex:0 0 auto;}
+
+  ul.ledger{list-style:none;padding:0;margin:20px 0 0;}
+  ul.ledger li{padding:12px 0 12px 30px;position:relative;border-bottom:1px solid var(--line);font-size:17px;}
+  ul.ledger li::before{content:"✓";position:absolute;left:0;top:12px;color:var(--survive);font-weight:700;}
+  ul.ledger li em{color:var(--ink-soft);}
+  .honest-list{list-style:none;padding:0;margin:20px 0 0;}
+  .honest-list li{padding:16px 0;border-bottom:1px solid var(--line);font-size:17px;} .honest-list li:last-child{border-bottom:none;}
+  .honest-list b{display:block;margin-bottom:4px;}
+
+  /* tech chapter */
+  ul.techlist{list-style:none;padding:0;margin:20px 0 0;}
+  ul.techlist li{padding:12px 0 12px 28px;position:relative;border-bottom:1px solid var(--line);font-size:16px;font-family:ui-sans-serif,system-ui,sans-serif;}
+  ul.techlist li:last-child{border-bottom:none;}
+  ul.techlist li::before{content:"›";position:absolute;left:4px;top:11px;color:var(--amber);font-weight:700;}
+  .repo{display:flex;gap:12px;flex-wrap:wrap;margin:22px 0 0;}
+  .repo a{font-family:ui-sans-serif,system-ui,sans-serif;font-size:15px;font-weight:600;text-decoration:none;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 18px;box-shadow:var(--shadow);color:var(--ink);}
+  .repo a b{color:var(--amber);}
+
+  /* sources ledger */
+  .sources ol{list-style:none;counter-reset:s;padding:0;margin:22px 0 0;}
+  .sources li{counter-increment:s;padding:13px 0 13px 36px;position:relative;border-bottom:1px solid var(--line);font-size:14.5px;line-height:1.55;font-family:ui-sans-serif,system-ui,sans-serif;color:var(--ink-soft);}
+  .sources li::before{content:counter(s);position:absolute;left:0;top:13px;font-weight:800;color:var(--amber);font-variant-numeric:tabular-nums;}
+  .sources li b{color:var(--ink);}
+  .sources li a{font-weight:600;}
+  .stag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:2px 6px;border-radius:4px;margin-right:7px;white-space:nowrap;}
+  .stag.pub{background:var(--amber-soft);color:var(--amber);}
+  .stag.mod{background:var(--survive);color:#fff;}
+  .track{opacity:.65;}
+
+  /* FAQ accordion */
+  .faq details{border:1px solid var(--line);border-radius:12px;background:var(--card);margin:12px 0 0;box-shadow:var(--shadow);}
+  .faq summary{list-style:none;cursor:pointer;padding:17px 20px;font-weight:700;font-size:18px;display:flex;justify-content:space-between;align-items:center;gap:14px;}
+  .faq summary::-webkit-details-marker{display:none;}
+  .faq summary::after{content:"+";font-family:ui-sans-serif,system-ui,sans-serif;color:var(--amber);font-weight:700;font-size:24px;line-height:1;flex:0 0 auto;}
+  .faq details[open] summary::after{content:"\2013";}
+  .faq summary:focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:12px;}
+  .faq .ans{padding:0 20px 20px;font-size:16.5px;color:var(--ink-soft);}
+  .faq .ans p{margin:0 0 12px;} .faq .ans p:last-child{margin:0;}
+  .faq .ans b{color:var(--ink);}
+
+  /* the personal close — warm, distinct */
+  .close-sec{background:var(--amber-soft);border-top:1px solid var(--line);}
+  .close-sec .wrap{padding-top:74px;padding-bottom:74px;}
+  .close-sec p{font-size:20px;}
+  .close-sec .first{font-size:clamp(40px,8vw,72px);font-weight:700;letter-spacing:-.03em;margin:0 0 26px;line-height:1;}
+  .close-sec .beat2{font-size:clamp(23px,3.4vw,30px);font-weight:600;line-height:1.32;margin:28px 0;}
+  .close-sec .thesis{font-size:clamp(32px,6vw,52px);font-weight:700;color:var(--amber);letter-spacing:-.025em;margin:30px 0;line-height:1.02;}
+  .close-sec .take{font-size:20px;} .close-sec .take b{color:var(--ink);}
+
+  footer{border-top:1px solid var(--line);padding:30px 0 70px;color:var(--ink-soft);font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;line-height:1.7;}
+
+  @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none;}.cue{animation:none;}}
+</style>
+
+<div class="wip sans"><b>Liberty Bee 1.0.</b> The numbers and charts are real, from the frozen 1.0 baseline (engine 0.5.0) — the code and the full dataset are public, and every run reproduces from a seed. Everything's sourced in <a href="#sources">the ledger</a>.</div>
+
+<!-- ============ 01 · INTRO ============ -->
+<div class="hero wrap">
+  <div class="mark sans"><span class="dot"></span> Liberty Bee — 01 / Intro</div>
+  <h1>Can housing be run without extraction — and still survive?</h1>
+  <p class="sub">Most landlords keep a few escape hatches: raise the rent, cut the maintenance, skim the surplus. Liberty Bee gives up all of them. We simulated twenty years, across every funding level and market from calm to crash, to find out whether that can actually last — and we're showing you everything, including the parts that don't flatter us, and where every number comes from.</p>
+  <div class="cue sans">Scroll ↓</div>
+</div>
+
+<!-- ============ 02 · THE PROBLEM ============ -->
+<div class="chapter"><div class="wrap"><div class="cnum">02</div><div>
+  <p class="clab">The problem — and the data behind it</p>
+  <h2>Salem is a hard place to rent. Here are the real numbers.</h2>
+  <p class="csub">Every figure in this chapter is public data, sourced in the ledger at the end. No made-up averages.</p>
+</div></div></div>
+
+<section class="beat"><div class="wrap reveal">
+  <p class="eyebrow sans">Priced out</p>
+  <h2>Most renters here can't afford even a <em>below-market</em> home.</h2>
+  <div class="megastat">76.5%</div>
+  <p class="big" style="margin-top:16px">of Salem renters can't afford a typical Liberty&nbsp;Bee 2-bedroom<sup class="cite"><a href="#src-1">1</a></sup> — and that's already discounted below market. Below-market housing obviously helps them. The hard question isn't <em>whether</em> it helps — it's whether an operator can give that help away and <b>still be standing in twenty years.</b></p>
+</div></section>
+
+<section class="beat"><div class="wrap reveal">
+  <p class="eyebrow sans">The market underneath it</p>
+  <h2>A tight, expensive city where pay stopped keeping up.</h2>
+  <p>This isn't a feeling — it's the ACS (the U.S. Census Bureau's American Community Survey) and the city's own housing report. The typical renter earns about <b>$58k</b><sup class="cite"><a href="#src-3">3</a></sup>; a market 2-bedroom runs around <b>$2,800/month</b><sup class="cite"><a href="#src-4">4</a></sup>. Thirty percent of that income — the classic "affordable" line — is roughly $1,450. The going rate is nearly double it.</p>
+  <div class="datagrid">
+    <div class="datacell"><div class="dn">1.9%<sup class="cite"><a href="#src-2">2</a></sup></div><div class="dl">rental vacancy — almost nothing open (healthy is ~6%)</div></div>
+    <div class="datacell"><div class="dn">52%<sup class="cite"><a href="#src-5">5</a></sup></div><div class="dl">of Salem renters are cost-burdened (rent &gt; 30% of income)</div></div>
+    <div class="datacell"><div class="dn">$542,800<sup class="cite"><a href="#src-6">6</a></sup></div><div class="dl">median home value — buying in takes real capital</div></div>
+    <div class="datacell"><div class="dn">+34.8%<sup class="cite"><a href="#src-7">7</a></sup></div><div class="dl">rent growth 2020–2025 alone</div></div>
+    <div class="datacell"><div class="dn">+27% vs +7%<sup class="cite"><a href="#src-8">8</a></sup></div><div class="dl">Salem real rent vs. real household income, 2016–2024 (rent outran pay ~4&times;)</div></div>
+    <div class="datacell"><div class="dn">~$58k<sup class="cite"><a href="#src-3">3</a></sup></div><div class="dl">median renter income — vs. $85k across all households</div></div>
+  </div>
+  <p style="margin-top:22px">That's the squeeze Liberty Bee is aimed at: not the destitute — them, honestly, a below-market landlord can't reach — but the working renter for whom "market rate" quietly means shrinking your life.</p>
+</div></section>
+
+<!-- ============ 03 · PHILOSOPHY, SIMULATION, FINDINGS ============ -->
+<div class="chapter"><div class="wrap"><div class="cnum">03</div><div>
+  <p class="clab">The idea, the simulation, and what it found</p>
+  <h2>What Liberty Bee is — starting with what it isn't.</h2>
+  <p class="csub">Before the findings: an honest fence around the claim.</p>
+</div></div></div>
+
+<section class="beat"><div class="wrap reveal">
+  <div class="scope">
+    <p class="k sans">First — what this is not</p>
+    <h2>This is not "affordable housing," and it does not solve poverty.</h2>
+    <p>Liberty Bee is <b>not</b> subsidized or income-restricted housing. The baseline model assumes <b>no</b> tax credit, no affordability covenant, no government operating subsidy — because the whole point is to test whether the <em>model itself</em> can stand without them.</p>
+    <p>And it does not solve poverty. That's a real problem with real, established answers — vouchers, public housing, direct subsidy — and we can't match them as the model stands. The deeply low-income renter needs help no below-market landlord can provide; pretending otherwise would be dishonest.</p>
+    <p>What it tries to be is narrower and <em>testable</em>: <b>more affordable than the market</b>, free of the usual extractive incentives — no rent hikes on people who stay, no punitive fees, no surplus skimmed off — and still <b>solvent</b> twenty years on. That's the entire claim. Someday a future version might accept vouchers and stack with subsidy; not this one, and we say so on purpose.</p>
+  </div>
+</div></section>
+
+<section class="beat"><div class="wrap reveal">
+  <p class="eyebrow sans">The idea</p>
+  <h2>It was never about making money.</h2>
+  <p>In our original written proposal, the mission was stated simply: <b>provide stable, dignified housing while fostering long-term community resilience.</b></p>
+  <p>The idea isn't to make money. It never was. Not much of a sales pitch, we know — but bear with us. The idea is to deliver immediate, meaningful relief against one of the biggest stressors in our society: housing.</p>
+  <p>The Liberty Bee model isn't about investing in housing — it's about anchoring families, preserving community integrity, and reshaping what affordability looks like. It's a non-extractive, sustainable, community-driven future for housing. <b>It's about investing in the people.</b></p>
+</div></section>
+
+<section class="beat"><div class="wrap reveal">
+  <p class="eyebrow sans">The refusal</p>
+  <h2>Liberty Bee gives up the landlord's playbook.</h2>
+  <ul class="refuse">
+    <li><span class="no sans">No</span><span>rent hikes on someone who stays — ever. If anything, your rent <b>falls</b> the longer you're here.</span></li>
+    <li><span class="no sans">No</span><span>cutting the maintenance to pad the margin — buildings are kept up, not run into the ground.</span></li>
+    <li><span class="no sans">No</span><span>surplus skimmed off as profit — it's reinvested in tenants, buildings, and reserve.</span></li>
+  </ul>
+  <p style="margin-top:22px">Everything else is machinery in service of one idea: <b>the value tenants and a community create should stay with them.</b></p>
+</div></section>
+
+<section class="beat"><div class="wrap reveal">
+  <p class="eyebrow sans">How is this even possible?</p>
+  <h2>No mortgage. That's the whole trick.</h2>
+  <p class="big">Liberty Bee buys its buildings <b>outright</b> — no debt, no lender, no interest payment that has to be met before anything else.</p>
+  <p>That one fact turns a nice idea into a workable one. A leveraged landlord <em>has</em> to maximize rent and cut corners — the bank doesn't care about your tenants. With no debt, the money that would've gone to a mortgage cycles back into the reserve, the next building, and the people living there. It's also why Liberty Bee can absorb the cost of its own kindness — flat rents, deep discounts, keeping people housed — and just grow slower, where a leveraged operator would default.</p>
+  <div class="callout"><span class="k sans">the short version</span><p>No mortgage, so the money stays in the mission.</p></div>
+</div></section>
+
+<section class="beat"><div class="wrap reveal">
+  <p class="eyebrow sans">What we built</p>
+  <h2>Not a slide deck — a simulation you can re-run.</h2>
+  <p>Liberty Bee is an event-driven Monte-Carlo engine: twenty simulated years, run across sixteen funding levels and every market regime, from calm to crash. It doesn't argue the idea works — it <em>stress-tests</em> it, and reports what happened, including the runs that died. Every number below is one of those outputs.<sup class="cite"><a href="#src-9">9</a></sup> How it's built and how to reproduce it is <a href="#chapter4">chapter 04</a>.</p>
+</div></section>
+
+<!-- Sticky scrolly: survival S-curve -->
+<section class="beat"><div class="wrap reveal" style="margin-bottom:10px">
+  <p class="eyebrow sans">Finding — does it survive?</p>
+  <h2>Under-funded, it dies. Funded properly, it survives every run.</h2>
+</div>
+<div class="scrolly">
+  <div class="sticky"><div class="figure">
+    <div class="readout"><span class="rn" id="ro-n">—</span> <span class="rl" id="ro-l">20-year survival</span></div>
+    <canvas id="scurve" width="520" height="300"></canvas>
+    <div class="figcap sans">Regime baseline · engine 0.5.0 · 800 runs · starting capital → % surviving 20 years</div>
+  </div></div>
+  <div class="steps wrap">
+    <div class="step" data-x="0.0" data-n="2%" data-c="die"><div class="box"><div class="lab sans" style="color:var(--die)">At the bottom</div><p>Start with too little capital — around <b>$2M</b> — and almost every version runs out of money before year twenty. Just <b>2%</b> make it.</p></div></div>
+    <div class="step" data-x="0.17" data-n="80%" data-c="amber"><div class="box"><div class="lab sans" style="color:var(--amber)">The knee</div><p>Add capital and survival climbs <em>steeply</em>: $3M&nbsp;→&nbsp;54%, $3.5M&nbsp;→&nbsp;80%, $4M&nbsp;→&nbsp;92%. A narrow band turns an under-funded experiment into a durable institution.</p></div></div>
+    <div class="step" data-x="0.28" data-n="100%" data-c="survive"><div class="box"><div class="lab sans" style="color:var(--survive)">Funded properly</div><p>At <b>$4.5M</b>, <b>every single run</b> survives the full twenty years — and the portfolio grows from about <b>19 homes</b> at the threshold to <b>~65</b> at the top of the range, holding the below-market rule the whole way.</p></div></div>
+    <div class="step" data-x="1" data-n="100%" data-c="survive"><div class="box"><p>So the story isn't "does non-extraction work?" It's "<b>how much runway does it need?</b>" — and now we can put a hard number on it: <b>$4.5M</b>.</p></div></div>
+  </div>
+</div></section>
+
+<section class="beat"><div class="wrap reveal">
+  <p class="eyebrow sans">Finding — how long it lasts</p>
+  <h2>Under-funding doesn't fail on day one. It fails years in.</h2>
+  <p>Survival isn't just a yes-or-no at year twenty. A thinly-funded org can look fine for a few years, then run its reserves down and collapse. Here's the share of runs still solvent at each milestone, by starting capital:</p>
+  <div class="cliff" id="horizon" style="grid-template-columns:auto repeat(4,1fr)"></div>
+  <p class="cliffnote sans">% of 50 runs still solvent · <b>$4.5M and up hold 100% at every milestone</b> · engine 0.5.0</p>
+  <div class="callout"><span class="k sans">the runway</span><p>At <b>$2M</b>, nearly half make it five years — but almost none reach ten. At <b>$3M</b>, most last a decade, then attrition sets in (54% still standing at twenty). Only past the <b>$4.5M</b> threshold does an org hold the line the whole way. Thin funding doesn't fail loudly up front — it bleeds out quietly, years in.</p></div>
+</div></section>
+
+<section class="beat"><div class="wrap reveal">
+  <p class="eyebrow sans">Finding — how far can it push?</p>
+  <h2>Affordability has an exchange rate.</h2>
+  <p>How deep a discount can Liberty Bee give before the math breaks? We swept it — every discount depth against every funding level. The pattern is clean: generosity is bought from the balance sheet at a knowable price.</p>
+  <div class="cliff" id="cliff"></div>
+  <p class="cliffnote sans"><span style="color:var(--survive)">■</span> survives &nbsp; <span style="color:var(--die)">■</span> fails &nbsp;·&nbsp; % of 10 seeds surviving 20 years · engine 0.5.0</p>
+  <div class="callout"><span class="k sans">the finding</span><p>Every ~5 points of deeper discount raises the capital you need by roughly <b>$0.5–1M</b>.<sup class="cite"><a href="#src-10">10</a></sup> Past a point, <b>no amount of money buys a half-off-forever policy</b> — a 50%-off-forever policy survives at no funding level we tested, even $11M. That's the quantitative case for the discount we actually chose.</p></div>
+</div></section>
+
+<section class="beat"><div class="wrap reveal">
+  <p class="eyebrow sans">Finding — who it's for</p>
+  <h2>The point was never the balance sheet. It's what people keep.</h2>
+  <p class="big">Solvency is the floor, not the goal. So the model measures the thing that actually matters: <b>how much better off tenants are.</b></p>
+  <div class="stats">
+    <div class="stat"><div class="n g">~$33k</div><div class="lab sans">Median saved vs. market per household — and it compounds sharply the longer you stay<sup class="cite"><a href="#src-11">11</a></sup></div></div>
+    <div class="stat"><div class="n a">55–170</div><div class="lab sans">Households housed below market per org, scaling with capital ($4.5M → $11M)</div></div>
+    <div class="stat"><div class="n">~4 yr</div><div class="lab sans">Median stay — vs. ~2.2yr for the typical market renter<sup class="cite"><a href="#src-12">12</a></sup></div></div>
+  </div>
+  <p style="margin-top:22px">That savings is real money that <b>stayed in the community</b> instead of leaving as someone's profit — and it compounds: the longer you stay, the deeper your discount gets.</p>
+  <div class="callout honest"><span class="k sans">the honest catch</span><p>In-kind housing help is a famously <em>inefficient</em> transfer — economists find it can cost a provider more than a dollar for each dollar a tenant truly values (the classic estimate is ~<b>2.4×</b><sup class="cite"><a href="#src-15">15</a></sup>). We won't pretend otherwise. What our model <em>can</em> measure is the straight transfer — <b>every dollar Liberty Bee gives up in rent is a dollar a tenant keeps.</b> What it <em>can't</em> measure is how much a tenant privately values that housing versus cash — so we don't fake that number, or put one on what a cash check can't buy: stability, not being displaced, roots.</p></div>
+</div></section>
+
+<section class="beat"><div class="wrap reveal">
+  <p class="eyebrow sans">Finding — reach</p>
+  <h2>More capital up front, more people served.</h2>
+  <p>Every extra dollar of starting capital buys more buildings — and more households housed below market. That's the case for funding it properly: it isn't overhead, it's people. At the $4.5M survival threshold a surviving org houses about <b>55</b> households over twenty years; at $11M, about <b>172</b>.</p>
+  <div class="barlist" id="reachbars"></div>
+  <p class="chartcap sans" style="text-align:left;margin-top:12px">Households housed below market per surviving org over 20 years, by starting capital · <span style="color:var(--survive)">green</span> = the $4.5M threshold</p>
+</div></section>
+
+<section class="beat"><div class="wrap reveal">
+  <p class="eyebrow sans">Finding — the deal deepens</p>
+  <h2>The longer you stay, the more you save.</h2>
+  <p>Your rent is frozen the day you sign — while the market keeps climbing — and the discount steps deeper at years 3, 6, and 10. The guaranteed ladder alone:</p>
+  <div class="ladder">
+    <div class="ladstep"><div class="lpct">10%</div><div class="lbar" style="height:43px"></div><div class="llab">at signing</div></div>
+    <div class="ladstep"><div class="lpct">~15%</div><div class="lbar" style="height:64px"></div><div class="llab">year 3</div></div>
+    <div class="ladstep"><div class="lpct">~19%</div><div class="lbar" style="height:81px"></div><div class="llab">year 6</div></div>
+    <div class="ladstep"><div class="lpct">~28%</div><div class="lbar" style="height:120px"></div><div class="llab">year 10+</div></div>
+  </div>
+  <p class="chartcap sans" style="text-align:left">Below-market discount by tenure — the shipped 10% up front plus a 5 / 5 / 10 tenure ladder.</p>
+  <p style="margin-top:18px">And because a sitting tenant's rent never re-prices while the market inflates, the <em>real</em> gap grows even faster than the ladder promises. In dollars, the median tenant's cumulative savings:</p>
+  <div class="chartcard"><canvas id="savecurve" width="560" height="300"></canvas>
+    <div class="chartcap sans">Median cumulative savings vs. market, per tenant, by years stayed<sup class="cite"><a href="#src-11">11</a></sup></div></div>
+  <p style="margin-top:18px">By year 5 the typical tenant has saved about <b>$46k</b>; by year 10, <b>$140k</b>; a twenty-year tenant, past <b>$500k</b> — money kept in a household instead of leaving as someone's profit.</p>
+</div></section>
+
+<section class="beat"><div class="wrap reveal">
+  <p class="eyebrow sans">Tenant credits</p>
+  <h2>A hidden paycheck that follows you.</h2>
+  <p>Beyond the rent discount, Liberty Bee banks <b>10% of every on-time rent payment</b> into a <b>Tenant Credit</b> that belongs to the household. It's not cash, not a loan, not equity, and it can't be sold or transferred away.</p>
+  <p><b>How and when you use it:</b> once a year you can draw up to <b>a month's rent</b> from your balance — either as a routine credit toward a month you choose, or as hardship relief when a month goes sideways. When you move out in good standing, whatever's left can go toward your final month's rent, and it stays redeemable for <b>two years</b> after you leave (an eviction forfeits it). It only ever builds on rent paid on time, and it never touches damages — that's what a deposit is for.</p>
+  <p>It's also where the model is <em>least</em> finished — so here's the honest split of every credit dollar earned across the corpus:<sup class="cite"><a href="#src-16">16</a></sup></p>
+  <div class="tcssplit">
+    <div style="width:50.3%;background:var(--survive)">50% redeemed</div>
+    <div style="width:20.8%;background:var(--die)">21% forfeited</div>
+    <div style="width:28.9%;background:var(--honey);color:var(--ink)">29% held</div>
+  </div>
+  <div class="tcslegend">
+    <span><i style="background:var(--survive)"></i> reached the tenant — about <b>$7,465</b> per household</span>
+    <span><i style="background:var(--die)"></i> forfeited, unused</span>
+    <span><i style="background:var(--honey)"></i> still on the books</span>
+  </div>
+  <div class="callout honest" style="margin-top:22px"><span class="k sans">an open problem, not a feature</span><p>Only about half of what tenants earn actually reaches them; a fifth is forfeited outright. We're not spinning that as a win — it's a design problem we're naming out loud, and making the credit easier to use is on the list.</p></div>
+</div></section>
+
+<section class="beat"><div class="wrap reveal">
+  <p class="eyebrow sans">Finding — the bottom line</p>
+  <h2>How much stays in the community.</h2>
+  <p>Put it together — below-market rent plus credits actually redeemed — and you can watch the total value <em>kept in the community</em> instead of extracted as profit, piling up over twenty years. More starting capital doesn't just serve more people; it keeps more money local, and the gap widens every year.</p>
+  <div class="chartcard"><canvas id="commcurve" width="560" height="320"></canvas>
+    <div class="chartcap sans">Cumulative value kept in the community (below-market rent + credits redeemed), average per surviving org, by starting capital<sup class="cite"><a href="#src-16">16</a></sup></div></div>
+  <p style="margin-top:18px">A properly-funded org at the <b>$4.5M</b> threshold keeps about <b>$5M</b> in the community over twenty years; at <b>$11M</b>, over <b>$13M</b>. None of it leaves as someone's return.</p>
+</div></section>
+
+<section class="beat"><div class="wrap reveal">
+  <p class="eyebrow sans">Finding — why people stay</p>
+  <h2>Treat people well, and they stay. Now we can show the mechanism.</h2>
+  <p>The whole theory of change is a loop: a below-market deal that <em>deepens</em> with tenure means the longer you stay, the more you'd give up by leaving — so people put down roots, and stability compounds. This isn't just hope — below-market tenants are measurably about <b>19% less likely to move</b><sup class="cite"><a href="#src-13">13</a></sup>. The model captures it directly: your odds of leaving fall as your deal gets better.</p>
+  <div class="callout honest"><span class="k sans">not all loyalty is love</span>
+  <p>We're honest about <em>why</em> people stay — and it <b>shifts over time.</b> Early in a tenancy, "nowhere else affordable to go" is a big part of it: the discount is still shallow and the market is tight. But as your below-market deal <em>deepens</em> with tenure, <b>the deal itself becomes the reason.</b> Averaged across a whole tenancy, that "nowhere to go" constraint accounts for <b>about 44%</b> of why people stay — a large minority, but the deal itself is the bigger half.<sup class="cite"><a href="#src-14">14</a></sup></p>
+  <p>But let's be real: <b>"nowhere to go" is only a win for a <em>traditional</em> landlord.</b> Our goal isn't captive tenants. Yes, it keeps people in the Liberty Bee system — but that's not <em>why</em> we want them here. It's a symptom of a broken housing landscape, and even where it "benefits" us on paper, <b>we'd far rather people stay because they want to than because they have nowhere else to go.</b></p></div>
+</div></section>
+
+<section class="beat"><div class="wrap reveal">
+  <p class="eyebrow sans">Blueprint, not a building</p>
+  <h2>What would it take to make this real? Capital. Full stop.</h2>
+  <p class="big">There is no funded Liberty Bee. No buildings, no tenants, no bank account. <b>Right now it's a model — a rigorous, reproducible argument that the idea holds up.</b></p>
+  <p>Most housing pitches ask you to trust a vision and write a check. We'd rather prove the thing survives twenty years of simulated pressure <em>first</em>, in the open, before anyone risks a dollar — or a home — on it. Having done that, the honest answer to "so what's missing?" is one word: <b>deep pockets.</b></p>
+  <p>The model runs on buying buildings <em>outright</em> — no debt — which takes real money up front, and we have exactly none. But it already shows <em>how much</em> it takes (about <b>$4.5M</b> to clear the survival threshold) and that it holds. So this isn't a plea for faith — it's a number, a method, and a result anyone can check, and then capital. Nothing else stands between the model and a real operation.</p>
+</div></section>
+
+<!-- ============ 04 · TECH & RECEIPTS ============ -->
+<div class="chapter" id="chapter4"><div class="wrap"><div class="cnum">04</div><div>
+  <p class="clab">The tech, and the receipts</p>
+  <h2>Don't trust it. Check it.</h2>
+  <p class="csub">How it's built, where the code lives, and every number's source.</p>
+</div></div></div>
+
+<section class="beat"><div class="wrap reveal">
+  <p class="eyebrow sans">How it's built</p>
+  <h2>Reproducible to the penny, from a seed.</h2>
+  <p>Liberty Bee is an event-driven Monte-Carlo simulation engine — <b>Python 3.12 + SQL Server</b> — that plays out 240 months of housing operations per run: acquisitions, leases, renewals, maintenance events, inflation regimes, tenant retention. Every random draw comes from a recorded seed, so any run — a survival, a death, one tenant's discount schedule — can be reproduced exactly by anyone with the code.</p>
+  <ul class="techlist">
+    <li>Event-driven engine — every acquisition, lease, renewal, repair and rent change is a dated event, not an average</li>
+    <li>Seeded RNG + RunID / BatchID run tracking — deterministic and reproducible: the same seed replays the same 20-year history to the penny, each run in its own freshly-restored database</li>
+    <li>A <b>frozen baseline</b> (named engine version, read-only) a skeptic can cite — beside a <b>living farm</b> that keeps running and only grows the evidence</li>
+    <li>Regime-based inflation, itemized Salem operating costs, zero-debt acquisition — the realism, not a toy</li>
+  </ul>
+  <div class="repo">
+    <a href="https://github.com/GreyOrGray/LibertyBee" target="_blank" rel="noopener"><b>Take the code →</b> github.com/GreyOrGray/LibertyBee</a>
+    <a href="https://github.com/GreyOrGray/LibertyBee/releases" target="_blank" rel="noopener"><b>The frozen dataset →</b> GitHub Release</a>
+  </div>
+  <p style="margin-top:22px">Take it. Change the assumptions you doubt. Run it against your own city. If we got something wrong, this is how you'll prove it. And this is how you'll let me know: <a href="mailto:gray@libertybee.org">gray@libertybee.org</a></p>
+</div></section>
+
+<section class="beat"><div class="wrap reveal">
+  <p class="eyebrow sans">Under the hood — the property market</p>
+  <h2>It buys from a real, moving market.</h2>
+  <p>Liberty Bee doesn't hand itself buildings. It runs a simulated property market that behaves like a real one: listings appear and disappear on a daily clock — more of them in the busy season — each priced from real local sales data and sized by real unit counts. Every building carries a days-on-market and a hold-period drawn from real distributions, so some sell fast, some linger, and owners sit on a property for years before it comes up again.</p>
+  <p>Against that market the operator does what a careful buyer does: watch what's available, value each property on its rents and its condition, and buy it <em>outright</em> when the numbers work and the cash is there. There's no auto-granted portfolio — every acquisition is a decision the model has to be able to afford, which is exactly why the starting-capital question has a hard floor.</p>
+  <p>The market's inputs — prices, rents, listing volume, days-on-market, seasonality, how long owners hold — are all calibrated from <b>public real-estate and housing-market data</b> for the Salem area. Where a number is a local market observation rather than an official statistic, we treat it as a calibration input, not a published claim — the goal is a market that <em>behaves</em> like Salem's, not a listings database.</p>
+</div></section>
+
+<section class="beat"><div class="wrap reveal">
+  <p class="eyebrow sans">Under the hood — inflation</p>
+  <h2>The economy doesn't move in a straight line, so neither does the model.</h2>
+  <p>Plenty of housing models pick one inflation number — say 3% a year — and let it ride. That single assumption can make an operator look invincible: a steady rate never produces a bad year. The world doesn't work that way. Neither does our simulation.</p>
+  <p>Instead, the model treats the economy as a set of <b>regimes</b> — calm stretches, rent surges, financial downturns, post-shock recoveries — and moves between them month to month, the way real markets do. And critically, everything inflates on <em>its own</em> track: rents, operating costs, property values, and vacancy don't march in lockstep. We model that because that decoupling is exactly what hurts a real operator — in a downturn, property values fall and vacancy climbs while taxes and insurance keep rising anyway. So we model it honestly.</p>
+  <p>The regimes are calibrated from real federal inflation and housing-price history. There have been only a couple of genuine crises in the last forty years — too few to simply resample — so <b>how often a downturn strikes is a modeling decision we make to the best of our ability</b>, not a statistic we can pretend to have measured. When we say "every market regime, calm to crash" that means something here, because the model has to survive surges and crashes, not one flattering straight line.</p>
+</div></section>
+
+<section class="beat"><div class="wrap reveal">
+  <p class="eyebrow sans">Built the hard way</p>
+  <h2>We go looking for our own mistakes.</h2>
+  <p>A model is only worth trusting if the people building it try to break it. So we do — and when we find something wrong, it goes on the page, even when the fix makes our numbers <em>worse.</em> A sample of what we've caught:</p>
+  <ul class="ledger">
+    <li>A real operating cost the org was quietly <em>not</em> being charged — <em>now charged, and it made survival harder.</em></li>
+    <li>Qualifying applicants against a stale, too-low rent — <em>now checked against the real rent; same standard, honestly applied.</em></li>
+    <li>Renewals that were a blind coin-flip — <em>now a real retention model grounded in the deal and the market.</em></li>
+    <li>A rent bug that accidentally <em>under</em>-charged some tenants — <em>we're telling you anyway; it happened to favor the tenant.</em></li>
+  </ul>
+</div></section>
+
+<section class="beat"><div class="wrap reveal">
+  <p class="eyebrow sans">Where it isn't finished</p>
+  <h2>It's not done. Here's exactly where it isn't.</h2>
+  <ul class="honest-list">
+    <li><b>Hardship is a probability, not yet a life.</b> Evictions are rare here — <b>97.6% of surviving runs record zero</b> — partly because the model doesn't yet follow a single household year to year. The next big build does exactly that — so an eviction becomes the honest end of a real trajectory, not a dice roll.</li>
+    <li><b>"Survived" is solvency — we won't invent a "mission score."</b> Whether the mission was served isn't one number, so we don't fake one. We show the concrete things instead: what tenants saved, what stayed local, how many were housed and for how long.</li>
+  </ul>
+  <p style="color:var(--ink-soft);font-style:italic;margin-top:22px">The model isn't flawless. What we'll stand behind is the direction: every pass makes it more real and more mission-true — even when that's less flattering to us.</p>
+</div></section>
+
+<section class="beat"><div class="wrap reveal">
+  <p class="eyebrow sans">Where the model goes next</p>
+  <h2>The simulation isn't finished growing either.</h2>
+  <p>Making it <em>real</em> takes capital. Making the <em>model</em> richer is a separate roadmap — future versions, not things standing in the way. What's on deck:</p>
+  <ul class="honest-list">
+    <li><b>The tenant engine.</b> Model households as they actually live — a job lost, a kid born, a good year and a rough one — so hardship and eviction become the honest end of a real story, and you can follow one family's path instead of a probability.</li>
+    <li><b>Beyond Salem.</b> Re-calibrate to other markets, so a city anywhere can see what this would take for <em>them.</em></li>
+    <li><b>EIP — the mission beyond the rent roll.</b> A future version could model an <em>Experimental Initiatives Program</em>: once housing and reserves are secure, surplus funding cultural preservation, reuse of historic buildings, artist and caretaker residencies, tenant-led place-making. Hard-gated — housing always comes first.</li>
+    <li><b>Grant simulations.</b> This baseline assumes <em>no</em> grants at all. A future version can model them as an acquisition accelerator — never operating life support — to show how much faster the mission scales when someone does write the check.</li>
+  </ul>
+</div></section>
+
+<section class="beat sources"><div class="wrap reveal">
+  <p class="eyebrow sans">Sources &amp; methodology</p>
+  <h2>Every number on this page — and where it comes from.</h2>
+  <p>Two kinds of number live here: <span class="stag pub">public data</span> anyone can look up, and <span class="stag mod">our model</span> outputs anyone can reproduce. Both are traceable to a tracked source in our documentation.</p>
+  <ol>
+    <li id="src-1"><span class="stag mod">our model</span> <b>76.5%</b> of Salem renters can't afford a typical below-market 2BR — Liberty Bee reach analysis (Phase 1.8 baseline of record §5b), computed from the Census renter-income distribution against our modeled 2BR rent. <span class="track">reference: business_rules.md</span></li>
+    <li id="src-2"><span class="stag pub">public data</span> Salem rental vacancy <b>1.9%</b> (healthy ≈ 6%) — City of Salem Housing Roadmap Report Card, Oct 22 2025. <a href="https://www.salemma.gov/m/newsflash/Home/Detail/190">salemma.gov</a> · <span class="track">evidence_base §4a</span></li>
+    <li id="src-3"><span class="stag pub">public data</span> Salem renter median income <b>~$58k</b> (vs ~$85k all households) — U.S. Census B25118, ACS 2024 5-year. <a href="https://censusreporter.org/profiles/16000US2559105-salem-ma/">Census Reporter</a> · <span class="track">evidence_base §9a</span></li>
+    <li id="src-4"><span class="stag pub">public data</span> Median 2-bedroom rent <b>~$2,800/mo</b> — Zumper &amp; RentCafe, 2026. <a href="https://www.zumper.com/rent-research/salem-ma">Zumper</a> · <a href="https://www.rentcafe.com/average-rent-market-trends/us/ma/salem/">RentCafe</a> · <span class="track">evidence_base §4b</span></li>
+    <li id="src-5"><span class="stag pub">public data</span> <b>52%</b> of Salem renters cost-burdened (rent &gt; 30% of income) — MAPC / HUD CHAS; corroborated by 2016 ACS. <a href="https://patch.com/massachusetts/salem/one-two-salem-renters-rent-burdened-census">Patch (ACS)</a> · <span class="track">evidence_base §4c</span></li>
+    <li id="src-6"><span class="stag pub">public data</span> Median home value <b>$542,800</b> — ACS 2019–23 5-year. <a href="https://datausa.io/profile/geo/salem-ma/">DataUSA</a> · <span class="track">evidence_base §4c</span></li>
+    <li id="src-7"><span class="stag pub">public data</span> Salem rents <b>+34.8%</b> 2020–2025 — RentCafe market trends, 2026. <a href="https://www.rentcafe.com/average-rent-market-trends/us/ma/salem/">RentCafe</a> · <span class="track">evidence_base §4b / §7</span></li>
+    <li id="src-8"><span class="stag pub">public data</span> <b>Salem</b> real gross rent <b>+27%</b> vs real median household income <b>+7%</b>, 2016→2024 (nominal +66% vs +39%) — derived from ACS 5-yr: median gross rent <b>$1,106→$1,836</b> (Census B25064), median household income <b>$61,083→$85,153</b> (B19013), CPI-U adjusted. 2016 via <a href="https://patch.com/massachusetts/salem/one-two-salem-renters-rent-burdened-census">Patch / 2016 ACS</a>, 2024 Census-verified. Note: all-household income (Salem renter series unavailable before 2024). <span class="track">evidence_base §9c</span></li>
+    <li id="src-9"><span class="stag mod">our model</span> Survival curve &amp; 100%-survival funding threshold — Liberty Bee 1.0 frozen Monte-Carlo baseline, 800 regime runs (16 funding levels × 50 seeds; engine 0.5.0), reproducible from seed. <span class="track">reproduce: reproduction_gate.py</span></li>
+    <li id="src-10"><span class="stag mod">our model</span> Discount exchange rate ≈ <b>$0.5–1M capital per 5 points</b> of up-front discount — Liberty Bee deep-discount cliff sweep. <span class="track">reproduce: the frozen Cliff corpus</span></li>
+    <li id="src-11"><span class="stag mod">our model</span> Tenant savings vs. market — median <b>~$33k</b>/household (mean $84k, skewed by long tenure; the median grows to ~<b>$140k</b> by year 10), households housed <b>55–172</b> by funding rung, median tenancy <b>~4&nbsp;yr</b> — Liberty Bee 1.0 corpus, 671 survived runs, engine 0.5.0. Month-by-month integration: market = unit BaseRent × cumulative rent inflation; contract = signed rent × tenure reductions (invariant #1, sitting rent flat). <span class="track">reproduce: site_metrics.py; evidence_base §10e</span></li>
+    <li id="src-12"><span class="stag pub">public data</span> Median market renter tenure <b>~2.2yr</b> (public-housing benchmark ~4.9yr) — Redfin / Census ACS; Collinson et al., NBER w21071 (2015). <a href="https://www.nber.org/papers/w21071">NBER</a> · <span class="track">evidence_base §10a</span></li>
+    <li id="src-13"><span class="stag pub">public data</span> Below-market/rent-protected tenants <b>~19% less likely to move</b> (causal) — Diamond, McQuade &amp; Qian, NBER w24181 / <em>AER</em> 2019. <a href="https://www.nber.org/papers/w24181">NBER</a> · <span class="track">evidence_base §10b</span></li>
+    <li id="src-14"><span class="stag mod">our model</span> Share of <em>realized</em> retention attributable to regional scarcity ≈ <b>44%</b> (the deal ≈ 56%) — measured by 20-year composed turnover with retention off (base, β=0/γ=0 → 21.7%), the deal only (γ=0 → 17.4%), and full (γ=0.5 → 14.0%): scarcity's slice = (deal-only − full) ÷ (base − full), pooled over 8 seeds at a viable funding level, each run in its own freshly-restored database (engine 0.5.0). Strongly tenure-dependent: scarcity dominates early when the deal is shallow, the deal takes over as it deepens. <span class="track">reproduce: scarcity_remeasure.py</span></li>
+    <li id="src-15"><span class="stag pub">public data</span> In-kind housing transfers cost roughly <b>2.4×</b> per dollar of tenant benefit — Olsen, <em>Journal of Political Economy</em> 1972. <span class="track">evidence_base §10e (local olsen1972.pdf)</span></li>
+    <li id="src-16"><span class="stag mod">our model</span> Tenant Credit System — of all credits accrued across survived runs, <b>50.3%</b> redeemed (~<b>$7,465</b>/household), <b>20.8%</b> forfeited, <b>28.9%</b> still held at year 20. Median cumulative savings by tenure year (yr5 ~$46k / yr10 ~$140k / yr20 ~$512k), and cumulative community value (below-market rent + credits redeemed) per surviving org — ~$5M at $4.5M funding to ~$13.5M at $11M over 20 years — from the same corpus integration as [11] (viable rungs only, n=50/rung). <span class="track">reproduce: site_metrics.py</span></li>
+  </ol>
+  <p style="margin-top:20px;font-size:14px;color:var(--ink-soft)" class="sans"><span class="track">Full provenance, with verbatim quotes against link-rot, lives in <b>evidence_base.md</b> in the repository. This ledger is the site's window onto it.</span></p>
+</div></section>
+
+<!-- ============ 05 · THE PERSONAL ============ -->
+<div class="chapter"><div class="wrap"><div class="cnum">05</div><div>
+  <p class="clab">Questions, and the person</p>
+  <h2>The doubts you're already forming — answered. Then, honestly, the person behind the idea.</h2>
+  <p class="csub">First the objections, straight. Then why Salem, and who's behind this.</p>
+</div></div></div>
+
+<section class="beat"><div class="wrap reveal">
+  <p class="eyebrow sans">Preemptive answers</p>
+  <h2>Questions you might have.</h2>
+  <p>Fair objections deserve straight answers — tap any that's on your mind.</p>
+  <div class="faq">
+    <details open><summary>Isn't this socialism?</summary><div class="ans">
+      <p>If by socialism you mean state or collective ownership of the housing — no. Tenants aren't collective owners, the state doesn't operate the properties, and the model doesn't abolish rent, contracts, property ownership, or cash flow.</p>
+      <p>If by socialism you mean <em>any</em> system where value benefits ordinary people instead of flowing upward to private owners — then the word is being stretched too broad to be useful.</p>
+      <p>Liberty Bee operates inside a market economy. The difference is simply that <b>surplus stays inside the housing system instead of being extracted upward.</b></p>
+    </div></details>
+    <details><summary>So it's capitalism?</summary><div class="ans">
+      <p>It operates inside capitalism, yes — that's the point. We're not pretending market constraints disappear. It uses ownership, rent, contracts, pricing, reserves, and cash flow. The difference is that <b>surplus is retained inside the housing system instead of taken as private gain.</b></p>
+      <p>A free market doesn't require every participant to use the same model or profit strategy. Liberty Bee is just a different operating model within a proven market — and the market can judge whether it works.</p>
+    </div></details>
+    <details><summary>So you're still a landlord?</summary><div class="ans">
+      <p>Operationally, sure. The difference is governance and use of surplus. A conventional landlord extracts surplus for owner return. Liberty Bee retains it — for reserves, maintenance, affordability, tenant stability, and disciplined growth.</p>
+    </div></details>
+    <details><summary>Why would anyone fund this?</summary><div class="ans">
+      <p>Because it's a testable alternative sitting between conventional rental extraction and subsidy-dependent affordable housing. We're not asking funders to fund a vibe — they'd be funding a model with <b>explicit assumptions, defined failure conditions, and reproducible simulations.</b></p>
+    </div></details>
+    <details><summary>Why not just charge much lower rent?</summary><div class="ans">
+      <p>Because rent has to cover real costs. Set it below operating reality and the model collapses — that's exactly what the survival curve up in chapter 03 is showing you. Liberty Bee starts below market, then deepens affordability through tenure-based reductions and retained surplus <em>only when the system can carry it.</em></p>
+    </div></details>
+    <details><summary>What if tenants abuse it?</summary><div class="ans">
+      <p>The model can't fix that — the rules and the people have to. A humane system is not a naive one. Liberty Bee needs clear screening, lease enforcement, a hardship policy, reserve rules, and honest failure conditions.</p>
+    </div></details>
+    <details><summary>Isn't this just charity?</summary><div class="ans">
+      <p>No. Charity is episodic relief. Liberty Bee is institutional design — it uses housing cash flow to create <b>durable</b> affordability, without requiring every operating dollar to come from donations.</p>
+    </div></details>
+    <details><summary>What happens when grants dry up?</summary><div class="ans">
+      <p>First — we'd have to <em>have</em> grants. This version of the model doesn't include grant funding at all; it's on the books for a future iteration. And even then, grants would be <b>acquisition accelerators, not operating life support.</b> If operations need grants to survive, the model is broken — which is exactly why we didn't build them in.</p>
+    </div></details>
+    <details><summary>Why not just make tenants owners?</summary><div class="ans">
+      <p>Ownership isn't automatically stability or benefit. It adds responsibility, risk, maintenance, taxes, insurance, financing, and legal complexity. Some tenants want ownership — it's part of the modern American Dream. Some have no desire to own. Some just need stable rental housing.</p>
+      <p>Liberty Bee can support <em>pathways</em> to ownership without pretending ownership is the only valid form of housing security.</p>
+    </div></details>
+  </div>
+</div></section>
+
+<section class="beat"><div class="wrap reveal">
+  <p class="eyebrow sans">Why Salem?</p>
+  <h2>Two reasons.</h2>
+
+  <p class="reasonlab">One — because a made-up town proves nothing.</p>
+  <p>Every number in chapter 02 comes from one real place. We didn't pick an easy market to look good — Salem is <em>hard</em>: tight, expensive, fast-gentrifying, homes pricey enough that buying them outright takes real capital. If a non-extractive operator can make it <em>here</em>, that means something. If it can't — far better to learn that in a simulation than with people's homes. And every one of those numbers is a <b>knob, not a law</b>: point the model at your city and run it.</p>
+
+  <p class="reasonlab" style="margin-top:36px">Two — because I want to live there.</p>
+  <p style="font-style:italic;color:var(--ink-soft)">Let me switch from Liberty Bee to myself for a moment.</p>
+  <p>Back in 2024 we — my wife and I — decided that once our kid goes off to college, we're moving to Salem. I love the city. The community, the culture, the diversity, the history, the architecture. Walking through the empty streets at night and standing barefoot in winter-cold water before the sun rises. I've never felt more at home.</p>
+  <p>So we started talking about how we could make money. In a tourist town, when you have a little capital you could leverage, an obvious answer is Airbnb. Which was… fine… for a bit. But the more I thought it over, the more uncomfortable I got.</p>
+  <p>Eventually I realized why. If I truly loved Salem for all the reasons I claimed to, why would I actively pursue the one thing that's anathema to the greatest part of what I loved — the people?</p>
+  <p>So I started thinking of ways I could be a <em>positive</em> part of the community instead. This idea rose from that. That's why Salem.</p>
+</div></section>
+
+<!-- The personal close -->
+<section class="close-sec"><div class="wrap reveal">
+  <p class="eyebrow sans">Why you should trust me</p>
+  <p class="first">You shouldn't.</p>
+  <p>I'm a baby born in a bus — because that's our home. I'm a kid watching his mom work like hell to give her children a better life. I'm a young adult with shady side-hustles just to make rent. I'm a guy begging for jobs and opportunities to learn. I'm a man with a crazy idea about housing that won't leave his head.</p>
+  <p class="beat2">I'm just a guy.<br>But maybe I'm like you.</p>
+  <p>Where I don't have cash, I've got brains, sleepless nights, and data.</p>
+  <p>That doesn't mean you should trust me. And I'm not asking you to.</p>
+  <p class="thesis">Trust the data.</p>
+  <p>The chance of anyone handing me millions of dollars and telling me to put this into action is… non-zero. So the next best thing is for me to take my idea and put it out there publicly.</p>
+  <p class="take"><b>Take the data. Take the code. Run it yourself.</b> Tweak it. Change it. Poke holes in it.</p>
+  <p>Maybe some altruistic billionaire will take it and run with it. Probably a non-zero chance of that as well.</p>
+</div></section>
+
+<section class="beat"><div class="wrap reveal">
+  <p class="eyebrow sans">One last disclosure</p>
+  <h2>I built this with AI — and I'm telling you that on purpose.</h2>
+  <p>Here's the honest story of how this exists.</p>
+  <p>I built the first version from scratch, by myself, in <b>T-SQL.</b> Those of you who know are probably thinking to yourselves, "gross" — and I agree. It was rough. And deeply, <em>deeply</em> flawed. But I'm a SQL Server DBA turned Data Architect. I've developed as needed throughout my career, but the gaps in my knowledge would never have allowed me to build this in any reasonable time. As of this moment, it's been over <b>a year and a half</b> of development. So don't come at me saying, "well, you could've just learned Python." Yeah, I could have. I could have learned Python and data science. And instead of reading this page now, you'd be reading it four or five years into the future.</p>
+  <p>What carried it here is that I took what I've learned from watching brilliant project managers and developers work at other companies. Through fits and starts, I learned to run AI the way a project manager runs a team of developers: I set the direction, made every ruling, argued the philosophy, hunted down the overclaims, did the UAT, performed code review where I could, and held the line on honesty — and the AI did the heavy lifting of code, analysis, and grind. The idea, the mission, and the call on every honest-versus-flattering tradeoff are mine. The execution was a partnership.</p>
+  <p>AI is very divisive right now. I could just as easily have said, "yeah, look what <em>I</em> did." But that runs counter to everything I've been trying to do. Honesty without flattery is the whole point. I can't tell you how many nights <em>we</em> fixed a problem and that fix caused massive shifts in the simulation's outcomes that left me feeling thoroughly defeated. Hell, the first part of this year was almost no active development. Just me, in my feelings. The only reason I picked this back up the last time was that I finally decided it was worth just getting to a completed state and putting it out in public — maybe the failed idea would still benefit someone. And then I'd never think about this stupid thing again.</p>
+  <p>And that's the point. It's more important to be honest and real than to just sell a perfect picture. So, yes — AI was instrumental in making this happen. This project is what one determined person with a clear idea and the right tools can build now (also, I learned what an em-dash and an en-dash were — and maybe AI teaching us how to actually use our language isn't so bad… now if I could just master the semicolon). You don't have to take my word that any of it holds up. The rules are written down, the code and data are downloadable, and every number re-runs from a seed. <b>Check it yourself. That was always the deal.</b></p>
+</div></section>
+
+<section class="beat"><div class="wrap reveal">
+  <p class="eyebrow sans">Get in touch</p>
+  <h2>Questions, corrections, or capital — one inbox.</h2>
+  <p>Liberty Bee is a public work in progress, built in the open. Found a flaw, want to point the model at your own city, or want to talk about funding a real one? Reach out.</p>
+  <div class="repo">
+    <a href="mailto:gray@libertybee.org"><b>Email →</b> gray@libertybee.org</a>
+    <a href="https://github.com/GreyOrGray/LibertyBee" target="_blank" rel="noopener"><b>The code →</b> github.com/GreyOrGray/LibertyBee</a>
+  </div>
+</div></section>
+
+<footer class="wrap">
+  <p>Liberty Bee — a non-extractive housing model, simulated in the open. Baseline <b>1.0 / retention-realistic</b> · engine <b>0.5.0</b> · <b>800</b> Monte-Carlo runs (frozen baseline; +100 static, +1,440 cliff) · itemized cost model, regime inflation, retention model, zero-debt acquisition · reproducible from seed.</p>
+  <p style="margin-top:10px">The code and the full dataset are on GitHub; every figure is cited in <a href="#sources">the ledger</a>. Nothing here is launch-capital guidance — it's what this model shows, under this market's assumptions, told honestly.</p>
+</footer>
+
+<script>
+(function(){
+  var root=document.documentElement;
+  // reveal on scroll
+  var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting)e.target.classList.add('in');});},{threshold:.15});
+  document.querySelectorAll('.reveal').forEach(function(el){io.observe(el);});
+
+  function css(v){return getComputedStyle(root).getPropertyValue(v).trim();}
+
+  // REAL regime survival (engine 0.5.0, 800 runs): [starting capital $M, survival fraction]
+  var SURV=[[2,.02],[2.5,.14],[3,.54],[3.5,.80],[4,.92],[4.5,1],[5,1],[5.5,1],[6,1],[6.5,1],[7,1],[7.5,1],[8,1],[9,1],[10,1],[11,1]];
+  function survAtFund(f){
+    if(f<=SURV[0][0])return SURV[0][1];
+    for(var k=1;k<SURV.length;k++){if(f<=SURV[k][0]){var a=SURV[k-1],b=SURV[k];return a[1]+(b[1]-a[1])*(f-a[0])/(b[0]-a[0]);}}
+    return SURV[SURV.length-1][1];
+  }
+  function surv(t){return survAtFund(2+t*9);}   // t in [0,1] -> $2M..$11M
+
+  var cv=document.getElementById('scurve'), ctx=cv.getContext('2d');
+  var activeX=0.0, activeC='die', dpr=Math.min(window.devicePixelRatio||1,2);
+  function drawCurve(){
+    var W=cv.width=520*dpr, H=cv.height=300*dpr; ctx.scale(dpr,dpr); cv.style.height='auto';
+    var w=520,h=300,pl=40,pr=14,pt=14,pb=28; ctx.clearRect(0,0,w,h);
+    ctx.strokeStyle=css('--line');ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(pl,pt);ctx.lineTo(pl,h-pb);ctx.lineTo(w-pr,h-pb);ctx.stroke();
+    var X=function(t){return pl+t*(w-pl-pr);}, Y=function(v){return (h-pb)-v*(h-pt-pb);};
+    ctx.strokeStyle=css('--amber');ctx.lineWidth=3;ctx.beginPath();
+    for(var i=0;i<=100;i++){var t=i/100,v=surv(t);(i?ctx.lineTo:ctx.moveTo).call(ctx,X(t),Y(v));}
+    ctx.stroke();
+    ctx.save();ctx.beginPath();ctx.moveTo(X(0),Y(surv(0)));
+    for(var j=0;j<=100;j++){var tt=j/100;if(tt>activeX)break;ctx.lineTo(X(tt),Y(surv(tt)));}
+    ctx.lineTo(X(Math.min(activeX,1)),h-pb);ctx.lineTo(X(0),h-pb);ctx.closePath();
+    ctx.globalAlpha=.12;ctx.fillStyle=css('--'+activeC);ctx.fill();ctx.restore();
+    var mv=surv(activeX);
+    ctx.strokeStyle=css('--line');ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(X(activeX),Y(mv));ctx.lineTo(X(activeX),h-pb);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=css('--'+activeC);ctx.beginPath();ctx.arc(X(activeX),Y(mv),7,0,7);ctx.fill();
+    ctx.fillStyle=css('--paper');ctx.beginPath();ctx.arc(X(activeX),Y(mv),3,0,7);ctx.fill();
+    ctx.fillStyle=css('--ink-soft');ctx.font='11px ui-sans-serif,system-ui,sans-serif';
+    ctx.fillText('$2M',pl-6,h-pb+16);ctx.fillText('$4.5M',X((4.5-2)/9)-13,h-pb+16);ctx.fillText('$11M',w-pr-24,h-pb+16);
+    ctx.save();ctx.translate(12,(h)/2+30);ctx.rotate(-Math.PI/2);ctx.fillText('% survive',0,0);ctx.restore();
+  }
+  drawCurve();
+
+  var ro_n=document.getElementById('ro-n'), ro_l=document.getElementById('ro-l');
+  var steps=[].slice.call(document.querySelectorAll('.step'));
+  var sio=new IntersectionObserver(function(es){es.forEach(function(e){
+    if(e.isIntersecting && e.intersectionRatio>.5){
+      steps.forEach(function(s){s.classList.remove('on');}); e.target.classList.add('on');
+      activeX=parseFloat(e.target.dataset.x); activeC=e.target.dataset.c;
+      ro_n.textContent=e.target.dataset.n; ro_n.style.color=css('--'+activeC);
+      ro_l.textContent = activeC==='die'?'survive, at $2M':(activeC==='survive'?'survive · $4.5M+':'and climbing');
+      drawCurve();
+    }});},{threshold:[.5]});
+  steps.forEach(function(s){sio.observe(s);});
+
+  // REAL cliff surface: rows = up-front discount, cols = funding; value = % of 10 seeds surviving 20 years
+  var cliff=document.getElementById('cliff');
+  var funds=['$3M','$4M','$5M','$6M','$8M','$11M'], disc=['10%','20%','30%','40%','50%'];
+  var CLIFF=[
+    [50,100,100,100,100,100],
+    [20, 60,100,100,100,100],
+    [ 0, 30, 70,100,100,100],
+    [ 0,  0, 30, 60, 80,100],
+    [ 0,  0,  0,  0, 30, 60]
+  ];
+  function heat(v){
+    var die=[166,70,47], sur=[62,122,94];
+    var r=Math.round(die[0]+(sur[0]-die[0])*v),g=Math.round(die[1]+(sur[1]-die[1])*v),b=Math.round(die[2]+(sur[2]-die[2])*v);
+    return 'rgb('+r+','+g+','+b+')';
+  }
+  var html='<div class="collab"></div>';
+  funds.forEach(function(f){html+='<div class="collab">'+f+'</div>';});
+  disc.forEach(function(d,di){
+    html+='<div class="rowlab">'+d+'</div>';
+    funds.forEach(function(f,fi){var p=CLIFF[di][fi];html+='<div class="cell" style="background:'+heat(p/100)+'">'+p+'</div>';});
+  });
+  cliff.innerHTML=html;
+
+  // survival-by-horizon heatmap (funding x 5/10/15/20yr)
+  var hz=document.getElementById('horizon');
+  if(hz){
+    var hcols=['5 yr','10 yr','15 yr','20 yr'];
+    var HZ=[['$2M',[46,4,2,2]],['$2.5M',[84,44,18,14]],['$3M',[94,78,62,54]],['$3.5M',[100,92,86,80]],['$4M',[100,100,98,92]],['$4.5M',[100,100,100,100]]];
+    var hh='<div class="collab"></div>';
+    hcols.forEach(function(c){hh+='<div class="collab">'+c+'</div>';});
+    HZ.forEach(function(row){
+      hh+='<div class="rowlab">'+row[0]+'</div>';
+      row[1].forEach(function(p){hh+='<div class="cell" style="background:'+heat(p/100)+'">'+p+'</div>';});
+    });
+    hz.innerHTML=hh;
+  }
+
+  // savings-over-time curve (median cumulative saved per tenant, by years stayed)
+  var sc=document.getElementById('savecurve');
+  if(sc){
+    var sctx=sc.getContext('2d'), sdpr=Math.min(window.devicePixelRatio||1,2);
+    var SD=[[1,5651],[2,12628],[3,20882],[4,32665],[5,45950],[6,60491],[7,78328],[8,97666],[9,118039],[10,140342],[11,167800],[12,197237],[13,228515],[14,261589],[15,294452],[16,329156],[17,367890],[18,412514],[19,460345],[20,512516]];
+    var w=560,h=300,pl=52,pr=16,pt=16,pb=30,maxY=520000;
+    sc.width=w*sdpr;sc.height=h*sdpr;sc.style.height='auto';sctx.setTransform(sdpr,0,0,sdpr,0,0);sctx.clearRect(0,0,w,h);
+    var SX=function(t){return pl+(t-1)/19*(w-pl-pr);},SY=function(v){return (h-pb)-v/maxY*(h-pt-pb);};
+    sctx.fillStyle=css('--ink-soft');sctx.font='10px ui-sans-serif,system-ui,sans-serif';sctx.textAlign='right';
+    [0,100000,200000,300000,400000,500000].forEach(function(g){var y=SY(g);sctx.strokeStyle=css('--line');sctx.globalAlpha=.5;sctx.beginPath();sctx.moveTo(pl,y);sctx.lineTo(w-pr,y);sctx.stroke();sctx.globalAlpha=1;sctx.fillText('$'+(g/1000)+'k',pl-6,y+3);});
+    sctx.beginPath();sctx.moveTo(SX(1),SY(SD[0][1]));SD.forEach(function(p){sctx.lineTo(SX(p[0]),SY(p[1]));});
+    sctx.lineTo(SX(20),h-pb);sctx.lineTo(SX(1),h-pb);sctx.closePath();sctx.globalAlpha=.13;sctx.fillStyle=css('--survive');sctx.fill();sctx.globalAlpha=1;
+    sctx.strokeStyle=css('--survive');sctx.lineWidth=3;sctx.beginPath();SD.forEach(function(p,i){(i?sctx.lineTo:sctx.moveTo).call(sctx,SX(p[0]),SY(p[1]));});sctx.stroke();
+    sctx.textAlign='center';
+    [[5,45950],[10,140342],[20,512516]].forEach(function(p){var x=SX(p[0]),y=SY(p[1]);sctx.fillStyle=css('--survive');sctx.beginPath();sctx.arc(x,y,4,0,7);sctx.fill();sctx.fillStyle=css('--ink');sctx.font='700 11px ui-sans-serif,system-ui,sans-serif';sctx.fillText('$'+Math.round(p[1]/1000)+'k',x,y-9);});
+    sctx.fillStyle=css('--ink-soft');sctx.font='10px ui-sans-serif,system-ui,sans-serif';[1,5,10,15,20].forEach(function(yr){sctx.fillText('yr '+yr,SX(yr),h-pb+15);});
+  }
+
+  // reach bars (households by starting capital)
+  var rb=document.getElementById('reachbars');
+  if(rb){
+    var RD=[[2,13],[2.5,26],[3,30],[3.5,36],[4,45],[4.5,55],[5,68],[5.5,78],[6,89],[6.5,99],[7,109],[7.5,118],[8,127],[9,140],[10,156],[11,172]];
+    var rmax=172,rh='';
+    RD.forEach(function(p){var knee=Math.abs(p[0]-4.5)<0.01;rh+='<div class="barrow'+(knee?' knee':'')+'"><span class="bl">$'+p[0]+'M</span><span class="bar" style="width:'+(p[1]/rmax*100)+'%"></span><span class="bv">'+p[1]+'</span></div>';});
+    rb.innerHTML=rh;
+  }
+
+  // community-value curves (cumulative rent savings + TCS redeemed, by funding, over time)
+  var cc=document.getElementById('commcurve');
+  if(cc){
+    var cctx=cc.getContext('2d'), cdpr=Math.min(window.devicePixelRatio||1,2);
+    var CC=[
+      {lab:'$4.5M',op:0.42,d:[0,0.03,0.12,0.22,0.35,0.50,0.65,0.83,1.03,1.25,1.48,1.74,2.02,2.31,2.62,2.94,3.30,3.68,4.08,4.51,4.97]},
+      {lab:'$6M',op:0.62,d:[0,0.04,0.16,0.29,0.46,0.66,0.88,1.13,1.42,1.72,2.06,2.43,2.84,3.27,3.73,4.25,4.81,5.42,6.06,6.76,7.52]},
+      {lab:'$8M',op:0.82,d:[0,0.05,0.19,0.36,0.58,0.84,1.12,1.45,1.82,2.23,2.68,3.19,3.74,4.33,4.96,5.66,6.43,7.26,8.16,9.12,10.15]},
+      {lab:'$11M',op:1,d:[0,0.06,0.23,0.46,0.75,1.09,1.48,1.91,2.41,2.95,3.55,4.23,4.96,5.75,6.60,7.53,8.56,9.67,10.87,12.15,13.54]}
+    ];
+    var w=560,h=320,pl=44,pr=56,pt=16,pb=30,maxY=14;
+    cc.width=w*cdpr;cc.height=h*cdpr;cc.style.height='auto';cctx.setTransform(cdpr,0,0,cdpr,0,0);cctx.clearRect(0,0,w,h);
+    var CX=function(t){return pl+t/20*(w-pl-pr);},CY=function(v){return (h-pb)-v/maxY*(h-pt-pb);};
+    cctx.fillStyle=css('--ink-soft');cctx.font='10px ui-sans-serif,system-ui,sans-serif';cctx.textAlign='right';
+    [0,2,4,6,8,10,12,14].forEach(function(g){var y=CY(g);cctx.strokeStyle=css('--line');cctx.globalAlpha=.5;cctx.beginPath();cctx.moveTo(pl,y);cctx.lineTo(w-pr,y);cctx.stroke();cctx.globalAlpha=1;cctx.fillText('$'+g+'M',pl-6,y+3);});
+    CC.forEach(function(s){
+      cctx.strokeStyle=css('--amber');cctx.globalAlpha=s.op;cctx.lineWidth=2.5;cctx.beginPath();
+      s.d.forEach(function(v,i){(i?cctx.lineTo:cctx.moveTo).call(cctx,CX(i),CY(v));});cctx.stroke();
+      cctx.globalAlpha=1;cctx.fillStyle=css('--amber');cctx.textAlign='left';cctx.font='700 11px ui-sans-serif,system-ui,sans-serif';
+      cctx.fillText(s.lab,CX(20)+5,CY(s.d[20])+3);
+    });
+    cctx.fillStyle=css('--ink-soft');cctx.font='10px ui-sans-serif,system-ui,sans-serif';cctx.textAlign='center';
+    [0,5,10,15,20].forEach(function(yr){cctx.fillText('yr '+yr,CX(yr),h-pb+15);});
+  }
+})();
+</script>

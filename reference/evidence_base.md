@@ -1,0 +1,288 @@
+# Liberty Bee — Evidence Base (external sources behind modeling decisions)
+
+**Status:** Canon — created 2026-06-25. Living document; grows as we research new modeling areas.
+**Scope:** The **real-world evidence** behind Liberty Bee's parameters and design decisions — with citations, so anyone can review *where our numbers come from*. Liberty Bee is a public, data-backed model; this is the provenance ledger for the empirical claims that ground it. The *rules* live in the business-rules reference; the *why* in the concept-and-philosophy reference; the numbers themselves in the parameter registry. **This doc answers "says who?"**
+
+---
+
+## How to use this doc
+
+Each section is a **modeling topic**:
+- **The real-world finding** — what the evidence says, with figures.
+- **Sources** — cited, linked.
+- **What it informs in LB** — the parameter / decision.
+- **Confidence & caveats** — where sources disagree, where data is thin, where a domain expert should verify.
+
+**This doc is the durable, reviewable record** and is self-contained (the sources are here). When a decision cites a number, it should be traceable to a row here.
+
+For **flaky / paywalled / official sources** that may disappear, the load-bearing figures are quoted **verbatim** here so the data survives link-rot — archival is part of the job; a public, data-backed model can't rest on dead links.
+
+> **Methodology note.** Sources are weighted: institutional surveys (NAA/IREM, HUD, Fannie/Freddie) and statute/case law over practitioner blogs; practitioner consensus is used where institutional data doesn't reach small-scale operators (a recurring gap — see §1). Legal characterizations here are research summaries, **not legal advice** — anything LB publishes as a fair-housing/compliance claim should be verified by a licensed attorney.
+
+---
+
+## 1. Operating expenses & the operating-expense ratio (OER)
+
+**Finding.** Well-run market-rate multifamily runs an **operating-expense ratio of ~35–50% of effective gross income (EGI)**, centered ~41%. NAA/IREM 2023 ≈ 41% ($8,420 OpEx / $20,421 rent per unit); 2024 ≈ same ($8,657 / $21,017). Small (2–8 unit) buildings have no institutional survey; practitioner consensus is **40–50% with professional management, 35–45% self-managed**. The common "60–80%" figure conflates OER with the **break-even ratio** (which includes debt service) — LB is unleveraged, so OER is the correct comparator.
+
+**Standard line-items** ($/unit/yr, NAA/IREM 2024 market-rate stabilized): property taxes ~$2,220 (~26%, the largest), utilities (owner-paid) ~$1,304 (~15%), R&M ~$1,098 (~13%), insurance ~$777 (~9%), admin+payroll ~$2,323 (~27%), turnover ~$292. Replacement reserves are **separate** from OER (~$250–500/unit/yr; Fannie SBL $200–500). Taxes + insurance + payroll ≈ 60–65% of all OpEx dollars.
+
+**What it informs in LB.** The OpEx redesign target: a credible **~45–48% OER** built from **itemized** lines (vs the current aggregate $95k static + $12k/unit). LB currently runs **~74–99% OpEx-to-rent** — roughly 2× realistic — because of a fixed-staffing artifact (see §2).
+
+**Confidence:** Solid on the 35–50% band and the 2024 line-items (multiple institutional sources). Thin on sub-10-unit specifics (absent from surveys). MA taxes/insurance run above the national averages (which are Sunbelt-weighted) — verify locally before publishing MA-specific figures.
+
+**Sources:**
+- [IREM Income/Expense IQ 2024 National Summary](https://blog.irem.org/learning/publications-news/blog/irem-blogs/2024/10/insights-from-irem-income-expense-iq-national-summary) — OER 41%, $8,420/unit
+- [NAA 2024 Income/Expense IQ](https://naahq.org/news/momentum-management-navigating-elevated-costs-constrained-operating-environment) — line-item table, $8,657/unit
+- [PropRise Multifamily Underwriting Guide](https://www.proprise.ai/primer/guides/multifamily-underwriting) — OER 35–50%, red-flag < 35%
+- [HelloData — good OER guide](https://www.hellodata.ai/help-articles/good-operating-expense-ratio-multifamily); [Adventures in CRE — OER glossary](https://www.adventuresincre.com/glossary/operating-expense-ratio/) (OER excludes debt service)
+- [Multifamily.loans — replacement reserves](https://www.multifamily.loans/apartment-finance-blog/replacement-reserves-in-multifamily-real-estate/); [Multifamily Dive — turnover ~$4,000](https://www.multifamilydive.com/news/turnover-costs-4000-apartment-multifamily/696298/)
+
+---
+
+## 2. Property management & maintenance staffing
+
+**Finding.** Small operators **don't carry fixed in-house staff**. Third-party PM fees by portfolio size: 1–20 units ~10%, **20–50 units 8–10%**, 50–100 units 5–7%, 100+ 3–5% of collected rent (+ a leasing fee of 50–100% of first month's rent per placement). ~45% of 5–49-unit stock is owner-self-managed (Terner Center 2024). Maintenance is **contracted** below ~50 units; the first in-house technician appears ~**75–100 units** (modal 1:100); contracted R&M runs ~$900–2,200/unit/yr (~$1,100 newer stock); a tech salary is ~$52–63k.
+
+**What it informs in LB.** The root cause of LB's 2× OpEx: a **2-FTE admin floor** (`STAFF.BaseAdminCount=2`) that governs at ~22 units → ~$18,750/unit/yr payroll. The redesign replaces it with a **PM-fee model** (default ~9% of collected rent) below an in-house crossover (~50–75 units), and **contracted maintenance** (no FTE under ~75 units). The current `STAFF.UnitsPerMaintenance=75` first-tech threshold is itself defensible against this evidence (industry 1:75–100).
+
+**Confidence:** PM-fee bands and the ~75–100-unit first-tech threshold are well-corroborated; the 50–60-unit first-on-site-staff figure is practitioner consensus, not a rigorous survey.
+
+**Sources:**
+- [Jake & Gino — management-fee rules of thumb](https://jakeandgino.com/real-estate-management-fees-rules-of-thumb/); [Harborside Partners — PM fees](https://harborsidepartners.com/blog/ss43-what-do-multifamily-property-managers-charge/)
+- [Terner Center (UC Berkeley) — small-multifamily ownership & management, Jan 2024](https://ternercenter.berkeley.edu/blog/small-multifamily-rental-market/)
+- [NAA — when to add staff vs outsource](https://naahq.org/news/when-add-staff-and-when-outsource); [Multifamily Insiders — units-per-tech poll](https://www.multifamilyinsiders.com/apartment-ideas/apartment-maintenance/969-average-of-units-per-maintenance-technician)
+- [Salary.com — apartment maintenance technician salary](https://www.salary.com/research/salary/listing/apartment-maintenance-technician-salary)
+
+---
+
+## 3. Occupancy standards & fair housing (bedroom-fit)
+
+**Finding.** The "**two persons per bedroom**" benchmark comes from HUD's 1991 **Keating Memo** (policy since 1998) and is an explicitly **rebuttable presumption, not a hard cap** — HUD will not find Fair Housing Act compliance "based solely on the number of people permitted in each bedroom." Six factors also weigh in: bedroom/unit **size (sq ft)**, **age of children** (infants often uncounted), unit **configuration**, building **systems**, **state/local** code, and landlord **conduct**. The de-facto industry standard (California statute-backed, Gov. Code §12955) is **"2 per bedroom + 1"** → studio 2, 1BR 3, 2BR 5, 3BR 7, 4BR 9. Square-footage codes (IPMC §404) set 70 sq ft for the first occupant + 50 per additional. Under the **Fair Housing Act** (familial status, protected since 1988), a cap **more restrictive than local norms** can constitute discrimination (e.g. a 2012 CT settlement, $40k).
+
+**What it informs in LB.** The bedroom-fit rule replaces the hardcoded `bedrooms × 2` cap with a parameterized **2+1** rule (the cheapest defensible improvement on data we currently model). A deeper future extension records: when tenant generation is rebuilt, model occupancy on the **full standard** (needs child ages + unit square footage, which the model doesn't yet track).
+
+**Confidence:** The Keating Memo's substance, the FHA familial-status protection, and the 2+1 standard are well-corroborated. The Keating Memo primary PDF was not machine-readable; its content here is from consistent secondary sources (fair-housing orgs, legal practitioners). LB models a Salem, MA-area scenario; MA Ch. 151B mirrors FHA familial-status protections (no stricter MA occupancy statute found). **Verify with a fair-housing attorney before any public compliance claim.**
+
+**Sources:**
+- [Fair Housing Forum — Keating Memo](https://fairhousingforum.org/uncategorized/keating-memo/); [Pettit Law Group — "not as simple as 2 per bedroom"](https://pettit-law.com/blog/landlord-tenant/occupancy-standards-not-as-simple-as-2-persons-per-bedroom)
+- [AJ Johnson Consulting — occupancy standards & fair housing (2018)](https://www.ajjcs.net/paper/main/2018/12/02/occupancy-standards-and-fair-housing/); [Best practices (2016)](https://www.ajjcs.net/paper/main/2016/11/25/occupancy-standards-recommendations-and-best-practices/)
+- [Equal Rights Center — arbitrary limits & familial status](https://equalrightscenter.org/occupancy-familial-status-discrimination/); [Fair Housing Council of Oregon — familial status](https://fhco.org/learn-about-fair-housing-and-familial-status/)
+- [California Gov. Code §12955 (FindLaw)](https://codes.findlaw.com/ca/government-code/gov-sect-12955/); [IPMC 2021 §404 (UpCodes)](https://up.codes/viewer/virginia/ipmc-2021/chapter/4/light-ventilation-and-occupancy-limitations)
+- [HUD Keating Memo (primary PDF — not machine-verified)](https://www.hud.gov/sites/documents/doc_35681.pdf)
+
+---
+
+## 4. Local market context — Salem, MA (vacancy · rent · households)
+
+LB models a **Salem, MA**-area scenario, so local figures anchor the realism work. Several Salem-data pages are flaky (point2homes 403; housing.ma TLS error; Census QuickFacts 403), so the load-bearing numbers are quoted **verbatim** here to survive link-rot. ⚠️ **Data-pollution warning:** discard any "Salem" figure that turns out to be Salem, **Oregon** (a real search hazard).
+
+### 4a. Vacancy (vacancy base + fluctuation)
+- Salem rental vacancy **1.9%**, owned **0.3%** (City of Salem Housing Roadmap Report Card, **Oct 22 2025**; ACS methodology).
+- **Healthy/natural** rate **~6% rental / ~2% owned** (same source); national healthy ~**7–8%** (LocalHousingSolutions, May 2024).
+- MA statewide rental vacancy **3.4%** (Census HVS, Jan 2025; record low 2.5% Jan 2023). Salem was **7%** in 2016 (ACS) — a steep decade tightening.
+- **North Shore / Essex County regional rental vacancy (a Salem *mover's* search area) ≈ 2.6–3%** — tighter than statewide, looser than Salem-city alone: Essex County **~3%**; towns Salem/Beverly **2%**, Peabody/Danvers/Lynn **3%**, Marblehead 5% (Gloucester's "0%" = ACS small-town artifact, discarded); pop-weighted **~2.6%** (AffordableHousingOnline.com town/county pages, presumed ACS 5-yr — **vintage unstated; secondary-source, pending Census DP04/B25004 verification**). → Informs retention `external_scarcity` availability (`RET.MoverRegionalVacancyPct`, §10c): a leaver isn't confined to Salem's 1.9%. **Unretrieved authoritative source (follow-up):** HUD Boston CHMA "North Shore" submarket (huduser.gov PDFs would not fetch).
+> Verbatim (salem.gov, Oct 22 2025): *"A healthy housing market has a natural vacancy rate of about 2% for owned properties and about 6% for rental units."* · *"a vacancy rate of 0.3% of owned properties and 1.9% of rental units vacant."* · *"When vacancy rates are low, it indicates there is not enough supply, which then drives up housing costs."*
+
+**LB decision (2026-06-25):** model vacancy as **two params** — a **base rate** + a **fluctuation band** (e.g. ±0.5%) — not a flat value. **Shipped: `PROP.VacancyRateBase = 1.9%` + `PROP.VacancyFluctuationBand = ±0.5%`** (the earlier `VacancyRateBaseline = 1%` was optimistic and is retired). Base candidates considered: ~**1.9–2%** (Salem-tight, ACS) up to ~**6%** (healthy rental). **Caveat:** ACS counts ALL rental units; a *market-survey* vacancy (managed 5+ unit stock — closer to LB's operator model) would differ and wasn't retrievable for Salem.
+
+### 4b. Rent levels + inflation (rent-inflation knob)
+- Current avg rent **~$2,740** (RentCafe, Jun 2 2026); by bed **$2,200 1BR / $2,800 2BR** (Zumper, Jun 25 2026; studio $1,650, 3BR $2,800, 4BR $3,900). ACS 2019–23 median gross rent **$1,836** (trailing).
+- **Y-o-Y rent change has decelerated to ~1%:** +0.87% (RentCafe Jun 2026) / +1% (Zumper) / ~+1.4–1.5% (point2homes, late 2025).
+- **But 2020–2025 surged +34.8%** (~6.2% CAGR); pre-2020 was ~1–2.7%/yr.
+
+**LB note:** rent inflation applies **only at turnover** (a core invariant — never to a sitting tenant). The current knob **`INF.RentInflationRate = 3%/yr`** (flat, DB-confirmed) sits **above** the *current* ~1% Salem trajectory and **below** the 2020–25 surge (~6.2% CAGR) — exactly the case for a **time-phased** model (surge + normalization) over one flat rate. Lead public framing with the honest cyclicality.
+
+### 4c. Households + cost burden (tenant generation)
+- **20,267 occupied households** / 21,492 housing units → **~5.7% all-tenure vacancy** (distinct from the 1.9% *rental*-only in §4a). **49.7% owner / 50.3% renter**; avg household size **2.1**. Median household income **$85,153** (ACS 2019–23 5-yr — DataUSA's "2024" label is likely publication-year, not vintage; verify on data.census.gov if precision matters). Median gross rent **$1,836**; median home value **$542,800**.
+- **Cost burden (MAPC/CHAS via housing.ma):** **46%** of Salem households cost-burdened (30%+), **20%** severely (50%+); by tenure **52% of renters vs 39% of owners** (statewide 47%/31%). Corroborates the 2016-ACS "~50.4% of renters" figure from a newer, differently-sourced dataset — both land near 50%+.
+- **Household composition (housing.ma / point2homes cache):** **51.6% family / 48.4% non-family**; **23%** families-with-children; **35%** single-person; **46%** of households income-qualify for affordable programs.
+
+**LB note:** corroborates the demand-pool size (renters ≈ half the city), the real-world salience of the 30% gate, and — for tenant generation — household-composition weights (families ≈ half; ~23% with kids; ~35% singles).
+
+### 4d. OpEx per-unit — Salem/MA localized (the OpEx bucket defaults)
+For a Salem 2–8 unit building (~6-unit modal), `$/unit/yr` registry defaults (inflated by `INF.OpExInflationRate`):
+- **Property tax ≈ $2,200–2,300/unit** — Salem **FY2026 residential rate $10.78/$1,000** (2–8 unit rentals are MA **Class-1 residential**, parcel-verified — *not* commercial) × per-unit assessed value (2-family ~$339k/unit → 4–8 unit ~$180–235k/unit; per-unit AV **falls** as building size grows). *(Salem Assessor FY2026; Patriot Properties parcels.)*
+- **Insurance ≈ $1,300–1,500/unit** (range $700–1,900) — **MA-proxy, not Salem/unit-segmented**; small-building BOP $4,200–11,400/bldg ÷ units; MA premiums +15–30%/yr since 2022; Essex ~94% voluntary market. *(Wexford; Stanton; Fed Notes Sep 2025.)*
+- **Owner-paid utilities ≈ $1,150–1,300/unit** — Salem **trash $309/unit/yr** (FY26, bldg-capped) + water/sewer ~$830/unit/yr (Salem $13.10/CCF × MA 65 gal/cap/day) + common electric ~$75–100/unit (bottom-up est). **⚠️ Excludes shared heat** — MA default assigns utilities to the landlord absent separate metering; Salem's ~99.6% pre-1978 stock may retain master-metered boilers → owner utilities materially higher if un-retrofitted. **Resolve the heat-metering assumption before finalizing** (biggest utilities risk). *(Salem trash/water; MassLandlords.)*
+- **Confidence:** tax high (rate+class parcel-verified); insurance low–medium (MA proxy, no unit-count segmentation, no pre-1978 loading found); utilities medium (trash/water solid, common-electric a guess, shared-heat unquantified). All are *effective-dated* (Salem rates change annually) — note the vintage in the registry.
+
+### Sources (§4)
+- [City of Salem Housing Roadmap Report Card (Oct 22 2025)](https://www.salemma.gov/m/newsflash/Home/Detail/190) · [RentCafe Salem (Jun 2 2026)](https://www.rentcafe.com/average-rent-market-trends/us/ma/salem/) · [Zumper Salem (Jun 25 2026)](https://www.zumper.com/rent-research/salem-ma)
+- [MA rental vacancy 3.4%, Census HVS (Jan 2025)](https://tradingeconomics.com/united-states/rental-vacancy-rate-for-massachusetts-percent-a-na-fed-data.html) · [LocalHousingSolutions — healthy 7–8% (May 2024)](https://www.localhousingsolutions.org/analyze/interpreting-rental-vacancy-rates-for-small-and-midsize-cities/)
+- [Patch — Salem cost burden, 2016 ACS (Dec 2017)](https://patch.com/massachusetts/salem/one-two-salem-renters-rent-burdened-census) · [DataUSA — Salem](https://datausa.io/profile/geo/salem-ma/) · [ImagineSalem (2017)](https://imaginesalem.org/faqs-and-common-concerns)
+- **Archival status (2026-06-25):** the 3 flaky originals stay **blocked/dead** — [point2homes](https://www.point2homes.com/US/Average-Rent/MA/Salem.html) (403), [Census QuickFacts](https://www.census.gov/quickfacts/fact/table/salemcitymassachusetts/) (403), and **`housing.ma/salem/report` is likely permanently gone** (TLS/DNS misconfigured → unrelated Heroku apps; it's a [MAPC](https://github.com/MAPC/housingma) CHAS project). Their **data is recovered + archived above** from durable alternatives: [Census Reporter (Salem, GEOID 16000US2559105)](https://censusreporter.org/profiles/16000US2559105-salem-ma/), [DataUSA](https://datausa.io/profile/geo/salem-ma/), MAPC/CHAS (via cache). *(Wayback unreachable in this pass; the originals could be snapshotted if true verbatim copies are wanted.)*
+
+---
+
+## 5. Maintenance — demand, cost & the event-driven model
+
+**Finding.** Maintenance is **event-driven and heavily skewed**, not a smooth per-unit drain — so LB models it as four discrete streams rather than a flat `$/unit`. A managed unit generates **~4–6 routine work-orders/year** (~0.4–0.5/month), of which **~6.67% are emergencies** (NAA/AppWork 2024); the rest routine. The distribution is **overdispersed** (most units quiet, a minority of "problem units" drive the load) — the appropriate statistical form is a **negative binomial** for counts + **lognormal** severity per event (right-skewed, fat tail). *(A stateful "problematic units" model — remembering which units/tenants are costly — is a stretch goal.)*
+
+**The four streams (LB model):**
+- **5a. Turnover make-ready** — per *actual* turn. Hard costs (clean/paint/repairs) ~$900–2,100 mid-market; **~$1,500–3,000 for older MA stock** (Salem ~99.6% pre-1978, lead-paint protocols). *(All-in incl. lost rent ~$3,872 median — but LB models lost rent separately via vacancy; use the **hard-cost** figure here.)*
+- **5b. Exterior / grounds** — **per *property*/yr** (fixed regardless of unit count): landscaping ~$1,200–3,000 + snow ~$900–1,500 + gutters/exterior ~$500–1,200 → **~$2,500–4,500/property/yr** for a Salem 2–8 unit building. **Snow is a fat tail** — a record MA winter runs 2–3× a mild one (Salem ~32–46 in/yr, ~15–25 plowable events).
+- **5c. Routine repairs** — **negative-binomial** count (λ ≈ **4–6/unit/yr**, overdispersed), **lognormal** severity (mean ~**$200**, routine plumbing/appliance/HVAC-service).
+- **5d. Major/random events + reserves** — a **low-rate** stream (λ ≈ **0.3–0.5/unit/yr**), lognormal severity **~$1,500–3,000, fat tail** (HVAC $5–12.5k / 15–20 yr; water heater $1–3.5k / 10–12 yr; roof $5.8–25k / 20–25 yr; plumbing emergency). **Replacement reserves (CapEx, separate from OpEx R&M): ~$250–600/unit/yr** (Fannie SBL $200–300 min; older MA stock $400–600).
+- **Total R&M** implied ~**$1,200–1,900/unit/yr** for Salem older stock — above the **$1,098** national (NAA/IREM 2024) by design (MA labor + pre-1978 + snow belt). Coefficient of variation ~0.5–0.8 — very high; the mean is a poor single-year/single-building predictor (a quiet year ~$300/unit; a boiler+roof year ~$3,000/unit).
+
+**Staffing thresholds — by PROPERTY/building count (multifamily):**
+- **First in-house maintenance tech: ~75–100 units ≈ ~12–17 buildings** (at ~6 units/bldg; modal industry ratio 1:100). Below that, **contract everything** — supports LB's "0 maintenance FTE at ~22 units." Consistent with the retired `STAFF.UnitsPerMaintenance=75`, but LB scales on **properties** (management/coordination tracks buildings, not doors).
+- **First full-time in-house admin/coordinator: ~20–30 units ≈ ~3–5 buildings** (part-time 10–20 units). LB's `BaseAdminCount=2` (tenant-ops + business-side) is defensible at this scale for a *mission* operator that self-manages (can't outsource below-market rent / reductions / TCS / relief to a profit PM).
+
+**What it informs in LB.** The maintenance decomposition (`MAINT.TurnoverCostBase` per turn; `MAINT.ExteriorPerProperty`; the negative-binomial routine + low-rate major streams — the major stream carries capital replacement directly per the "lumpy events" resolution; **no separate `OPEX.ReservesPerUnit` was seeded**) and the property-based maintenance staffing threshold (`STAFF.MaintCrossoverProperties`).
+
+**Confidence.** Solid: emergency share (6.67%), saturation (5.98%), $1,098 R&M, replacement-reserve ranges, snow climatology, the 1:100 tech ratio (all institutional/large-sample). Thinner (practitioner consensus, no sub-10-unit survey): the 4–6 work-orders/unit/yr, the make-ready-vs-tenancy-length multiplier, the distribution skew for small multifamily (negative-binomial is theoretically sound but not unit-level-surveyed for this cohort), the exterior/grounds totals (assembled from quotes). The IREM/NAA line-item detail is paywalled + the platform shut down Dec 2025 (aggregate $1,098 is the public figure).
+
+**Sources.**
+- [NAA/AppWork — common maintenance work orders (2024)](https://naahq.org/news/10-things-about-common-maintenance-work-orders) (frequency, emergency %, saturation, tech throughput); [NAA Income/Expense IQ 2024](https://naahq.org/news/momentum-management-navigating-elevated-costs-constrained-operating-environment) ($1,098/unit R&M, $292/unit turnover)
+- [Terner Center — small multifamily (Jan 2024)](https://ternercenter.berkeley.edu/blog/small-multifamily-rental-market/) (45% self-managed; 25% defer maintenance); [Multifamily Dive — turnover ~$4,000 (2023)](https://www.multifamilydive.com/news/turnover-costs-4000-apartment-multifamily/696298/)
+- [Multifamily Insiders — units/tech poll](https://www.multifamilyinsiders.com/apartment-ideas/apartment-maintenance/969-average-of-units-per-maintenance-technician) (1:100); [Fannie Mae SBL reserves $200–300/unit](https://www.multifamily.loans/apartment-finance-blog/replacement-reserves-in-multifamily-real-estate/)
+- [lula.life — maintenance costs 2026](https://lula.life/articles/rental-property-maintenance-costs-guide) (system replacement cadences/costs); [genuinemanaged — $900–2,200/unit/yr](https://genuinemanaged.com/library/what-is-the-average-maintenance-cost-for-an-apartment-complex/)
+- Snow/grounds (MA): [Boston Landscape Co. — snow removal 2025](https://bostonlandscapeco.com/cost-of-snow-removal/); [WeatherSpark — Salem climate](https://weatherspark.com/y/26887/Average-Weather-in-Salem-Massachusetts-United-States-Year-Round)
+
+---
+
+## 6. Operating-reserve sizing — the CSF curve
+
+**Finding.** No published formula ties a nonprofit-housing reserve to *portfolio size*, but three literatures converge on a **tapering curve with a floor**:
+- **Nonprofit norm (NORI, 2010):** minimum **3 months (25%)** of OpEx; **6 months** the common "strong" target; **>12 mo** needs justification, **>24 mo** reads as hoarding (anti-mission for LB). *(NFF 2025: 52% of nonprofits actually hold ≤3 mo — most are below the minimum.)*
+- **Target should be volatility-derived, not flat** (Irvin & Furneaux 2022, NVSQ) — right months-of-reserve tracks revenue volatility (<3 to ~12 mo by subsector).
+- **Size → lower relative reserve** — corporate cash-holding theory (NBER) + the actuarial **1/√N risk-pooling law**: a larger, diversified portfolio has lower *relative* cash-flow volatility, so a smaller months-of-reserve is justified at scale.
+
+**Design basis:** `reserve_months(N) = floor + (peak − floor) × f(N)`, **peak ≈ 12 mo** at small scale (one vacancy/nonpayment is a big share of a tiny portfolio; a bad winter hits all units at once) tapering toward a **floor ≈ 3–4 mo** (NORI min 3 / LIHTC operating-reserve min 4) via `f(N) = √(N0/N)`. **Never below the floor** — shocks (regional recession, MA policy, a hard winter) are *correlated* across LB's units, so √N independence breaks at the tail.
+
+**LB fit.** LB's **Cash floor is already `3 × monthly_opex`** (= NORI min); the **CSF** protected reserve is the flat 12-mo target this replaces — let 12 mo be the *small-portfolio* value of the curve. **Do NOT** borrow a debt-driven scaling rule (Fannie SBL reserves rise 2→6% with property count = leverage-concentration risk; **LB is all-cash, CSF never levered** — the business rules). Excess reserves = hoarding = anti-mission.
+
+**Confidence.** NORI 3–6 mo + the 1/√N law: solid. The √N-with-floor *shape* is a **synthesis across 3 literatures, not a single housing-specific citation** — a design starting point, not a "fact." Irvin & Furneaux full text 403'd (reconstructed from abstracts).
+
+**Sources.** [NORI Toolkit (2010)](https://weingartfnd.org/wp-content/uploads/2021/01/Operating_Reserves_Policy_Toolkit_1st_Ed_2010-09-16.pdf) · [NFF 2025 Survey](https://nff.org/state-of-the-nonprofit-sector-survey/2025-state-of-the-survey-nonprofit-sector-survey/) · Irvin & Furneaux 2022 NVSQ 51(5) · [NBER w12534](https://www.nber.org/system/files/working_papers/w12534/w12534.pdf) · [IRMI — law of large numbers](https://www.irmi.com/articles/expert-commentary/the-law-of-large-numbers) · [Ohio LIHTC (4-mo op reserve)](https://ohiohome.org/ppd/documents/LIHTC-RentalUnderwritingGuidelines.pdf) · [Fannie SBL B3-4.1-01](https://selling-guide.fanniemae.com/sel/b3-4.1-01/minimum-reserve-requirements)
+
+---
+
+## 7. Inflation & market cycles — time-phased model
+
+**Finding.** The flat 3%/yr multiplier structurally **can't produce a bad year** for LB — a positive constant compounds forever, and (code-confirmed) `inflation_engine._get_scenario_multiplier` applies **one scalar to rent/OpEx/property/general simultaneously**, so nothing decouples. The real "inflation hurts landlords" mechanism is **decoupling**, not magnitude:
+- **2008–2012 (financial):** home values **−27.4%** (Case-Shiller, ~5.5 yr) while rent stayed ~0–2% (sticky), taxes/insurance kept rising, rental vacancy peaked **~10.6%** (2009).
+- **2020–2023 (shock):** rents dipped ~1–2% then **surged +15–18%/yr**; property values **rose throughout**. Salem +34.8% 2020–25 (§4b).
+- **CPI-shelter lags market rent ~3–4 quarters** (~2-yr catch-up); LB's turnover-priced rent matches the *leading, more volatile market/new-lease* series — calibrate to that, not CPI-shelter.
+- US CPI 1990–2019: **mean ~2.45%, σ ~1.13pt**; 2022's 8.0% was ~4.9σ — **a pure Gaussian can't reach it**; needs a regime/jump mechanism.
+
+**Recommended structure (hybrid):** a **discrete-regime Markov** model with **per-category** effects (the key fix — rent/OpEx/property/vacancy each get their own mean+vol per regime, ending the lockstep multiplier) + light **AR(1)/OU noise within regime**. Regimes *calibrated* (not replayed) from history: `Normal` (~2.5%), `Surge` (rent 8–17%, OpEx lags 6–12mo), `Normalization` (2022→25 glide-down), `Downturn-Financial` (property −15 to −30% / 3–6 yr, rent flat, OpEx still up, vacancy +3–5pt), `Downturn-Shock` (rent dip 1–20% / 1–2 yr then overshoot, property untouched, vacancy spikes then reverts). The existing `simulation.InflationSchedule` already scaffolds this (`ScenarioType`/`ScenarioPhase`) — the fix is per-category, multi-month-persistent regimes. **Not** pure historical replay (n=2 crises in 40 yr → too thin to resample).
+
+**Confidence.** CPI table + Case-Shiller −27.4% + the CPI-shelter lag: solid (BLS/FRED/NBER/Fed). **Downturn frequency is n=2 (2008, COVID) in ~40 yr — transition probabilities are a stated modeling *decision*, not a fitted statistic** (like the vacancy call in §4a).
+
+**Sources.** [US CPI by year](https://www.usinflationcalculator.com/inflation/historical-inflation-rates/) · [FRED CPIAUCSL](https://fred.stlouisfed.org/series/CPIAUCSL) · [Case-Shiller CSUSHPINSA](https://fred.stlouisfed.org/series/CSUSHPINSA) · [NBER — CPI-shelter lag (Oct 2025)](https://www.nber.org/digest/202510/understanding-lag-between-cpi-shelter-inflation-and-market-rents) · [Boston Fed](https://www.bostonfed.org/publications/current-policy-perspectives/2024/a-faster-convergence-of-shelter-prices-and-market-rent-implications-for-inflation.aspx) · [Urban Institute — Great Recession rental](https://www.urban.org/sites/default/files/publication/27011/1001550-Rental-Market-Stresses-Impacts-of-the-Great-Recession-on-Affordability-and-Multifamily-Lending.PDF) · [FRED RRVRUSQ156N](https://fred.stlouisfed.org/series/RRVRUSQ156N)
+
+---
+
+## 8. Property market flow — seasonal & hold-period calibration
+
+**Finding.** Salem-area listing-volume, days-on-market, and price seasonality come from FRED's Massachusetts / Essex-County housing series (2020–2025 monthly averages): listing volume from **ACTLISCOUMA** (Active Listing Count, MA), days-on-market from **MEDDAYONMAR25009** (Median Days on Market, Essex County), listing price from **MEDLISPRI25009** (Median Listing Price, Essex County). Each monthly multiplier = that month's average ÷ the annual average (e.g. October listing volume 10,134 vs 7,727 annual average → 1.31×). The hold-period distribution (6% <2yr / 14% 2–5yr / 9% 5–10yr / 71% 10yr+, exponential long tail mean ~8 additional years past 10) comes from a **multi-family property-owner survey (40,000+ sample, accessed 2025-11-27)**. The sale-success rate (90% sold / 10% withdrawn) is NAR FSBO-statistics-derived.
+
+**What it informs in LB.** The `MARKET.*` registry category — zero-day state distribution, daily-listing probability, days-on-market mean/stddev + seasonal multipliers, price seasonal multipliers, hold-period cumulative thresholds. Originally captured with full per-row JSON source metadata in `reference.ProjectionConstants` (later retired, folded into the registry); this section is the durable citable record now that the DB-native provenance trail no longer exists live. Full original citations, incl. exact monthly sample values, are preserved in the repository's reference data-load migration for forensic reconstruction.
+
+**Confidence:** CITED (FRED / NAR / survey — same tier as this doc's other CITED entries). The owner-survey's sample-size/methodology detail was not independently re-verified in this pass; treat as CITED-adjacent until sourced directly.
+
+**Sources:**
+- FRED — Active Listing Count, Massachusetts (`ACTLISCOUMA`); Median Days on Market, Essex County (`MEDDAYONMAR25009`); Median Listing Price, Essex County (`MEDLISPRI25009`). https://fred.stlouisfed.org/
+- Multi-family property-owner survey (40,000+ sample) — hold-period distribution.
+- National Association of Realtors — FSBO statistics (sale-success rate).
+
+## 9. Applicant / household income — levels, structure & growth
+
+**Why this section exists.** A publish re-sweep exposed that applicant incomes were a **static, non-inflating** draw from `reference.IncomeBand` (LOW $30–45k / MED $45–75k / HIGH $75–120k / VERY_HIGH $120–200k) while rent compounds at turnover — so the honest 30%-screen rejected an ever-growing share (109/211 early → 3,437/3,500 late), starving occupancy into a structural deficit (the "never reaches 100%" S-curve tail). This section grounds the replacement: a **time-varying, correctly-leveled, household-composition-aware** income model.
+
+### 9a. Salem renter income — the re-level anchor
+- **Census B25118 (Tenure by Household Income), ACS 2024 5-yr — two independent pulls agree to the household** (a data.census.gov export plus a keyless Census Reporter mirror): **Salem renter households 10,194**, distribution — <$25k **26.7%** (cum), <$50k 44.6%, <$75k 60.6% (**median ≈ $58k**), <$100k 73.5%, <$150k 89.1%, **≥$150k 10.9%**. **Owners** by contrast are **40% ≥$150k** — the stark owner/renter split that mandates calibrating the applicant pool to *renters*.
+- Salem all-household median income **$85,153**, poverty **12.1%**, homeownership **49.7%** (DataUSA/ACS 2024) — the town isn't destitute; the story is the squeezed renter, not mass poverty.
+- **LB decision:** applicant pool levels to **renters (~$58k median), not all households ($85k)**. Current bands are mis-leveled both ways — the **$30k floor excludes ~27% of real renters** (sub-$25k), and the **$200k ceiling misses a real tail** (10.9% of renters ≥$150k; citywide 13% of *all* households ≥$200k, top-5% mean ~$396k — Neilsberg/ACS). Replace hard static bands with a **smooth distribution reweighted toward the target range**, widened at both ends.
+
+### 9b. Household income = a sum of earners (structure, not a single draw)
+- **2-earner family median ~$142.2k ≈ 2.0× the 1-earner median ~$71.7k** (Census FINC-01, 2024). Mean earners/household rises **0.40 (bottom quintile) → 2.0 (top)**; married-couple share **16.7% → 77.3%** (AEI/Census 2020). Married both-employed **~50%** (BLS 2024, current-employment) / **~68%** annual-earnings basis.
+- **Intra-household earnings correlation r ≈ 0.15–0.25** (dual-earner), lower population-wide; **flat since ~1990** (Schwartz 2010; Gonalons-Pons & Schwartz 2017) → model a **stable** correlation, not a rising one. ~34–40% of couples are effectively single-/primary-earner (Pew 2023; Dunatchik 2024).
+- **Career-stage tail:** BLS OEWS 2024 occupational medians — all-occupations **$49.5k (1×)** → management **~2×** → **Chief Executives (all firm sizes) $206,420 (~4×)**. ⚠️ **Cap the tail ~4×** — the EPI 281:1 CEO ratio / big-tech ladders describe mega-cap-public / big-tech populations that don't appear in a Salem below-market renter pool; use them only to confirm the tail is fat + log-right-skewed, not to set its width.
+- **LB decision:** household income = **sum of independently-drawn earners**, earner-count conditioned on the household type the engine already tracks (SINGLE=1; COUPLE Bernoulli P(2nd earner)≈0.68; ROOMMATES ≈ N independent single-adult draws; FAMILY per composition); correlate couple draws (r≈0.2–0.25, flat); per-earner career-stage right-tail capped ~4×.
+
+### 9c. Wage growth over time — couples to the §7 regime model
+- **EPI State of Working America (primary, bulk-CSV pulled), real hourly wage (2025$), US national:** median **$19.59 (1995) → $25.47 (2024) = +30.0% real** (0.91%/yr); **nominal median CAGR 3.20%/yr**. By decile 1995→2024 real: **P10 +49.9%, P90 +47.7%**; P90/P10 ratio ~4.4 **roughly stable over this window** (the explosive divergence was pre-1995 + the top-1%, not the P10–P90 span 1995–2024).
+- **Growth is EPISODIC / regime-dependent, not monotonic:** bottom-decile wages lag CPI in slack decades (2000s, early 2010s) but *outpace* the top in tight-labor windows (1995–2000, 2013–2019, 2019–2023). Four of six research clusters independently landed on "reuse the regime machinery."
+- **Housing-vs-wage gap (the honesty dial):** JCHS — renters 2001–22 real rent **+21%** vs real income **+2%** (rent ~**10×** renter income growth); sub-$30k renter income **−12%** real. Smoothed long-run real gap **≈ 0.3–0.5 pp/yr favoring rent (a FLOOR)**, **larger at turnover** (new-lease/ZORI ran 2–3× CPI-rent in the 2021–22 surge; §7). MassINC 2025: Salem-class Gateway City affordability gap widened $38k→$40k in one year.
+- **Salem-specific derived gap (site-facing, 2026-07-09):** the local echo of the national JCHS number, built from two ACS 5-yr vintages. Median gross rent **$1,106 (2016 ACS) → $1,836 (2024 ACS)** = **+66% nominal / +27% real**; median **household** income **$61,083 → $85,153** = **+39% nominal / +7% real** (Census tables **B25064** rent / **B19013** income; CPI-U 2016→24 +30.6%). **Rent outran pay ~4×** over this window — shorter than JCHS (8 yr) and mostly the 2020–23 surge (§4b), and **all-household** income, not renter (Salem renter-income time series unavailable pre-2024; 2024 renter median **$57,935**, B25119_003). Confidence: 2024 endpoints re-verified via Census Reporter API 2026-07-09 (Tier 1); 2016 endpoints official ACS via [Patch (Dec 2017)](https://patch.com/massachusetts/salem/one-two-salem-renters-rent-burdened-census) (already cited §4c) + Statistical Atlas cross-check within $10 (Tier 2). **Vintage-label note:** this confirms the $1,836 / $85,153 figures in §4c are the **2020–2024** vintage; §4c currently labels them "ACS 2019–23" — worth reconciling.
+- **LB decision:** extend the discrete-regime Markov (§7) to applicant income — band-specific mean+vol per regime; income **lags rent in Surge/Downturn, recovers or wins in Normal** (the 1990s + current-Boston pattern). Base nominal wage growth ~**3.2%/yr** (EPI median / SSA AWI). **Never** a flat rate, **never** a flat "low band always lags."
+
+### 9d. AMI methodology + the mission-scope ruling
+- **HUD AMI — Boston-Cambridge-Quincy HMFA (Salem's area):** FY2026 4-person Median Family Income **$164,600** (FY2025 $160,900); tiers ELI ≤30% / VLI ≤50% / LI ≤80% / moderate ~80–120%, household-size-adjusted; HUD flags this metro a **"high housing cost" exception area**. **Metro-aggregation caveat:** Salem's own median sits *below* the Boston-metro AMI (analogous to the documented Bronx-vs-NYC AMI gap) — anchor bands to Salem, cross-check against AMI, don't copy the metro figure.
+- **Rent cross-check (why ~$2,800 holds):** Salem 2BR **$2,774 (Zumper) / $3,021 (RentCafe)**, ~flat-to-down YoY (post-surge normalization — a *Normal* regime now, §4b); trailing ACS median gross rent **$1,836** (all stock, sitting leases). At 30%, a $2,800 *turnover* 2BR needs **~$112k** — far above the ~$58k renter median: the **stock-vs-flow** gap (sitting/subsidized/burdened renters ≠ new-lease applicants) and the fact that a 10%-below-market discount is nowhere near enough to make market-area units affordable at 30% to the low-income renter.
+- **★ MISSION-SCOPE RULING (2026-07-05): Liberty Bee bolsters the squeezed MIDDLE CLASS — it does not solve poverty.** The deeply low-income renter needs subsidy no below-market landlord can provide → out of scope, and claiming otherwise would be dishonest. Target = households not in poverty but squeezed, for whom market rent means "tighten the belt / live a smaller life." **Public-framing guardrail (binding): "more affordable than market so you don't have to shrink your life," NEVER "affordable housing / solves poverty"** — extends the existing never-"affordable-housing" rule (the business rules). Modeling consequence: the applicant pool centers on **moderate/middle-income renters (the flow), screened against LB's below-market rent**, not the whole low-income renter stock against full-market turnover rent.
+- **Band methodology — open question:** AMI-relative *structure* with a **model-internal median decoupled from (and slower than) rent** vs absolute+inflate; this is coupled with the vacancy-lag decision (AMI-relative doesn't auto-solve the lag because the median itself lags), so the time-dynamics parameter must independently encode the real gap regardless.
+
+**Confidence.** SOLID: Salem renter distribution (two independent pulls exact, official ACS 2024 5-yr); wage percentiles (EPI primary CSV); household structure (multi-source triangulated); HUD AMI dollars (municipal-PDF-sourced, cross-corroborated); rent cross-check (3 current sources). **DECISION not statistic** (pending ratification): the honesty-dial magnitude + per-regime income loadings, the couple-correlation value, the tail cap, and the applicant-pool truncation. **Genuine gaps (flag as assumptions, don't invent):** roommate inter-earner income correlation (no data → independent draws); renter-only percentile-by-year detail (Census binary XLS, not pulled).
+
+**Sources.** Load-bearing: [Census B25118 ACS 2024 5-yr](https://data.census.gov) (data.census.gov export + [Census Reporter mirror](https://censusreporter.org/profiles/16000US2559105-salem-ma/)); [EPI State of Working America Data Library](https://data.epi.org) (bulk CSV); FRED [CPIAUCSL](https://fred.stlouisfed.org/series/CPIAUCSL) / [CUUR0000SEHA](https://fred.stlouisfed.org/series/CUUR0000SEHA) / [MEHOINUSA672N](https://fred.stlouisfed.org/series/MEHOINUSA672N); [HUD Income Limits](https://www.huduser.gov/portal/datasets/il.html); [JCHS SOTN 2025](https://www.jchs.harvard.edu/state-nations-housing-2025); [Schwartz 2010](https://pmc.ncbi.nlm.nih.gov/articles/PMC2908420/) / [Gonalons-Pons & Schwartz 2017](https://pmc.ncbi.nlm.nih.gov/articles/PMC6048969/); [BLS OEWS](https://www.bls.gov/oes/); [Census FINC-01](https://www.census.gov/data/tables/time-series/demo/income-poverty/cps-finc/finc-01.html); [DataUSA Salem](https://datausa.io/profile/geo/salem-ma/); [Zumper](https://www.zumper.com/rent-research/salem-ma) / [RentCafe](https://www.rentcafe.com/average-rent-market-trends/us/ma/salem/).
+
+---
+
+## 10. Tenant retention & welfare
+
+**Why:** the 1.0 engine models voluntary renewal as a flat, circumstance-blind **80% coin-flip** (`lease_renewal_manager.py:253`) — no response to the below-market discount, tenure, or scarcity — erasing the mission's central feedback loop (treat people well → they stay). This section grounds a retention model + welfare metrics. **Standing rule:** every DECLARED value carries how/why + the reference that shaped it; a disclosed gap beats false precision.
+
+### 10a. Baseline renter tenure & turnover (anchor)
+- US annual renter mobility **28.9% (2012) → 20.8% (2022)** → ~**80% annual stay**; average renter tenure **~5.9yr (2019) → ~6.5yr (2024)** (Redfin/Census ACS 2022; NAR 2024). **CITED.**
+- Industry *conditional* lease-renewal rate ~**60–62%** (Yardi Matrix 2024 — secondhand, **verify before canon**). *Metric mismatch: LB's 80% is applied at a renewal event but sits at the ~80% **unconditional** stay level — resolve in the model.*
+- Subsidized benchmark: public-housing median tenancy **4.9yr vs 2.2yr** median renter (Lubell et al. 2003, via Collinson 2015). *LB's current ~4.5yr uncensored average is already near this — the flat model's error is the missing **mechanism** + the deep-discount **tail**, not the average.*
+
+### 10b. Below-market rent → retention (core relationship)
+- **Causal anchor:** SF rent-control expansion → covered tenants **~19% less likely to have moved** at 5–10yr; stronger for older/long-tenured/minority (Diamond-McQuade-Qian, NBER w24181 2018 / *AER* 2019). **CITED.** Binary (covered vs not), not dosage-scaled.
+- **Dosage gradient (correlational, UPPER-BOUND):** NYC avg tenure — market **3.85yr** → rent-stabilized (~51% below mkt) **9.49yr** → public housing **16.18yr** (Sieg & Yoon, *QE* 2020). Monotonic 2.5–4×. **Confounded** — partly waitlist/queue-avoidance (~4yr search), not pure price lock-in. US corroboration: <$1,000/mo renters stay 5+yr at **40.2%** vs $3,000+ at **15.6%** (Redfin/Census ACS 2024).
+- **Model implication (DECLARED form, CITED anchors):** renewal rises with discount depth + tenure; anchor magnitude to the 19% causal (near-market) and the 2.5–4× gradient (deep, upper-bound); **declare** the functional form (no household-utility model to derive it) + sweep.
+
+### 10c. Scarcity — the "difficulty of leaving" retention driver (REGIONAL; refined 2026-07-08)
+- **The force is regional, not LB-internal.** "Nowhere else affordable to go" is a condition of the *outside market*, not a scarcity of LB units. To actually leave, a tenant needs an alternative that is **both vacant AND affordable to them** → `external_scarcity = 1 − (availability × affordability)`:
+  - **availability** = regional rental vacancy. Healthy/balanced is **~6–8%** (salem.gov "≈6% for rentals," §4a; LocalHousingSolutions "healthy 7–8%," §4a sources). **Refinement (2026-07-08):** the first draft reused `PROP.VacancyRateBase` (1.9%, LB's own **Salem-local occupancy**) — but that conflates LB's own submarket with a *mover's* opportunity set; a leaving tenant searches the wider North Shore, not just Salem. **Shipped instead:** `RET.MoverRegionalVacancyPct` = **3.0%** (North Shore/Essex, §4a — secondary-sourced, pending Census verify, range 2.6–3.4%) + the regime `vacancy_delta` (§7, still shared — **no new stochastic process**), which rises in downturns (→ easier to leave). This moved the *measured* scarcity share of retention from a majority (**~54%**, Salem-anchored) to a minority (**~28%**, regional-anchored).
+  - **affordability** = can the household afford the market rent for the unit it would seek? Regional cost burden is severe — **52% of Salem renters cost-burdened (≥30%); 20% of Salem households severely burdened (≥50%)** (§4c; the renter-specific ≥50% rate isn't separately reported) — so leaving often means an unaffordable rent. Computed per-tenant from the income model (§9) vs market rent (§4b/§7) for the bedroom-fit unit (§3).
+- **Mechanism cited:** Sieg-Yoon's 2.5–4× lock-in gradient (§10b) is *partly* this scarcity — they attribute ~4yr of the effect to queue/search rather than pure price lock-in; that confound is exactly the regional-availability effect modeled here.
+- **LB inventory / the de-facto waitlist is NOT this term.** LB's tiny inventory (~16 properties / ~38 units per survived run vs ~23.5% of renters eligible, thousands) governs *intake* — who gets **in** — so it belongs to the **reach / who's-shut-out** story (business-rules reporting), not the sitting-tenant retention decision. *(An earlier framing that treated LB fullness as the retention driver is superseded.)*
+- **Honesty:** in LB's tight, expensive market `external_scarcity` runs high, so a **measured, published share** of retention is "nowhere else to go," not satisfaction — decompose and disclose it, don't fold it into "the mission works."
+
+### 10d. Non-extractive quality contrast (why LB ≠ rent control)
+- **Mechanism (CITED, primary):** a binding price ceiling makes quality substitute for price — an extractive owner lets a unit depreciate until market value falls to the ceiling, cutting maintenance (Ault & Saba 1990, p.39). Corroborated: rent control cut SF supply 15% (DMQ 2019); ending Cambridge MA control added ~$1.8B, >half from spillovers off disinvested units (Autor-Palmer-Pathak, *JPE* 2014); MA post-repeal quality gains, "smaller items" (Sims *JUE* 2007 — **verify primary**).
+- **The LB line (DECLARED / disclosed inference):** the mechanism *requires* a profit motive to protect + capped revenue. LB has **neither** (non-extractive + zero-debt, §10f) → its quality edge is a **reasoned structural argument the mechanism supports, NOT a measured result** — no study tests a non-extractive operator. *(The sim budgets maintenance as cost but doesn't model unit condition as tenant-experienced — a stated gap.)*
+
+### 10e. Tenant welfare — measurement framework
+- **Toolkit (Olsen 1972, re-read in full):** net tenant benefit = a compensating-variation measure; decomposes into rent saved (→ non-housing) minus housing under-consumed. NYC 1968: **+3.4% real income** ($213/family, 1968$), 4.4% less housing / 9.9% more non-housing, **landlord cost ≈2.4× tenant benefit**. **CITED** (inflation-adjust before public use; method-sensitivity huge).
+- **Efficiency critique LB must engage:** in-kind transfers often deliver <$1/$1 — voucher ≈83¢/$ (Reeder via Carlson 2010); public housing 1.8–2.2× cost vs voucher 1.09–1.15× (Mayo 1980 via Collinson 2015); labor-supply cost (public housing −19% earnings, Susin 2005). Countervailing: Section 8 nets positive with health/crime/child benefits (BC ratio 1.1–1.37, Carlson 2010). **CITED.**
+- **Computable from LB's own data (no assumptions):** real-income/transfer (LB rent vs modeled market), rent-burden reduction (benchmark 58%→27%, Jacob-Ludwig 2012), freed cash→savings, distributional incidence (Olsen's targeting test), tenure, and the headline — **LB's own benefit-vs-provider-cost ratio** (forgone market rent = the mission cost, in LB's P&L). LB *is* the entity absorbing the gap → it reports its own Olsen ratio honestly.
+- **DECLARED:** the consumer-surplus component — even Carlson *declared* 0.2–0.5 of transfer for want of an elasticity; LB declares + sweeps.
+- **Unreachable (disclose):** structural WTP (Sieg-Yoon ~$50–65k needs a utility model LB lacks — **paywalled, verify**); health/crime/child values (LB doesn't model tenant lives).
+- **Naming collision:** "tenant benefit" already names a discretionary OpEx line — welfare reporting needs a distinct term (welfare gain / real-income effect).
+
+### 10f. Zero-debt — the structural enabler (keystone)
+- LB buys **outright** — Cash-only acquisitions, **no** debt-service / mortgage / interest line (the business rules; verified). The money a leveraged operator pays to debt service **cycles back** into reserve/acquisitions/tenant benefit. It's *why* LB can be non-extractive, freeze sitting rents + forgo re-pricing, fund maintenance first (§10d), and **absorb** the retention financial hit (no payment that must be met → slower growth, not default; a leveraged operator charging below-market flat rents defaults). The survival S-curve = "how much outright-purchase capital until self-sustaining." Zero-debt deserves naming as a core enabling invariant in the concept and business-rules documentation.
+
+### Sources (§10)
+DMQ (NBER w24181, 2019); Sieg & Yoon (*QE* 2020, NBER w26015); Olsen (*JPE* 1972, local `olsen1972.pdf`); Ault & Saba (*JREFE* 1990, local `ault1990.pdf`); Carlson/Haveman/Kaplan/Wolfe (IRP DP 1380-10, 2010); Collinson/Ellen/Ludwig (NBER w21071, 2015); Autor/Palmer/Pathak (*JPE* 2014, w18125); Sims (*JUE* 2007); NAR 2024 / NAAHQ-Redfin 2022–24 / NLIHC 2025 National Renter Survey.
+**Verification debt (secondhand/paywalled — pull primaries before citing as hard):** Sieg-Yoon WTP ($50–65k), Sims (2007) effect size, Olsen (2003) benefit/cost ratios, Yardi renewal rate.
+
+---
+
+## Topics not yet researched (residual gaps)
+
+The realism topics (§1–§10) are now sourced. Remaining thin spots to firm up during implementation:
+- **Shared-heat metering** (§4d utilities) — what fraction of Salem's pre-1978 2–8 unit stock is still master-metered (owner pays heat)? The biggest utilities-cost risk; unquantified.
+- **Maintenance distribution params** (§5) — the negative-binomial dispersion + lognormal σ are central tendencies, not fitted; set defensible defaults + cite.
+- **Downturn frequency** (§7) — n=2 in 40 yr; the regime transition probabilities are a modeling decision (pending ratification), not a statistic.
+- **Income model params** (§9) — the honesty-dial magnitude, per-regime income-band loadings, couple-earnings correlation, tail cap, and applicant-pool truncation are **modeling decisions** (pending ratification), not fitted statistics. **Genuine data gaps:** roommate inter-earner income correlation (none published → independent-draw assumption); renter-only percentile-by-year detail (Census binary XLS, unpulled).
+
+---
+
+## Consolidated source index
+
+*(Grouped by institution; see each section for what it supports.)*
+- **Institutional / statutory:** NAA Income/Expense IQ; IREM Income/Expense IQ; Fannie Mae SBL (reserves); HUD Keating Memo; Fair Housing Act (familial status, 1988); California Gov. Code §12955; IPMC §404; Terner Center (UC Berkeley).
+- **Legal / fair-housing:** AJ Johnson Consulting; Equal Rights Center; Fair Housing Council of Oregon; Pettit Law Group; Fair Housing Forum.
+- **Practitioner / market:** Jake & Gino; Harborside Partners; Multifamily Insiders; PropRise; HelloData; Adventures in CRE; Multifamily.loans; Multifamily Dive; Salary.com.
+- **Local market (Salem, MA):** City of Salem Housing Roadmap Report Card; RentCafe; Zumper; Census HVS / ACS; LocalHousingSolutions; Patch (2016 ACS); DataUSA; ImagineSalem. *(Flaky / needs browser-fallback archival: point2homes, housing.ma, Census QuickFacts.)*
+- **Income & wages (§9):** Census B25118 (ACS 2024 5-yr) + Census Reporter; EPI State of Working America (wage percentiles); FRED (CPI / rent-CPI / real median income / ECI); HUD Income Limits (Boston HMFA); JCHS State of the Nation's Housing 2025; CBPP; Census FINC-01; BLS OEWS + Employment Characteristics of Families; Pew; Schwartz / Gonalons-Pons / Dunatchik / Greenwood / Eika (assortative mating); MassINC Gateway Cities Housing Monitor; Neilsberg; DataUSA; Zumper / RentCafe.
+
+*Full per-source URLs are inline in each section above.*

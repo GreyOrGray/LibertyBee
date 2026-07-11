@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# reproduction runtime artifacts
+corpus_regen_status.txt
+corpus_regen_logs/
+*.log
+
+# local environments + the downloaded database backups (fetched from the Release, not tracked)
+environments/
+db_config.json
+DBBackup/
+*.bak
