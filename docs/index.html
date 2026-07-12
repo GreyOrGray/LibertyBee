@@ -198,6 +198,61 @@
 
   footer{border-top:1px solid var(--line);padding:30px 0 70px;color:var(--ink-soft);font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;line-height:1.7;}
 
+  /* ===== the live section — hard-walled: live, not cited ===== */
+  .live-sec{--lv-card:#221F15;--lv-line:#3A3626;--lv-text:#EDEAE0;--lv-soft:#B5B0A0;
+    --lv-live:#7FB4C9;--lv-flavor:#B49BD6;
+    background:var(--ink);color:var(--lv-text);border-top:3px solid var(--lv-live);
+    border-bottom:3px solid var(--lv-live);padding:64px 0 56px;}
+  .live-sec .eyebrow{color:var(--lv-live);letter-spacing:.15em;}
+  .live-sec h2{color:var(--lv-text);}
+  .live-sec p{color:var(--lv-soft);} .live-sec p b{color:var(--lv-text);}
+  .lv-asof{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px;letter-spacing:.05em;
+    color:var(--lv-live);text-transform:uppercase;}
+  .lv-tally{background:var(--lv-card);border:1px solid var(--lv-line);border-radius:8px;
+    padding:26px 28px;margin:30px 0 8px;}
+  .lv-tally .row{display:flex;flex-wrap:wrap;align-items:baseline;gap:14px;font-variant-numeric:tabular-nums;}
+  .lv-tally .fz{font-family:ui-sans-serif,system-ui,sans-serif;font-size:30px;font-weight:700;color:var(--lv-text);}
+  .lv-tally .lv{font-family:ui-sans-serif,system-ui,sans-serif;font-size:54px;font-weight:800;color:var(--lv-live);line-height:1;}
+  .lv-tally .lab{font-size:14px;color:var(--lv-soft);font-family:ui-sans-serif,system-ui,sans-serif;}
+  .lv-tally .sub{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:16px;padding-top:14px;
+    border-top:1px solid var(--lv-line);font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;color:var(--lv-soft);}
+  .lv-tally .sub b{color:var(--lv-text);font-variant-numeric:tabular-nums;}
+  .lv-panel{background:var(--lv-card);border:1px solid var(--lv-line);border-radius:8px;
+    padding:24px 28px;margin:26px 0;}
+  .lv-panel h3{font-family:ui-sans-serif,system-ui,sans-serif;font-size:14px;font-weight:700;
+    letter-spacing:.08em;text-transform:uppercase;margin:0 0 4px;color:var(--lv-text);}
+  .lv-panel .pnote{font-size:14px;color:var(--lv-soft);margin:0 0 18px;font-family:ui-sans-serif,system-ui,sans-serif;}
+  .lv-panel.flavor{margin-left:26px;border-left:3px solid var(--lv-flavor);}
+  .lv-panel.flavor h3{color:var(--lv-flavor);}
+  .live-sec svg text{font-family:ui-sans-serif,system-ui,sans-serif;}
+  .lv-legend{display:flex;flex-wrap:wrap;gap:6px 20px;font-family:ui-sans-serif,system-ui,sans-serif;
+    font-size:12px;color:var(--lv-soft);margin:12px 0 0;align-items:center;}
+  .lv-legend .sw{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:6px;}
+  .lv-legend .swb{display:inline-block;width:18px;height:10px;vertical-align:middle;margin-right:6px;border-radius:2px;}
+  .lv-strips{display:grid;grid-template-columns:52px 1fr 92px;gap:5px 12px;align-items:center;
+    font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px;font-variant-numeric:tabular-nums;margin-top:14px;}
+  .lv-strips .rl{color:var(--lv-soft);text-align:right;}
+  .lv-strips .bar{height:8px;background:#2E2A1C;border-radius:4px;overflow:hidden;}
+  .lv-strips .bar i{display:block;height:100%;border-radius:4px;}
+  .lv-strips .bar i.std{background:var(--lv-live);} .lv-strips .bar i.flv{background:var(--lv-flavor);}
+  .lv-strips .n{color:var(--lv-soft);text-align:right;}
+  .lv-note{border:1px dashed var(--lv-line);border-radius:8px;padding:18px 22px;margin:26px 0 0;}
+  .lv-note .tag{font-family:ui-sans-serif,system-ui,sans-serif;font-size:11px;font-weight:700;
+    letter-spacing:.12em;text-transform:uppercase;color:var(--lv-soft);margin:0 0 10px;}
+  .lv-note p{font-size:15px;margin-bottom:12px;} .lv-note p:last-child{margin-bottom:0;}
+  .lv-note .kd{font-style:normal;border-top:1px solid var(--lv-line);padding-top:12px;}
+  .lv-note .kd b{color:var(--lv-text);}
+  .lv-methods{font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;color:var(--lv-soft);
+    border-top:1px solid var(--lv-line);margin-top:34px;padding-top:16px;}
+  .lv-methods b{color:var(--lv-text);} .lv-methods a{color:var(--lv-live);}
+  .lv-unavail{font-family:ui-sans-serif,system-ui,sans-serif;font-size:14px;color:var(--lv-soft);
+    border:1px dashed var(--lv-line);border-radius:8px;padding:16px 20px;margin-top:26px;}
+  @media (max-width:560px){
+    .lv-panel{padding:16px 12px;} .lv-panel.flavor{margin-left:8px;}
+    .lv-tally{padding:18px 16px;} .lv-tally .lv{font-size:38px;} .lv-tally .fz{font-size:24px;}
+    .lv-strips{grid-template-columns:44px 1fr 80px;}
+  }
+
   @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none;}.cue{animation:none;}}
 </style>
 </head>
@@ -511,6 +566,165 @@
   <p style="margin-top:20px;font-size:14px;color:var(--ink-soft)" class="sans"><span class="track">Full provenance, with verbatim quotes against link-rot, lives in <b>evidence_base.md</b> in the repository. This ledger is the site's window onto it.</span></p>
 </div></section>
 
+<!-- ============ THE LIVE SECTION — beyond the frozen baseline ============ -->
+<section class="live-sec"><div class="wrap reveal">
+  <p class="eyebrow sans">Beyond the frozen baseline — live, not cited</p>
+  <h2>The model keeps running.</h2>
+  <p>Everything above this line is frozen — 800 runs, every number reproducible from a seed,
+  and none of it will ever move. Everything below this line is <b>alive</b>. The same released
+  engine keeps running on a machine in the corner of a room, on fresh seeds no cited run ever
+  used — not to change the answer, but to keep measuring it.</p>
+  <div id="lvBody"><p class="lv-unavail">Loading live data…</p></div>
+  <p class="lv-methods">A living run: engine <b>0.5.0</b>, a fresh seed no cited run ever used, a fresh
+  database restored from the released Gold every time, keyed (scenario · engine · funding · seed).
+  Published only through a tripwire-gated, human-merged pull request — eight invariant checks stand
+  between the machine and this page. Data contract: <a href="data/schema.md">data/schema.md</a>.</p>
+</div></section>
+<script>
+(function(){
+  var GATE=500, LIVE='#7FB4C9', FLAVOR='#B49BD6';
+  function esc(t){var d=document.createElement('div');d.textContent=t;return d.innerHTML;}
+
+  // draw into an EXISTING svg, sized to ITS OWN panel's content box —
+  // measuring any outer container overflows the padded/indented panels
+  function drawChart(svgEl, refRungs, liveRungs, color, fill, dashedRef){
+    var byFunds={}; liveRungs.forEach(function(r){byFunds[r.starting_funds]=r;});
+    var funds=refRungs.map(function(r){return r.starting_funds;});
+    var panel=svgEl.parentNode, cs=getComputedStyle(panel);
+    var W=Math.max(260, panel.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight));
+    var H=Math.max(200, Math.round(W*0.42)), L=40, R=24, T=16, B=30;
+    var slot=(W-L-R)/funds.length, bw=slot*0.58;
+    function x(i){return L+slot*(i+0.5);}
+    function y(v){return T+(H-T-B)*(1-v);}
+    var g='', strips=[];
+    [0,.5,1].forEach(function(v){
+      g+='<line x1="'+L+'" y1="'+y(v)+'" x2="'+(W-R)+'" y2="'+y(v)+'" stroke="#3A3626" stroke-width="1"/>'
+        +'<text x="'+(L-8)+'" y="'+(y(v)+4)+'" text-anchor="end" font-size="11" fill="#B5B0A0">'+(v*100)+'%</text>';
+    });
+    funds.forEach(function(f,i){
+      var lr=byFunds[f], annotated=lr&&lr.annotations;
+      if(lr && lr.n>=GATE && lr.survival_ci){
+        g+='<rect x="'+(x(i)-bw/2)+'" y="'+y(lr.survival_rate)+'" width="'+bw
+          +'" height="'+(y(0)-y(lr.survival_rate))+'" fill="'+fill+'" stroke="'+color+'" stroke-width="1">'
+          +'<title>'+esc('$'+(f/1e6).toFixed(1)+'M: '+(lr.survival_rate*100).toFixed(1)+'% of '+lr.n+' living runs')+'</title></rect>'
+          +'<line x1="'+x(i)+'" y1="'+y(lr.survival_ci.lo)+'" x2="'+x(i)+'" y2="'+y(lr.survival_ci.hi)+'" stroke="'+color+'" stroke-width="1.5"/>'
+          +'<line x1="'+(x(i)-3.5)+'" y1="'+y(lr.survival_ci.lo)+'" x2="'+(x(i)+3.5)+'" y2="'+y(lr.survival_ci.lo)+'" stroke="'+color+'" stroke-width="1.5"/>'
+          +'<line x1="'+(x(i)-3.5)+'" y1="'+y(lr.survival_ci.hi)+'" x2="'+(x(i)+3.5)+'" y2="'+y(lr.survival_ci.hi)+'" stroke="'+color+'" stroke-width="1.5"/>';
+      } else {
+        strips.push({funds:f, n:lr?lr.n:0, ann:annotated});
+      }
+      if(i%3===0||i===funds.length-1||annotated)
+        g+='<text x="'+x(i)+'" y="'+(H-10)+'" text-anchor="middle" font-size="11" fill="#B5B0A0">$'+(f/1e6)+'M'
+          +(annotated?' <a href="#lv-note"><tspan fill="'+color+'">\u2020</tspan></a>':'')+'</text>';
+    });
+    g+='<polyline points="'+refRungs.map(function(r,i){return x(i)+','+y(r.survival_rate);}).join(' ')
+      +'" fill="none" stroke="#B5B0A0" stroke-width="2"'+(dashedRef?' stroke-dasharray="6 5"':'')+'/>';
+    svgEl.setAttribute('viewBox','0 0 '+W+' '+H);
+    svgEl.setAttribute('width',W); svgEl.setAttribute('height',H);
+    svgEl.style.display='block';
+    svgEl.innerHTML=g;
+    return strips;
+  }
+
+  function stripRows(strips, cls){
+    if(!strips.length) return '';
+    var h='<div class="lv-strips">';
+    strips.forEach(function(s){
+      var pct=Math.min(100,100*s.n/GATE);
+      var dag=s.ann?' <a href="#lv-note" style="color:#7FB4C9;text-decoration:none" title="human-dispositioned divergence \u2014 see the note below">\u2020</a>':'';
+      h+='<div class="rl">$'+(s.funds/1e6).toFixed(1)+'M'+dag+'</div>'
+        +'<div class="bar" title="'+s.n+' of '+GATE+' living runs"><i class="'+cls+'" style="width:'+pct+'%"></i></div>'
+        +'<div class="n">'+s.n+' / '+GATE+'</div>';
+    });
+    return h+'</div>';
+  }
+
+  function render(d){
+    var segs={}; d.living.segments.forEach(function(s){segs[s.scenario]=s;});
+    var std=segs['standard']||{runs:0,deaths:0,rungs:[]};
+    var flv=segs['deep-discount-25']||{runs:0,deaths:0,rungs:[]};
+    var asof=d.generated_utc.replace('T',' ').replace('Z',' UTC');
+    var sha=(std.engine_sha||flv.engine_sha||'').slice(0,8);
+    var anns=[];
+    d.living.segments.forEach(function(s){(s.rungs||[]).forEach(function(r){
+      (r.annotations||[]).forEach(function(a){anns.push({rung:r, seg:s, a:a});});});});
+
+    var h='<div class="lv-tally"><div class="row">'
+      +'<span><span class="fz">'+d.frozen.total_runs+'</span> <span class="lab">frozen baseline runs (cited, above)</span></span>'
+      +'<span style="color:#B5B0A0;font-size:26px">+</span>'
+      +'<span><span class="lv">'+d.living.total_runs.toLocaleString()+'</span> <span class="lab">living runs \u2014 and counting</span></span>'
+      +'</div><div class="sub">'
+      +'<span class="lv-asof">as of '+esc(asof)+'</span>'
+      +'<span><b>'+d.living.total_deaths.toLocaleString()+'</b> living deaths recorded</span>'
+      +'<span>standard <b>'+std.runs.toLocaleString()+'</b></span>'
+      +'<span>deep-discount-25 <b>'+flv.runs.toLocaleString()+'</b></span>'
+      +'<span>engine <b>'+esc(d.engine_version)+'</b> \u00b7 segment <b>'+esc(sha)+'</b></span>'
+      +'</div></div>';
+
+    h+='<div class="lv-panel"><h3>Standard series \u2014 shipped defaults</h3>'
+      +'<p class="pnote">The gray line is the frozen curve, cited in chapter 03 \u2014 it does not move. '
+      +'Living runs accumulate against it; a funding level earns its bar and confidence whisker at '
+      +GATE+' living runs. Until then, the honest display is the count.</p>'
+      +'<svg id="lvStdChart" role="img" aria-label="Living survival vs the frozen curve"></svg>'
+      +'<div class="lv-legend"><span><span class="sw" style="background:#B5B0A0"></span>frozen curve (cited, does not move)</span>'
+      +'<span><span class="swb" style="background:rgba(127,180,201,.35);border:1px solid '+LIVE+'"></span>living rate per level (bar) + 95% CI (whisker)</span></div>'
+      +'<div id="lvStdStrips"></div></div>';
+
+    if(anns.length){
+      h+='<div class="lv-note" id="lv-note"><p class="tag">the deal we committed to in advance \u2014 and its first instance</p>'
+        +'<p style="font-style:italic">When the living runs disagree with the frozen curve \u2014 as they now have, once \u2014 '
+        +'here is the deal we committed to before it happened: the cited numbers above stay exactly as published \u2014 '
+        +'that is what frozen means. This section shows the fuller truth, with the note attached. A real disagreement '
+        +'is a finding \u2014 investigated in the open, and if it holds, it becomes the starting point of the next '
+        +'engine\u2019s baseline, never a silent edit to this one.</p>';
+      anns.forEach(function(x){
+        var ref=x.a.public_ref||'known-issues.html';
+        h+='<p class="kd">\u2020 <b>$'+(x.rung.starting_funds/1e6).toFixed(1)+'M ('+esc(x.seg.scenario)+', '
+          +x.rung.survived+'/'+x.rung.n+' surviving so far):</b> '+esc(x.a.summary||x.a.note)
+          +' <a href="'+esc(ref)+'" style="color:'+LIVE+';font-weight:700">Full account: '+esc(x.a.kd)+' \u2192</a></p>';
+      });
+      h+='</div>';
+    }
+
+    h+='<div class="lv-panel flavor"><h3>Exploratory \u2014 deep-discount-25</h3>'
+      +'<p class="pnote">The same engine at 25% below market up-front instead of 10%, kept to at most a '
+      +'quarter of living runs. Its dashed reference is the frozen deep-discount cliff row (cited above: '
+      +'deeper generosity up front demands visibly more capital). This series keeps measuring that price.</p>'
+      +'<svg id="lvFlvChart" role="img" aria-label="Living deep-discount survival vs the frozen cliff row"></svg>'
+      +'<div class="lv-legend"><span><span class="sw" style="border-top:3px dashed #B5B0A0;height:0;background:none"></span>frozen cliff 25% row (cited, 10 seeds/level)</span>'
+      +'<span><span class="swb" style="background:rgba(180,155,214,.35);border:1px solid '+FLAVOR+'"></span>living rate per level (bar) + 95% CI (whisker)</span></div>'
+      +'<div id="lvFlvStrips"></div></div>';
+
+    document.getElementById('lvBody').innerHTML=h;
+
+    // second pass: the panels exist now — measure THEM and draw
+    var s1=drawChart(document.getElementById('lvStdChart'), d.frozen.rungs, std.rungs||[],
+                     LIVE, 'rgba(127,180,201,.35)', false);
+    document.getElementById('lvStdStrips').innerHTML=stripRows(s1,'std');
+    var s2=drawChart(document.getElementById('lvFlvChart'), d.frozen.cliff_25_reference.rungs, flv.rungs||[],
+                     FLAVOR, 'rgba(180,155,214,.35)', true);
+    document.getElementById('lvFlvStrips').innerHTML=stripRows(s2,'flv');
+  }
+
+  var data=null;
+  function go(){
+    fetch('data/live.json').then(function(r){
+      if(!r.ok) throw new Error(r.status);
+      return r.json();
+    }).then(function(d){
+      data=d; render(d);
+    }).catch(function(){
+      document.getElementById('lvBody').innerHTML=
+        '<p class="lv-unavail">Live data temporarily unavailable \u2014 the frozen numbers above are unaffected.</p>';
+    });
+  }
+  go();
+  var rt; window.addEventListener('resize', function(){
+    if(data){clearTimeout(rt); rt=setTimeout(function(){render(data);},150);}
+  });
+})();
+</script>
+
 <!-- ============ 05 · THE PERSONAL ============ -->
 <div class="chapter"><div class="wrap"><div class="cnum">05</div><div>
   <p class="clab">Questions, and the person</p>
@@ -611,7 +825,7 @@
 </div>
 
 <footer class="wrap">
-  <p>Liberty Bee — a non-extractive housing model, simulated in the open. Baseline <b>1.0 / retention-realistic</b> · engine <b>0.5.0</b> · <b>800</b> Monte-Carlo runs (frozen baseline; +100 static, +1,440 cliff) · itemized cost model, regime inflation, retention model, zero-debt acquisition · reproducible from seed.</p>
+  <p>Liberty Bee — a non-extractive housing model, simulated in the open. Baseline <b>1.0 / retention-realistic</b> · engine <b>0.5.0</b> · <b>800</b> Monte-Carlo runs (frozen baseline; +100 static, +1,440 cliff) · itemized cost model, regime inflation, retention model, zero-debt acquisition · reproducible from seed · plus a living series that never stops (see <i>the model keeps running</i>, above — live, not cited).</p>
   <p style="margin-top:10px">The code and the full dataset are on GitHub; every figure is cited in <a href="#sources">the ledger</a>. Nothing here is launch-capital guidance — it's what this model shows, under this market's assumptions, told honestly.</p>
   <p style="margin-top:14px;font-size:12px;">© 2026 Liberty Bee · open source under the <a href="https://github.com/GreyOrGray/LibertyBee/blob/main/LICENSE" target="_blank" rel="noopener">GNU AGPL-3.0</a> · bee icon by <a href="https://lucide.dev" target="_blank" rel="noopener">Lucide Lab</a> (ISC).</p>
 </footer>

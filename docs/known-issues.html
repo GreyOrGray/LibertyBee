@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Liberty Bee — Known Issues</title>
+<link rel="icon" href="favicon.svg">
+<style>
+  :root{--paper:#FBFAF7;--ink:#15130C;--ink-soft:#4A4638;--line:#E4DECF;--card:#FFF;--amber:#A96A0C;--amber-soft:#F3E7CF;--live:#2C6B8A;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);line-height:1.62;
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:680px;margin:0 auto;padding:40px 24px 70px;}
+  .eyebrow{font-family:ui-sans-serif,system-ui,sans-serif;font-weight:700;letter-spacing:.13em;
+    text-transform:uppercase;font-size:12px;color:var(--amber);margin:0 0 14px;}
+  h1{font-size:clamp(28px,5vw,40px);line-height:1.1;margin:0 0 18px;font-weight:600;}
+  p{margin:0 0 18px;font-size:17px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:22px 26px;margin:0 0 18px;
+    box-shadow:0 1px 2px rgba(21,19,12,.04);}
+  .card h2{font-size:19px;margin:0 0 6px;font-weight:700;}
+  .tag{font-family:ui-sans-serif,system-ui,sans-serif;font-size:11px;font-weight:700;letter-spacing:.1em;
+    text-transform:uppercase;padding:2px 8px;border-radius:3px;margin-left:8px;vertical-align:middle;}
+  .tag.farm{background:#E2EDF2;color:var(--live);}
+  .tag.v2{background:var(--amber-soft);color:var(--amber);}
+  .meta{font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;color:var(--ink-soft);margin:0 0 10px;}
+  .card p{font-size:15px;margin-bottom:10px;} .card p:last-child{margin-bottom:0;}
+  a{color:var(--amber);}
+  .back{font-family:ui-sans-serif,system-ui,sans-serif;font-size:14px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="back"><a href="index.html">← libertybee.org</a></p>
+  <p class="eyebrow">The open defect ledger</p>
+  <h1>Known issues in the released model.</h1>
+  <p>Honesty without flattery is the whole point, so the defects we know about are listed here —
+  plainly, with their causes — and each stays listed until a future baseline resolves it. The
+  frozen 1.0 numbers are never edited in place; a fix always means a new, fully re-run baseline.
+  Issues found by the <a href="index.html">living farm</a> (the model that keeps running) are
+  tagged accordingly.</p>
+
+  <div class="card" id="kd-042">
+    <h2>KD-042 — acquisition gate prices current costs only<span class="tag farm">found by the living farm</span><span class="tag v2">fix: next baseline</span></h2>
+    <p class="meta">Found 2026-07-12, one day after the living farm started · status: corrected gate in development</p>
+    <p>The engine's acquisition safety gate checks an organization's cash against its <em>current</em>
+    monthly operating costs — but nothing prices the incoming carrying costs of the properties being
+    acquired. During the startup grace window (when current costs are payroll-only), a rare week-one
+    ladder of attractive listings lets an organization legally commit ~94% of its capital before its
+    first rents arrive. Observed at the $5.5M funding level: 2 of the first 81 living runs failed at
+    months 3–4 this way — with zero evictions and no rent hikes; the failures were purely
+    institutional. The frozen baseline scored that level 100% across its 50 seeds; the living data
+    shows the fuller picture, annotated on the live section.</p>
+    <p>The fix (a forward-looking gate that prices in-pipeline obligations) is in development and
+    ships with the next baseline — never as an edit to this one.</p>
+  </div>
+
+  <div class="card" id="issue-44">
+    <h2>Rent charged from the unadjusted column<span class="tag v2">fix: next baseline</span></h2>
+    <p class="meta">Found 2026-07-06 in pre-release audit · disclosed in the baseline-of-record documents</p>
+    <p>The 1.0 engine charges tenants from <code>BaseRent</code> while acquisition underwriting uses
+    <code>AdjustedRent</code>. In the released model this is acquisition-scoring-only — no tenant rent
+    and no published survival number is affected — and in at least one case it <em>under</em>charged
+    tenants. Ruled for the next baseline's engine rework.</p>
+  </div>
+
+  <div class="card" id="kd-040">
+    <h2>KD-040 — fractional bathrooms overpriced by the rent generator<span class="tag v2">fix: next baseline</span></h2>
+    <p class="meta">Found 2026-07-06 in pre-release audit · disclosed in the baseline-of-record documents</p>
+    <p>The synthetic rent generator prices a half-bath at 7.5% instead of the intended 5%.
+    Acquisition-scoring-only in 1.0; no tenant rent and no published survival number moves.
+    Ruled for the next baseline.</p>
+  </div>
+
+  <p style="font-size:14px;color:var(--ink-soft)">Full engineering detail for every issue lives in the
+  project's development tracker and the baseline-of-record documents shipped in
+  <a href="https://github.com/GreyOrGray/LibertyBee">the repository</a>. Nothing is ever removed from
+  this ledger — but it doesn't sprawl either: open issues get full cards like the ones above, and when
+  a new baseline resolves a batch, those entries compress into a one-line-per-issue resolved register
+  beneath, each keeping its id, its cause, and what fixed it.</p>
+</div>
+</body>
+</html>
