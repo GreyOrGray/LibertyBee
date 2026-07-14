@@ -41,17 +41,45 @@
 
   <div class="card" id="kd-042">
     <h2>KD-042 — acquisition gate prices current costs only<span class="tag farm">found by the living farm</span><span class="tag v2">fix: next baseline</span></h2>
-    <p class="meta">Found 2026-07-12, one day after the living farm started · status: corrected gate in development</p>
+    <p class="meta">Found 2026-07-12, one day after the living farm started · status: root cause verified, remediation expected in the next baseline</p>
     <p>The engine's acquisition safety gate checks an organization's cash against its <em>current</em>
     monthly operating costs — but nothing prices the incoming carrying costs of the properties being
     acquired. During the startup grace window (when current costs are payroll-only), a rare week-one
-    ladder of attractive listings lets an organization legally commit ~94% of its capital before its
-    first rents arrive. Observed at the $5.5M funding level: 2 of the first 81 living runs failed at
-    months 3–4 this way — with zero evictions and no rent hikes; the failures were purely
-    institutional. The frozen baseline scored that level 100% across its 50 seeds; the living data
-    shows the fuller picture, annotated on the live section.</p>
-    <p>The fix (a forward-looking gate that prices in-pipeline obligations) is in development and
-    ships with the next baseline — never as an edit to this one.</p>
+    ladder of attractive listings lets an organization legally commit ~92–96% of its capital before its
+    first rents arrive. Every purchase is individually legal under the released gate; the failures are
+    purely institutional — zero evictions, no rent hikes, no tenant harmed on the way down.</p>
+    <p><strong>Version history.</strong> <em>v1 (current):</em> affected. The full census as the living
+    farm found it — standard series: 2 failures at $5.5M (months 3–4), 1 at $6.0M (month 5), 1 at
+    $5.0M (month 4), 1 at the $4.5M extension rung (month 5); deep-discount series: 2 at $5.5M
+    (months 3–4), the same seeds as the standard pair — the gap is independent of rent policy, because
+    it lives on the buy side. Each failure was replayed to the penny to confirm the mechanism: 6–7
+    properties bought in the opening weeks, acquisitions accounting for 92–96% of every dollar spent,
+    zero gate refusals. <em>v2 (next baseline):</em> remediation expected — a forward-looking gate that
+    prices in-pipeline obligations, including expected onboarding costs, before committing.</p>
+    <p><strong>Reproduce it on v1 today:</strong> restore the published Gold backup and run
+    <code>simulation.py --projection-id 201 --seed 128 --months 240</code> (dies month 3) or
+    <code>--projection-id 200 --seed 247</code> (dies month 4). <strong>Verify the fix when v2
+    ships:</strong> the same commands on the v2 baseline should carry the same organizations to
+    month 240 without insolvency — that claim publishes here, checkable, the day the v2 engine does.</p>
+  </div>
+
+  <div class="card" id="kd-187">
+    <h2>Determinism in v1 is plan-dependent<span class="tag v2">fix: next baseline</span></h2>
+    <p class="meta">Found 2026-07-14 by an internal byte-identity gate · status: fixed in the v2 engine, disclosed for v1</p>
+    <p>v1 results are reproducible to the cent on the pinned environment — the published Gold backup,
+    the published engine, the documented SQL Server setup. That was verified before release and still
+    holds. What we have since found: a handful of internal queries feed random draws to entities in
+    whatever row order SQL Server returns, without an explicit ordering. On the pinned environment the
+    query plans are stable and every same-seed run is identical. On a <em>materially different</em>
+    environment — a newer SQL Server, different statistics or indexes — the optimizer may legally
+    return rows in a different order, and a same-seed run can then take a different but equally valid
+    path through the model. Neither path is wrong; the run would simply no longer match our published
+    run byte-for-byte.</p>
+    <p>If you are reproducing v1 exactly, use the pinned environment as documented in REPRODUCE. The
+    v2 engine removes this at the root: every order-sensitive query imposes an explicit deterministic
+    ordering, enforced by a tracked determinism gate that includes a negative control — a test that
+    demonstrably fails on the defect it guards against. We found this with our own validation tooling
+    and are disclosing it because reproducibility claims should say precisely what they claim.</p>
   </div>
 
   <div class="card" id="issue-44">
@@ -74,9 +102,10 @@
   <p style="font-size:14px;color:var(--ink-soft)">Full engineering detail for every issue lives in the
   project's development tracker and the baseline-of-record documents shipped in
   <a href="https://github.com/GreyOrGray/LibertyBee">the repository</a>. Nothing is ever removed from
-  this ledger — but it doesn't sprawl either: open issues get full cards like the ones above, and when
-  a new baseline resolves a batch, those entries compress into a one-line-per-issue resolved register
-  beneath, each keeping its id, its cause, and what fixed it.</p>
+  this ledger, and every issue keeps a version history: what was wrong in the version that shipped it,
+  and what fixed it in the version that did. When a new baseline resolves an issue, its card keeps a
+  note showing how to reproduce the defect on the old version and how to verify the fix on the new one
+  — the fix claim ships only when it is checkable.</p>
 </div>
 </body>
 </html>
