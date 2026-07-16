@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Liberty Bee — Previous Versions</title>
+<link rel="icon" href="favicon.svg">
+<style>
+  :root{
+    --paper:#FBFAF7; --ink:#15130C; --ink-soft:#4A4638; --line:#E4DECF; --card:#FFF;
+    --amber:#A96A0C; --amber-soft:#F3E7CF; --survive:#3E7A5E; --die:#A6462F;
+    --honey:#E8B84B; --live:#2C6B8A;
+    --shadow:0 1px 2px rgba(21,19,12,.04),0 10px 30px rgba(21,19,12,.07);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);line-height:1.62;
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:680px;margin:0 auto;padding:40px 24px 70px;}
+  .eyebrow{font-family:ui-sans-serif,system-ui,sans-serif;font-weight:700;letter-spacing:.13em;
+    text-transform:uppercase;font-size:12px;color:var(--amber);margin:0 0 14px;}
+  h1{font-size:clamp(28px,5vw,40px);line-height:1.1;margin:0 0 18px;font-weight:600;text-wrap:balance;}
+  p{margin:0 0 18px;font-size:17px;}
+  .back{font-family:ui-sans-serif,system-ui,sans-serif;font-size:14px;}
+  a{color:var(--amber);}
+  .ver{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:26px 28px;margin:26px 0;box-shadow:var(--shadow);}
+  .ver h2{font-size:24px;margin:0 0 4px;font-weight:700;}
+  .ver .meta{font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;color:var(--ink-soft);margin:0 0 20px;}
+  .stats{display:flex;flex-wrap:wrap;gap:16px 28px;font-family:ui-sans-serif,system-ui,sans-serif;margin:0 0 22px;}
+  .stat .n{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1;}
+  .stat .l{font-size:12px;color:var(--ink-soft);letter-spacing:.02em;margin-top:2px;}
+  .legend{display:flex;flex-wrap:wrap;gap:8px 18px;font-family:ui-sans-serif,system-ui,sans-serif;font-size:12.5px;margin:2px 0 8px;}
+  .legend span{display:inline-flex;align-items:center;gap:7px;color:var(--ink-soft);}
+  .swatch{width:15px;height:3px;border-radius:2px;display:inline-block;flex:none;}
+  .chartwrap{overflow-x:auto;}
+  svg{width:100%;height:auto;display:block;min-width:440px;}
+  .cap{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12.5px;line-height:1.55;color:var(--ink-soft);border-top:1px solid var(--line);padding-top:12px;margin:12px 0 20px;}
+  .ver p{font-size:15.5px;margin-bottom:14px;}
+  .ver p:last-child{margin-bottom:0;}
+  .foot{font-size:14px;color:var(--ink-soft);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="back"><a href="index.html">← libertybee.org</a></p>
+  <p class="eyebrow">The version archive</p>
+  <h1>Previous versions.</h1>
+  <p>Liberty Bee ships as fully re-run baselines, never as edits to a live one. When a new baseline takes over the front page, the one it replaces is preserved here — its numbers, the issues it surfaced, and how to reproduce it — exactly as it shipped.</p>
+
+  <div class="ver">
+    <h2>Liberty Bee 1.0</h2>
+    <p class="meta">Engine 0.5.0 · shipped July 10, 2026 · frozen corpus (800 runs) + the living farm (5,903 runs, July 11–15, 2026)</p>
+
+    <div class="stats">
+      <div class="stat"><div class="n">5,903</div><div class="l">living-farm runs</div></div>
+      <div class="stat"><div class="n">83.8%</div><div class="l">standard survival</div></div>
+      <div class="stat"><div class="n">71.6%</div><div class="l">deep-discount survival</div></div>
+      <div class="stat"><div class="n">$4.5M</div><div class="l">funding threshold · standard</div></div>
+    </div>
+
+    <div class="legend">
+      <span><i class="swatch" style="background:#E8B84B"></i> frozen 1.0 · 800 runs</span>
+      <span><i class="swatch" style="background:#3E7A5E"></i> living farm · standard · 4,428</span>
+      <span><i class="swatch" style="background:#2C6B8A"></i> living farm · deep-discount-25 · 1,475</span>
+    </div>
+
+    <div class="chartwrap">
+      <svg viewBox="0 0 560 320" role="img" aria-label="20-year survival by starting capital, for the frozen 1.0 baseline, the living-farm standard scenario, and the living-farm deep-discount scenario">
+        <g stroke="#E4DECF" stroke-width="1">
+          <line x1="52" y1="18" x2="544" y2="18"/>
+          <line x1="52" y1="85" x2="544" y2="85"/>
+          <line x1="52" y1="152" x2="544" y2="152"/>
+          <line x1="52" y1="219" x2="544" y2="219"/>
+          <line x1="52" y1="286" x2="544" y2="286"/>
+        </g>
+        <g font-family="ui-sans-serif,system-ui,sans-serif" font-size="11" fill="#4A4638" text-anchor="end">
+          <text x="45" y="22">100%</text>
+          <text x="45" y="89">75</text>
+          <text x="45" y="156">50</text>
+          <text x="45" y="223">25</text>
+          <text x="45" y="290">0</text>
+        </g>
+        <g font-family="ui-sans-serif,system-ui,sans-serif" font-size="11" fill="#4A4638" text-anchor="middle">
+          <text x="52" y="305">$2M</text>
+          <text x="106.7" y="305">$3M</text>
+          <text x="188.7" y="305">$4.5M</text>
+          <text x="270.7" y="305">$6M</text>
+          <text x="380" y="305">$8M</text>
+          <text x="544" y="305">$11M</text>
+        </g>
+        <line x1="188.7" y1="18" x2="188.7" y2="286" stroke="#A96A0C" stroke-width="1" stroke-dasharray="3 3" opacity="0.45"/>
+        <polyline fill="none" stroke="#E8B84B" stroke-width="2" stroke-linejoin="round" points="52.0,280.6 79.3,248.5 106.7,141.3 134.0,71.6 161.3,39.4 188.7,18.0 216.0,18.0 243.3,18.0 270.7,18.0 298.0,18.0 325.3,18.0 352.7,18.0 380.0,18.0 434.7,18.0 489.3,18.0 544.0,18.0"/>
+        <polyline fill="none" stroke="#3E7A5E" stroke-width="2.5" stroke-linejoin="round" points="52.0,280.1 79.3,241.5 106.7,163.5 134.0,65.7 161.3,28.7 188.7,19.1 216.0,19.1 243.3,19.9 270.7,19.1 298.0,18.0 325.3,18.0 352.7,18.0 380.0,18.0 434.7,18.0 489.3,18.0 544.0,18.0"/>
+        <polyline fill="none" stroke="#2C6B8A" stroke-width="2.5" stroke-linejoin="round" points="52.0,286.0 79.3,286.0 106.7,265.6 134.0,221.9 161.3,154.9 188.7,82.1 216.0,38.1 243.3,26.6 270.7,20.9 298.0,18.0 325.3,18.0 352.7,18.0 380.0,18.0 434.7,18.0 489.3,18.0 544.0,18.0"/>
+      </svg>
+    </div>
+    <p class="cap">20-year survival by starting capital. The frozen 1.0 baseline drew a clean threshold at $4.5M — below it, an organization usually runs out of money before year twenty; at or above it, all 800 runs survived. The living farm kept the same engine running to 5,903 runs and drew the fuller picture.</p>
+
+    <p>Left running, the farm reached <strong>5,903 runs and 1,136 failures</strong> — nearly all of them the deliberately under-capitalized rungs, where running out of money is the finding, not a fault. At the funded rungs it reads <strong>99.6%, not the frozen 100%</strong>: a few organizations failed in their opening weeks for purely institutional reasons — no evictions, no rent increases — the acquisition-gate defect now logged as <a href="known-issues.html#kd-042">KD-042</a>.</p>
+
+    <p>It also sampled the <strong>deep-discount-25</strong> scenario — a standing 25% below-market rule — that the frozen set only referenced. There the threshold sits a full rung higher, near <strong>$5M</strong>: the measured price of deeper affordability, and a dimension the shipped corpus couldn't show on its own.</p>
+
+    <p><strong>Known issues.</strong> Every defect the 1.0 run surfaced stays in the open <a href="known-issues.html">defect ledger</a> — the lead-deleading gap, the acquisition gate, plan-dependent determinism — each with how to reproduce it and how the next baseline resolves it. <strong>Reproduce:</strong> every run here regenerates from its seed on the published 0.5.0 engine and Gold backup in <a href="https://github.com/GreyOrGray/LibertyBee">the repository</a>.</p>
+  </div>
+
+  <p class="foot">The next baseline — the V2 re-baseline on a corrected engine — is in progress. When it ships, the front page moves to it and this 1.0 record stays exactly as it is.</p>
+</div>
+</body>
+</html>
