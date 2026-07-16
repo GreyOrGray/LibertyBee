@@ -63,6 +63,31 @@
     month 240 without insolvency — that claim publishes here, checkable, the day the v2 engine does.</p>
   </div>
 
+  <div class="card" id="kd-193">
+    <h2>Lead deleading is never charged<span class="tag v2">fix: next baseline</span></h2>
+    <p class="meta">Root cause KD-043 (lead chain unreachable) + KD-193 (assessment sequencing) · status: fixed in the v2 engine, disclosed for v1</p>
+    <p>Massachusetts law requires lead remediation ("deleading") for pre-1978 rental housing, and about
+    <strong>99.6% of Salem's stock is pre-1978</strong> — so for this portfolio deleading is the norm, not
+    the exception. In the 1.0 engine the abatement step is <em>unreachable</em>: a work-classification bug
+    leaves it as dead code, so across the entire released corpus it fires <strong>zero times</strong>. The
+    consequence is that 1.0 never charges the deleading a real pre-1978 acquisition would legally incur, so
+    its operating costs — and therefore its survival numbers — are optimistic on this one axis. No tenant is
+    affected; the gap is purely an unmodeled cost.</p>
+    <p><strong>Version history.</strong> <em>v1 (current):</em> affected — abatement is dead code, zero work
+    items in the corpus, deleading cost absent. <em>v2 (next baseline):</em> remediation expected — the lead
+    chain is made reachable and recalibrated to Massachusetts DPH / MassHousing figures (KD-043), and the
+    risk assessment is moved to <em>due diligence</em>, so the organization prices the actual abatement cost
+    before it commits and can decline a property it cannot solvently carry (KD-193). Making lead real
+    surfaced that a cost committed blindly <em>after</em> closing would itself sink mid-size organizations —
+    which is precisely why the assessment now happens before the purchase, not after.</p>
+    <p><strong>Reproduce it on v1 today:</strong> restore the published Gold backup, run
+    <code>simulation.py --projection-id 206 --seed 99 --months 240</code>, and query
+    <code>simulation.ComplianceWorkItem WHERE WorkType = 'LEAD_ABATEMENT'</code> — zero rows. <strong>Verify
+    the fix when v2 ships:</strong> the same query on a v2 run returns calibrated lead-abatement work items,
+    and the acquisition ledger shows lead priced at due diligence — that claim publishes here, checkable, the
+    day the v2 engine does.</p>
+  </div>
+
   <div class="card" id="kd-187">
     <h2>Determinism in v1 is plan-dependent<span class="tag v2">fix: next baseline</span></h2>
     <p class="meta">Found 2026-07-14 by an internal byte-identity gate · status: fixed in the v2 engine, disclosed for v1</p>
