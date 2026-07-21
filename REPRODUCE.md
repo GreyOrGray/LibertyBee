@@ -173,89 +173,13 @@ python app/src/simulation.py --env <db> --projection-id <ProjectionID> --seed <S
      python app/src/simulation.py --env <your_db> --projection-id 303 --seed 7 --months 240   # 303 = $3.5M
      ```
 
-   - **The whole corpus**: build an empty corpus database, then fill it. `create_corpus.py` applies
-     `corpus_schema.sql` (the `v1.*` schema of record) to a brand-new database; `regenerate_corpus.py` runs the
-     projections you name over the seeds you name and extracts each result into that corpus. Every projection is
-     seeded data (from the migration chain); the tool reads its funding amount and scenario from that data. Then
-     compare against the `.bak` from Path A:
+   - **The whole corpus**: use the included **`regenerate_corpus.py`**, which defines all sixteen rungs (cloning
+     206 into 300–305 at runtime), loops them over the seeds, and extracts each result into a central corpus
+     database — regenerating the full 800-run `Baseline`, then compare against the `.bak` from Path A:
 
      ```bash
-     python create_corpus.py     --corpus MyCorpus
-     python regenerate_corpus.py --corpus MyCorpus --rungs 200-209,300-305 --seeds 1-50
+     python regenerate_corpus.py --corpus <your_empty_corpus_db> --rungs all --seeds 1-50
      ```
-
-     `--rungs` is required and takes a mixed list and ranges (`200-209,300-305` is the published standard
-     ladder — ten stored rungs plus the six sub-$5M extension rungs). There is no default set: the recipe
-     states exactly what ran. Expect this to take a while — each run is a full 240-month simulation, and this is
-     800 of them. Add `--workers N` to widen parallelism, and `--throttle` if you want it to yield the machine
-     back while you're using it (throttling changes only *when* runs are scheduled, never their results).
-
-     Interrupt it safely with a `sweep.stop` file next to the script: in-flight runs finish and extract, and
-     nothing new starts. Re-invoking resumes — runs already in the corpus are skipped.
-
-### Scenarios — one corpus per scenario
-
-A scenario is an affordability assumption, and **a corpus holds exactly one**. You don't select it with a flag;
-you name the projections that carry it, and the tool reads their scenario from the seeded data:
-
-| scenario | projections | meaning |
-|---|---|---|
-| `standard` | `200-209,300-305` | the seed database's own below-market rent (10%) — the published baseline |
-| `deep-discount-25` | `400-409,500-505` | rents set 25% below market |
-
-```bash
-python regenerate_corpus.py --corpus MyDeepDiscount --rungs 400-409,500-505 --seeds 1-50
-```
-
-The named projections must all share one scenario, or the tool refuses — a corpus blending two populations
-would look entirely normal and be silently wrong. The resolved scenario is recorded in `v1.corpus_meta` on
-first write and enforced on resume. `--scenario <name>` is optional and only *asserts* the resolved value (a
-guard against naming the wrong projections); it does not select anything. To sweep both scenarios, build two
-corpora.
-
-### What produced a corpus
-
-`v1.corpus_meta` also records the engine version, the harness commit, and whether that checkout had
-uncommitted changes:
-
-```sql
-SELECT Scenario, EngineVersion, HarnessCommit, HarnessDirty, StartedUTC FROM v1.corpus_meta;
-```
-
-`HarnessDirty = 1` means the corpus was generated from a modified working tree and therefore cannot be
-reproduced from any published commit — useful for a throwaway experiment, disqualifying for a corpus of
-record. The tool refuses to generate from a dirty tree unless you explicitly pass `--allow-dirty`.
-
-### Verifying a corpus is reproducible, not merely re-runnable
-
-`reproduction_gate.py` does two things, in order:
-
-1. **Provenance check** — can this corpus be rebuilt by someone else at all? Confirms every funding rung
-   present has a matching `v1.projection_parameters` row, that the corpus holds exactly one scenario, and
-   that no run came from an uncommitted tree. The rung check matters more than it looks: rungs 300–305
-   **don't exist in the seed database** (they're cloned at runtime), so without those rows every sub-$5M
-   run is unreproducible from this bundle.
-2. **Cell reproduction** — rebuilds a sample of `(rung, seed)` cells from scratch and compares against the
-   corpus: survivors to the penny, failed organisations to the death-month.
-
-```bash
-python reproduction_gate.py --corpus <your_corpus_db> --sample edges
-python reproduction_gate.py --corpus <your_corpus_db> --provenance-only   # fast; no re-runs
-```
-
-Add `--strict-provenance` to also require `v1.corpus_meta` (only meaningful for corpora built after
-provenance stamping existed — the 1.0 corpora pre-date it and will warn instead).
-
-Passing the numbers but failing provenance is a real and useful distinction: it means the corpus is
-*correct* but not *handable* — nobody else could rebuild it.
-
-### Watching a long sweep
-
-A full sweep takes days, so `corpus_checks/` runs checks against the corpus as it fills — every 250
-completions by default. Two ship: `fast_death` (reports the death profile) and `acquisition_binge` (halts
-if organisations start dying in a pattern we don't recognise). A halt drains the sweep cleanly and exits
-**2**, and `corpus_regen_status.txt` records it — so an unattended run that stops for a real reason doesn't
-look like a successful one. See `corpus_checks/README.md` to write your own or disable ours.
 
 ---
 

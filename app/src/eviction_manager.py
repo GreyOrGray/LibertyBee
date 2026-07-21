@@ -308,9 +308,6 @@ class EvictionManager:
         with self.db.get_connection() as conn:
             cursor = conn.cursor()
 
-            # ORDER BY is an invariant-#8 guard (#187): execution order drives
-            # the downstream turnover/deposit sequential streams, so it must
-            # not ride plan row order. LeaseID = the clustered-PK trailing column.
             query = """
                 SELECT
                     lt.LeaseID,
@@ -322,7 +319,6 @@ class EvictionManager:
                     AND lt.TerminationType = 'EVICTION'
                     AND lt.EvictionExecutionDate = ?
                     AND l.LeaseStatus = 'Active'
-                ORDER BY lt.LeaseID
             """
 
             cursor.execute(query, (run_id, current_date))

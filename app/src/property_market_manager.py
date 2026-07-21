@@ -508,18 +508,13 @@ class PropertyMarketManager:
         with self.db.get_connection() as conn:
             cursor = conn.cursor()
 
-            # Get all Available properties.
-            # ORDER BY is an invariant-#8 guard (#187): the per-day rng draws
-            # one listing roll per row below, so the draw<->property mapping
-            # must not ride plan row order. PropertyMarketID = clustered-PK
-            # trailing column.
+            # Get all Available properties
             cursor.execute("""
                 SELECT PropertyID, PropertyMarketID
                 FROM simulation.PropertyMarket
                 WHERE RunID = ?
                   AND MarketStatus = 'Available'
                   AND ExpirationDate IS NULL
-                ORDER BY PropertyMarketID
             """, run_id)
 
             available_properties = cursor.fetchall()
@@ -591,9 +586,7 @@ class PropertyMarketManager:
         with self.db.get_connection() as conn:
             cursor = conn.cursor()
 
-            # Find listings scheduled to resolve today.
-            # ORDER BY is an invariant-#8 guard (#187): the per-day rng draws
-            # one sale/withdraw roll (+ hold-period draws) per row below.
+            # Find listings scheduled to resolve today
             cursor.execute("""
                 SELECT PropertyID, PropertyMarketID
                 FROM simulation.PropertyMarket
@@ -601,7 +594,6 @@ class PropertyMarketManager:
                   AND MarketStatus = 'Listed'
                   AND ExpectedReturnDate = ?
                   AND ExpirationDate IS NULL
-                ORDER BY PropertyMarketID
             """, run_id, current_date)
 
             resolving_listings = cursor.fetchall()

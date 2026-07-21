@@ -91,10 +91,6 @@ class EmployeeManager:
         self.raise_tier_mid_cushion_months = self.registry.get_int('STAFF', 'RaiseTierMidCushionMonths')
         self.raise_tier_low_cushion_months = self.registry.get_int('STAFF', 'RaiseTierLowCushionMonths')
 
-        # KD-042: memo for expected_annual_role_cost (reference.EmployeeRole
-        # is static; the gate-basis provider calls this daily).
-        self._expected_role_cost_cache: dict = {}
-
 
 
     def get_owned_property_count(self, run_id: int, as_of_date: date) -> int:
@@ -158,35 +154,6 @@ class EmployeeManager:
         """Count active employees in specified role"""
         return len([emp for emp in employees if emp.role_name == role_name])
 
-    @staticmethod
-    def staffing_formula(total_properties: int, total_units: int,
-                         years_operating: float, maint_crossover_properties: int,
-                         units_per_admin_early: int, units_per_admin_late: int,
-                         early_admin_years: int, base_admin_count: int) -> "tuple[int, int]":
-        """(maintenance_needed, admin_needed) at the given portfolio size.
-
-        The pure staffing rule, extracted (KD-042) so calculate_staffing_needs
-        (owned counts) and the pro-forma acquisition gate (owned + in-pipeline
-        counts) evaluate the SAME formula — the marginal staffing step is
-        f(owned+pipeline) − f(owned) of this function, never a re-derivation.
-
-        Ratified mixed model (2026-07-02): maintenance
-        scales per PROPERTY (coordination/travel tracks buildings, not doors
-        — evidence_base §5: first in-house tech ~12-17 buildings). Below the
-        crossover: 0 maintenance FTE, fully contracted (the MAINT event
-        streams carry the cost). Refines G1.0's per-unit UnitsPerMaintenance.
-
-        KD-030 (#59): admin scales with units, FLOORED at the core team — the
-        same `max(base, unit-scaled)` shape maintenance uses. The prior
-        `base + ceil(...)` double-counted the fixed overhead; `max` makes
-        base_admin a true floor. No maintenance floor by design — 0 FTE below the
-        property crossover is the design (contracted maintenance), not a gap.
-        """
-        maintenance_needed = total_properties // maint_crossover_properties if total_properties > 0 else 0
-        admin_threshold = units_per_admin_early if years_operating < early_admin_years else units_per_admin_late
-        unit_scaled_admin_needed = math.ceil(total_units / admin_threshold) if total_units > 0 else 0
-        return maintenance_needed, max(base_admin_count, unit_scaled_admin_needed)
-
     def calculate_staffing_needs(self, run_id: int, as_of_date: date,
                                maint_crossover_properties: int, units_per_admin_early: int,
                                units_per_admin_late: int, early_admin_years: int,
@@ -200,10 +167,28 @@ class EmployeeManager:
         # Calculate years of operation
         years_operating = (as_of_date - start_date).days / 365.25
 
-        maintenance_needed, admin_needed = self.staffing_formula(
-            total_properties, total_units, years_operating,
-            maint_crossover_properties, units_per_admin_early,
-            units_per_admin_late, early_admin_years, self.base_admin_count)
+        # Mixed model (Gray 2026-07-02): maintenance
+        # scales per PROPERTY (coordination/travel tracks buildings, not doors
+        # — evidence_base §5: first in-house tech ~12-17 buildings). Below the
+        # crossover: 0 maintenance FTE, fully contracted (the MAINT event
+        # streams carry the cost). Refines G1.0's per-unit UnitsPerMaintenance.
+        maintenance_needed = total_properties // maint_crossover_properties if total_properties > 0 else 0
+
+        # Admin threshold depends on years operating.
+        admin_threshold = units_per_admin_early if years_operating < early_admin_years else units_per_admin_late
+        # admin scales with units, FLOORED at the core team — the
+        # same `max(base, unit-scaled)` shape maintenance uses (above). The prior
+        # `base_admin + ceil(...)` double-counted the fixed overhead: base_admin
+        # already IS the core team (1 Administration Manager + 1 Property Manager),
+        # so adding ceil(units/threshold) on top forced a 3rd admin from month ~2
+        # for ANY non-empty portfolio. `max` makes base_admin a true floor; the
+        # early/late ratio only adds staff once units actually warrant it.
+        base_admin_needed = self.base_admin_count
+        unit_scaled_admin_needed = math.ceil(total_units / admin_threshold) if total_units > 0 else 0
+        admin_needed = max(base_admin_needed, unit_scaled_admin_needed)
+
+        # no maintenance floor — 0 FTE below the property crossover is
+        # the design (contracted maintenance), not a gap.
 
         # Get current staffing
         current_employees = self.get_active_employees(run_id, as_of_date)
@@ -222,29 +207,6 @@ class EmployeeManager:
             needs_maintenance_hire=(maintenance_needed > current_maintenance),
             needs_admin_hire=(admin_needed > current_admin)
         )
-
-    def expected_annual_role_cost(self, role_name: str) -> Decimal:
-        """KD-042: E[annual cost] of a FUTURE hire in this role.
-
-        Hire salaries are seeded uniform draws in [BaseSalary, SalaryCap]
-        (KD-039), so a not-yet-made hire has no knowable salary — the
-        pro-forma gate prices its EXPECTATION: the band mean plus benefits.
-        Deterministic (reference data only), matching the E[·] basis the
-        rest of the gate uses. Memoized per role — reference.EmployeeRole
-        is static, and the gate-basis provider runs daily (read-once idiom).
-        """
-        cached = self._expected_role_cost_cache.get(role_name)
-        if cached is not None:
-            return cached
-        row = self.db.execute_query(
-            "SELECT BaseSalary, SalaryCap FROM reference.EmployeeRole WHERE Role = ?",
-            (role_name,))
-        if not row:
-            raise ValueError(f"Role '{role_name}' not found in reference.EmployeeRole")
-        base, cap = Decimal(str(row[0][0])), Decimal(str(row[0][1]))
-        cost = ((base + cap) / 2 * (1 + self.benefits_pct)).quantize(Decimal('0.01'))
-        self._expected_role_cost_cache[role_name] = cost
-        return cost
 
     def get_run_seed(self, run_id: int) -> int:
         """Get the random seed for this run to ensure reproducibility"""

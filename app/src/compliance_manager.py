@@ -123,40 +123,6 @@ class ComplianceManager:
             'MAJOR': registry.get_float('CMPL', 'SeverityMultMajor'),
         }
 
-        # KD-043 lead knobs (all-aspects-knobbed regime, ratified). The lead
-        # chain is jurisdiction-specific: the cutoff year gates the chain
-        # (sentinel 0 disables it entirely — no-lead-law jurisdictions and
-        # new-build portfolios alike); costs are unit-scaled per the cited
-        # anchors (evidence_base §11) with the severity multiplier fixed at
-        # 1.0 for lead items — base + per-unit IS the full job (the model
-        # prices the full-deleading pole; a severity gradient on it is a
-        # vestige of habitability remediation).
-        self.lead_cutoff_year = registry.get_int('CMPL', 'LeadCutoffYearBuilt')
-        self.lead_assess_cost_base = registry.get_float('CMPL', 'LeadAssessmentCostBase')
-        self.lead_assess_cost_per_unit = registry.get_float('CMPL', 'LeadAssessmentCostPerUnit')
-        self.lead_abate_cost_base = registry.get_float('CMPL', 'LeadAbatementCostBase')
-        self.lead_abate_cost_per_unit = registry.get_float('CMPL', 'LeadAbatementCostPerUnit')
-        self.lead_abate_cost_band_pct = registry.get_float('CMPL', 'LeadAbatementCostBandPct')
-
-    def _property_unit_count(self, property_id: int) -> int:
-        """Unit count for lead cost scaling — the SAME source the acquisition
-        gate's expectation uses (reference.Units by PropertyID), so gate and
-        realized draws can never scale from different counts (KD-043)."""
-        row = self.db.execute_query(
-            "SELECT COUNT(*) FROM reference.Units WHERE PropertyID = ?",
-            (property_id,))
-        return int(row[0][0]) if row and row[0] else 1
-
-    def _is_pre_lead_cutoff(self, year_built) -> bool:
-        """KD-043: the lead chain fires iff the building predates the
-        jurisdiction cutoff. Sentinel `LeadCutoffYearBuilt = 0` disables the
-        chain entirely and TAKES PRECEDENCE over the unknown-YearBuilt
-        default (ratified precedence). Unknown YearBuilt counts as
-        pre-cutoff (conservative) only when the chain is enabled."""
-        if self.lead_cutoff_year <= 0:
-            return False
-        return year_built is None or year_built < self.lead_cutoff_year
-
     def _load_compliance_parameters(self) -> None:
         """
         Load compliance parameters from reference.ComplianceParameters into memory.
@@ -201,156 +167,6 @@ class ComplianceManager:
             self.parameters[row.WorkType] = config
 
         print(f"[ComplianceManager] Loaded {len(self.parameters)} work type parameters")
-
-    def expected_onboarding_compliance_cost(self, unit_count: int,
-                                            year_built: Optional[int],
-                                            known_lead_cost: Optional[Decimal] = None) -> Decimal:
-        """KD-042: expected one-time compliance cost of onboarding ONE
-        acquired property — the probability-weighted average of exactly the
-        work-item chains acquisition close spawns (see
-        initiate_property_compliance / REMEDIATION_MAPPING):
-
-          building:  BUILDING_HABITABILITY_INSPECTION → BUILDING_REMEDIATION
-                       (ModeratePct × 1.5 | else × 3.0)
-                     LEAD_DOC_REVIEW ($0) → LEAD_RISK_ASSESSMENT ($base+per-unit)
-                       → LEAD_ABATEMENT ($base+per-unit, ±band, ×1.0) — pre-cutoff (knobbed) only
-          per unit:  UNIT_SMOKE_CO_INSPECTION → …_REMEDIATION (always MINOR)
-                     UNIT_HABITABILITY_INSPECTION → UNIT_REMEDIATION
-                       (MinorPct × 1.0 | else × 1.5)
-
-        Base-year dollars (compliance charges are not inflation-adjusted in
-        the engine — the expectation matches what will actually be drawn).
-        Remediation costs use the uniform band MEAN; inspection items use
-        cost_min, matching the CostEstimate the spawn writes. Unknown
-        Lead terms derive from the SAME knobs the realized spawn uses
-        (KD-043: the cutoff sentinel is honored identically — a disabled
-        jurisdiction prices zero lead; unknown YearBuilt counts as
-        pre-cutoff only when the chain is enabled; unit-scaled assessment
-        + abatement at multiplier 1.0), so gate pricing and realization
-        move together by construction. Used ONLY by the pro-forma
-        acquisition gate — realized draws are untouched.
-        """
-        def band_mean(work_type: str) -> Decimal:
-            p = self.parameters[work_type]
-            return (Decimal(str(p.cost_min)) + Decimal(str(p.cost_max))) / 2
-
-        def fail_chance(work_type: str) -> Decimal:
-            p = self.parameters[work_type]
-            if p.pass_chance_override is not None:
-                return Decimal('1') - Decimal(str(p.pass_chance_override))
-            return Decimal(str(p.fail_chance_base))
-
-        mult = {k: Decimal(str(v)) for k, v in self.severity_multipliers.items()}
-
-        # Building habitability chain (every property)
-        bldg_rem_sev = (Decimal(str(self.building_remediation_moderate_pct)) * mult['MODERATE']
-                        + (1 - Decimal(str(self.building_remediation_moderate_pct))) * mult['MAJOR'])
-        expected = (Decimal(str(self.parameters['BUILDING_HABITABILITY_INSPECTION'].cost_min))
-                    + fail_chance('BUILDING_HABITABILITY_INSPECTION')
-                    * band_mean('BUILDING_REMEDIATION') * bldg_rem_sev)
-
-        # Lead chain. KD-193 (D3 coherence): if the property's lead has been
-        # ASSESSED at due diligence, price it at the KNOWN actual
-        # (known_lead_cost) — the assessment cost is already sunk pre-closing
-        # (a DD cost), so only the foreseen ABATEMENT remains in the onboarding
-        # lump. Otherwise (un-assessed candidate), fall back to the E[lead]
-        # expectation — unit-scaled assessment + abatement at ×1.0, cutoff/
-        # sentinel identical to the realized spawn (KD-043 move-together).
-        if known_lead_cost is not None:
-            expected += Decimal(str(known_lead_cost))
-        elif self._is_pre_lead_cutoff(year_built):
-            assess = (Decimal(str(self.lead_assess_cost_base))
-                      + Decimal(str(self.lead_assess_cost_per_unit)) * max(0, unit_count - 1))
-            abate_center = (Decimal(str(self.lead_abate_cost_base))
-                            + Decimal(str(self.lead_abate_cost_per_unit)) * max(0, unit_count - 1))
-            expected += fail_chance('LEAD_DOC_REVIEW') * (
-                assess + fail_chance('LEAD_RISK_ASSESSMENT') * abate_center)
-
-        # Per-unit chains
-        e_smoke = (Decimal(str(self.parameters['UNIT_SMOKE_CO_INSPECTION'].cost_min))
-                   + fail_chance('UNIT_SMOKE_CO_INSPECTION')
-                   * band_mean('UNIT_SMOKE_CO_REMEDIATION') * mult['MINOR'])
-        unit_rem_sev = (Decimal(str(self.unit_remediation_minor_pct)) * mult['MINOR']
-                        + (1 - Decimal(str(self.unit_remediation_minor_pct))) * mult['MODERATE'])
-        e_unit_hab = (Decimal(str(self.parameters['UNIT_HABITABILITY_INSPECTION'].cost_min))
-                      + fail_chance('UNIT_HABITABILITY_INSPECTION')
-                      * band_mean('UNIT_REMEDIATION') * unit_rem_sev)
-        expected += Decimal(unit_count) * (e_smoke + e_unit_hab)
-
-        return expected.quantize(Decimal('0.01'))
-
-    def assess_property_lead(self, unit_count: int, year_built: Optional[int], rng):
-        """KD-193: pre-closing lead assessment — the ACTUAL draw (not the
-        E[lead] average) of the lead-chain outcome for ONE property, using the
-        SAME knobs, cutoff, and probabilities as
-        expected_onboarding_compliance_cost / the realized spawn (full-chain
-        fidelity: doc-review P(no docs)=0.85 → hazard P=0.55 → abatement ±band).
-
-        Returns (assessment_cost, abatement_cost):
-          assessment_cost — the risk-assessment due-diligence cost INCURRED
-            (0 if post-cutoff or docs present; the org pays the assessor only
-            when it commissions one, i.e. when doc-review fails).
-          abatement_cost  — the FORESEEN full abatement cost (0 if post-cutoff /
-            docs present / no hazard; else base + per-unit, ±band). This is the
-            store-and-forward value: persisted on the attempt at inspection and
-            READ by the post-closing LEAD_ABATEMENT (never re-drawn — the
-            realized abatement RNG seeds on WorkItemID/ScheduledDate, absent
-            pre-closing).
-
-        rng: a caller-owned, property-seeded random.Random (dedicated offset —
-        NOT the content-hash work-item stream). Draw order (doc → hazard →
-        band) is fixed so the outcome is seed-reproducible.
-        """
-        zero = Decimal('0.00')
-        if not self._is_pre_lead_cutoff(year_built):
-            return zero, zero
-
-        def fail_chance(work_type: str) -> float:
-            p = self.parameters[work_type]
-            if p.pass_chance_override is not None:
-                return 1.0 - float(p.pass_chance_override)
-            return float(p.fail_chance_base)
-
-        # LEAD_DOC_REVIEW — docs present (pass) ⇒ no lead cost.
-        if rng.random() >= fail_chance('LEAD_DOC_REVIEW'):
-            return zero, zero
-        # no docs ⇒ commission the risk assessment (DD cost incurred now).
-        assess = (Decimal(str(self.lead_assess_cost_base))
-                  + Decimal(str(self.lead_assess_cost_per_unit)) * max(0, unit_count - 1)
-                  ).quantize(Decimal('0.01'))
-        # LEAD_RISK_ASSESSMENT — no hazard (pass) ⇒ assessment only, no abatement.
-        if rng.random() >= fail_chance('LEAD_RISK_ASSESSMENT'):
-            return assess, zero
-        # hazard ⇒ foresee the full abatement cost (unit-scaled center ± band, ×1.0).
-        center = (Decimal(str(self.lead_abate_cost_base))
-                  + Decimal(str(self.lead_abate_cost_per_unit)) * max(0, unit_count - 1))
-        band = Decimal(str(self.lead_abate_cost_band_pct))
-        factor = (Decimal('1') - band) + Decimal(str(rng.random())) * 2 * band
-        return assess, (center * factor).quantize(Decimal('0.01'))
-
-    def assess_property_lead_for_acquisition(self, property_id: int, rng):
-        """KD-193 provider entry (wired to PropertyAcquisitionManager's lead
-        assessor). Fetches YearBuilt + unit count for `property_id` from the
-        SAME sources the gate expectation and the realized spawn use
-        (reference.Properties.YearBuilt, `_property_unit_count`), then runs the
-        pre-closing assessment. Returns (assessment_cost, abatement_cost).
-        `rng` is the caller's dedicated property-seeded Random."""
-        row = self.db.execute_query(
-            "SELECT YearBuilt FROM reference.Properties WHERE PropertyID = ?", (property_id,))
-        year_built = row[0][0] if row else None
-        unit_count = self._property_unit_count(property_id)
-        return self.assess_property_lead(unit_count, year_built, rng)
-
-    def _is_inspection(self, work_type: str) -> bool:
-        """KD-043 reachability fix: an inspection is any work type that can
-        SPAWN a child on failure — i.e. a key of REMEDIATION_MAPPING. Role,
-        not name: the old string-match ('INSPECTION' in name, or the
-        LEAD_DOC_REVIEW special case) silently excluded LEAD_RISK_ASSESSMENT,
-        which therefore always resolved COMPLETED and never rolled its
-        declared fail chance — LEAD_ABATEMENT was unreachable dead code
-        (KD-043; zero abatement rows in any corpus before this fix). Future
-        chain extensions inherit correct classification by construction."""
-        return work_type in self.REMEDIATION_MAPPING
 
     def _get_work_item_rng(
         self,
@@ -470,10 +286,6 @@ class ComplianceManager:
         Args:
             current_date: Current simulation date
         """
-        # ORDER BY is an invariant-#8 guard (#187): on a same-day multi-close,
-        # loop order assigns AttemptID/WorkItemID blocks, and WorkItemID is a
-        # component of the work-item content-hash seed — so the order must not
-        # ride plan row order. AttemptID = the clustered-PK trailing column.
         query = """
             SELECT
                 paa.AttemptID AS AcquisitionAttemptID,
@@ -495,7 +307,6 @@ class ComplianceManager:
                         AND ca.ScopeType = 'BUILDING'
                         AND ca.TriggerType = 'ACQUISITION_CLOSE'
                 )
-            ORDER BY paa.AttemptID
         """
 
         properties = self.db.execute_query(query, (self.run_id, current_date))
@@ -617,28 +428,43 @@ class ComplianceManager:
             year_built: Property year built
         """
         # Check if pre-1978 (lead compliance required)
-        # KD-043: cutoff is a jurisdiction knob (CMPL.LeadCutoffYearBuilt,
-        # sentinel 0 disables), no longer a hardcoded 1978 literal.
-        is_pre_1978 = self._is_pre_lead_cutoff(year_built)
+        is_pre_1978 = year_built < 1978
 
-        # Lead chain — KD-193 store-and-forward. If the property's lead was
-        # ASSESSED at due diligence (the normal path once the assessor is
-        # wired), REALIZE the stored outcome: the doc-review + hazard
-        # determination and the assessment cost already ran pre-closing, so
-        # post-closing we do ONLY the abatement WORK at the assessed cost
-        # (occupancy-blocking preserved; cost READ not drawn; no re-charge).
-        # If un-assessed (legacy / no assessor wired), fall back to the
-        # original post-closing doc-review chain.
+        # LEAD_DOC_REVIEW (pre-1978 only)
         if is_pre_1978:
-            assessed = self._lookup_assessed_lead(property_id)
-            if assessed is not None:
-                lead_assessed, abate_cost = assessed
-                if lead_assessed and abate_cost is not None and Decimal(str(abate_cost)) > 0:
-                    self._spawn_realized_lead_abatement(
-                        attempt_id, property_id, close_date, Decimal(str(abate_cost)))
-                # assessed clean (docs present / no hazard) → no lead work
-            else:
-                self._spawn_lead_doc_review_chain(attempt_id, property_id, close_date)
+            lead_doc_params = self.parameters['LEAD_DOC_REVIEW']
+            work_item_id = self._get_next_work_item_id()
+
+            # Sample duration from range
+            rng_value = self._get_work_item_rng(
+                property_id, None, 'LEAD_DOC_REVIEW',
+                close_date + timedelta(days=self.offset_doc_review_days), work_item_id
+            )
+            duration_days = int(
+                lead_doc_params.duration_min_days +
+                rng_value * (lead_doc_params.duration_max_days - lead_doc_params.duration_min_days)
+            )
+
+            scheduled_date = close_date + timedelta(days=self.offset_doc_review_days)
+
+            insert_query = """
+                INSERT INTO simulation.ComplianceWorkItem (
+                    RunID, WorkItemID, AttemptID, PropertyID, UnitID, WorkType, Status,
+                    ScheduledDate, StartDate, CompletedDate, CostEstimate, ActualCost,
+                    PaidDate, DurationDays, ParentWorkItemID, Severity, Metadata
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """
+
+            self.db.execute_non_query(
+                insert_query,
+                (
+                    self.run_id, work_item_id, attempt_id, property_id, None,
+                    'LEAD_DOC_REVIEW', 'SCHEDULED', scheduled_date, None, None,
+                    Decimal('0.00'), None, None, duration_days, None, None, None
+                )
+            )
+
+            print(f"    Created LEAD_DOC_REVIEW (WorkItem {work_item_id}, scheduled {scheduled_date})")
 
         # BUILDING_HABITABILITY_INSPECTION (all properties)
         hab_params = self.parameters['BUILDING_HABITABILITY_INSPECTION']
@@ -663,78 +489,6 @@ class ComplianceManager:
         )
 
         print(f"    Created BUILDING_HABITABILITY_INSPECTION (WorkItem {work_item_id}, scheduled {scheduled_date})")
-
-    def _lookup_assessed_lead(self, property_id: int):
-        """KD-193 store-and-forward source: the pre-closing lead assessment for
-        the WINNING acquisition attempt of this property. Returns
-        (lead_assessed: bool, abatement_cost: Decimal|None), or None when no
-        assessed attempt exists (legacy / no assessor wired → the original
-        post-closing chain runs)."""
-        row = self.db.execute_query(
-            "SELECT LeadAssessed, AssessedLeadCost FROM simulation.PropertyAcquisitionAttempt "
-            "WHERE RunID = ? AND PropertyID = ? AND AcquisitionSucceeded = 1 AND LeadAssessed = 1",
-            (self.run_id, property_id))
-        if not row:
-            return None
-        return bool(row[0][0]), row[0][1]
-
-    def _spawn_realized_lead_abatement(self, attempt_id: int, property_id: int,
-                                       close_date: date, cost: Decimal) -> None:
-        """KD-193: the post-closing LEAD_ABATEMENT that REALIZES the
-        due-diligence assessment. CostEstimate = the assessed cost (READ, never
-        re-drawn — assessed == abated). Duration IS drawn here: the
-        occupancy-delay is post-closing work, not part of the pre-closing cost
-        decision. As a standalone remediation it pays its CostEstimate on start
-        and blocks the building until COMPLETED (occupancy channel preserved).
-        The doc-review + risk-assessment determination + assessment cost already
-        ran pre-closing, so they are NOT re-spawned / re-charged here."""
-        abate_params = self.parameters['LEAD_ABATEMENT']
-        work_item_id = self._get_next_work_item_id()
-        scheduled_date = close_date + timedelta(days=self.offset_doc_review_days)
-        rng_dur = self._get_work_item_rng(
-            property_id, None, 'LEAD_ABATEMENT_DURATION', scheduled_date, work_item_id)
-        duration_days = int(abate_params.duration_min_days
-                            + rng_dur * (abate_params.duration_max_days - abate_params.duration_min_days))
-        self.db.execute_non_query(
-            """INSERT INTO simulation.ComplianceWorkItem (
-                 RunID, WorkItemID, AttemptID, PropertyID, UnitID, WorkType, Status,
-                 ScheduledDate, StartDate, CompletedDate, CostEstimate, ActualCost,
-                 PaidDate, DurationDays, ParentWorkItemID, Severity, Metadata
-               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            # Severity='MAJOR' matches the legacy chain-spawned LEAD_ABATEMENT
-            # (via _spawn_remediation_from_failed_inspection) so the frozen corpus
-            # stores one consistent value for the same real-world event. Purely a
-            # stored label here — the cost is the READ assessed value, not a
-            # severity-derived recompute, and KD-043 set lead's severity multiplier
-            # to 1.0. Clearance never branches on Severity for LEAD_ABATEMENT.
-            (self.run_id, work_item_id, attempt_id, property_id, None,
-             'LEAD_ABATEMENT', 'SCHEDULED', scheduled_date, None, None,
-             cost.quantize(Decimal('0.01')), None, None, duration_days, None, 'MAJOR', None))
-        print(f"    Created LEAD_ABATEMENT (realized from DD assessment, WorkItem "
-              f"{work_item_id}, cost ${cost:,.2f}, scheduled {scheduled_date})")
-
-    def _spawn_lead_doc_review_chain(self, attempt_id: int, property_id: int,
-                                     close_date: date) -> None:
-        """The original post-closing lead chain (LEAD_DOC_REVIEW → …). KD-193
-        legacy fallback for un-assessed properties (no assessor wired — tests /
-        legacy). Behavior unchanged from pre-KD-193."""
-        lead_doc_params = self.parameters['LEAD_DOC_REVIEW']
-        work_item_id = self._get_next_work_item_id()
-        scheduled_date = close_date + timedelta(days=self.offset_doc_review_days)
-        rng_value = self._get_work_item_rng(
-            property_id, None, 'LEAD_DOC_REVIEW', scheduled_date, work_item_id)
-        duration_days = int(lead_doc_params.duration_min_days
-                            + rng_value * (lead_doc_params.duration_max_days - lead_doc_params.duration_min_days))
-        self.db.execute_non_query(
-            """INSERT INTO simulation.ComplianceWorkItem (
-                 RunID, WorkItemID, AttemptID, PropertyID, UnitID, WorkType, Status,
-                 ScheduledDate, StartDate, CompletedDate, CostEstimate, ActualCost,
-                 PaidDate, DurationDays, ParentWorkItemID, Severity, Metadata
-               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (self.run_id, work_item_id, attempt_id, property_id, None,
-             'LEAD_DOC_REVIEW', 'SCHEDULED', scheduled_date, None, None,
-             Decimal('0.00'), None, None, duration_days, None, None, None))
-        print(f"    Created LEAD_DOC_REVIEW (WorkItem {work_item_id}, scheduled {scheduled_date})")
 
     def _create_due_diligence_remediation(
         self,
@@ -1097,7 +851,7 @@ class ComplianceManager:
         print(f"    {current_date}: Work item {item.WorkItemID} ({item.WorkType}) started (IN_PROGRESS)")
 
         # Determine if inspection or remediation
-        is_inspection = self._is_inspection(item.WorkType)
+        is_inspection = 'INSPECTION' in item.WorkType or item.WorkType == 'LEAD_DOC_REVIEW'
 
         if not is_inspection:
             # Remediation: pay cost on start day
@@ -1127,7 +881,7 @@ class ComplianceManager:
             current_date: Current simulation date
         """
         # Determine if inspection or remediation
-        is_inspection = self._is_inspection(item.WorkType)
+        is_inspection = 'INSPECTION' in item.WorkType or item.WorkType == 'LEAD_DOC_REVIEW'
 
         if is_inspection:
             # Inspection: determine PASSED or FAILED
@@ -1201,7 +955,7 @@ class ComplianceManager:
 
         for item in work_items:
             # Determine if inspection or remediation
-            is_inspection = self._is_inspection(item.WorkType)
+            is_inspection = 'INSPECTION' in item.WorkType or item.WorkType == 'LEAD_DOC_REVIEW'
 
             if is_inspection:
                 # Inspection: determine PASSED or FAILED
@@ -1309,7 +1063,7 @@ class ComplianceManager:
         )
 
         if cost > 0:
-            is_inspection = self._is_inspection(work_type)
+            is_inspection = 'INSPECTION' in work_type or work_type == 'LEAD_DOC_REVIEW'
             kind = 'INSPECTION' if is_inspection else 'REMEDIATION'
             self.fund_manager.process_expense(
                 run_id=self.run_id,
@@ -1486,46 +1240,12 @@ class ComplianceManager:
         Args:
             failed_item: Failed inspection work item
             remediation_type: Remediation work type
-            severity: Severity string ('MINOR' | 'MODERATE' | 'MAJOR').
-                IGNORED for LEAD_RISK_ASSESSMENT / LEAD_ABATEMENT — lead
-                cost is unit-scaled at multiplier 1.0, not severity-scaled
-                (KD-043).
+            severity: Severity string ('MINOR' | 'MODERATE' | 'MAJOR')
 
         Returns:
             Tuple of (duration_days, cost_estimate)
         """
         params = self.parameters[remediation_type]
-
-        # KD-043 (ratified): lead items are UNIT-SCALED at multiplier 1.0 —
-        # base + per-unit IS the full job (anchored to the MassHousing GTLO
-        # ladder; evidence_base §11). Assessment is deterministic
-        # (base + per-unit); abatement draws a uniform ±band around its
-        # unit-scaled center. Durations keep the ComplianceParameters bands
-        # (the migration folded the former ×3 severity effect into the
-        # LEAD_ABATEMENT duration band itself, so effective blocking time is
-        # unchanged — the occupancy-delay channel is real and priced).
-        if remediation_type in ('LEAD_RISK_ASSESSMENT', 'LEAD_ABATEMENT'):
-            units = self._property_unit_count(failed_item.PropertyID)
-            rng_duration = self._get_work_item_rng(
-                failed_item.PropertyID, failed_item.UnitID,
-                f"{remediation_type}_DURATION", failed_item.ScheduledDate,
-                failed_item.WorkItemID)
-            duration_days = params.duration_min_days + int(
-                rng_duration * (params.duration_max_days - params.duration_min_days))
-            if remediation_type == 'LEAD_RISK_ASSESSMENT':
-                cost = Decimal(str(self.lead_assess_cost_base)) + \
-                    Decimal(str(self.lead_assess_cost_per_unit)) * max(0, units - 1)
-            else:
-                center = Decimal(str(self.lead_abate_cost_base)) + \
-                    Decimal(str(self.lead_abate_cost_per_unit)) * max(0, units - 1)
-                rng_cost = self._get_work_item_rng(
-                    failed_item.PropertyID, failed_item.UnitID,
-                    f"{remediation_type}_COST", failed_item.ScheduledDate,
-                    failed_item.WorkItemID)
-                band = Decimal(str(self.lead_abate_cost_band_pct))
-                factor = (Decimal('1') - band) + Decimal(str(rng_cost)) * 2 * band
-                cost = center * factor
-            return duration_days, cost.quantize(Decimal('0.01'))
 
         # Severity multipliers from the CMPL knobs (unknown severity -> MINOR)
         multiplier = self.severity_multipliers.get(severity, self.severity_multipliers['MINOR'])
@@ -1599,19 +1319,10 @@ class ComplianceManager:
         """
         Get all blocking building-level work items that are not yet cleared.
 
-        A work item is "cleared" when (KD-043 clearance fix):
+        A work item is "cleared" when:
         - Status = 'PASSED' (inspection passed)
         - Status = 'COMPLETED' (remediation completed)
-        - Status = 'FAILED' AND its spawn chain terminates cleared — i.e. ANY
-          descendant (recursive) has Status PASSED or COMPLETED. In a linear
-          spawn chain only the terminal node can be PASSED/COMPLETED, so this
-          is exactly "the chain resolved": a failed LEAD_DOC_REVIEW clears
-          when its LEAD_RISK_ASSESSMENT passes (no hazard) OR when the chain's
-          LEAD_ABATEMENT completes. The pre-KD-043 rule (direct child
-          COMPLETED only) deadlocked two-stage chains — it was accidentally
-          satisfied by the mis-classification KD-043's reachability fix
-          removes. Value-neutral for every one-hop chain (a COMPLETED direct
-          remediation is a COMPLETED descendant).
+        - Status = 'FAILED' AND has remediation child with Status = 'COMPLETED'
 
         Special case (DUE_DILIGENCE_REMEDIATION):
         - Only blocks if Severity >= 'MODERATE'
@@ -1621,20 +1332,6 @@ class ComplianceManager:
             List of blocking work items not yet cleared
         """
         query = """
-            WITH descendants AS (
-                SELECT root.WorkItemID AS RootID, child.WorkItemID, child.Status
-                FROM simulation.ComplianceWorkItem root
-                JOIN simulation.ComplianceWorkItem child
-                  ON child.RunID = root.RunID
-                 AND child.ParentWorkItemID = root.WorkItemID
-                WHERE root.RunID = ? AND root.PropertyID = ?
-                  AND root.UnitID IS NULL  -- only building-level roots are probed
-                UNION ALL
-                SELECT d.RootID, c.WorkItemID, c.Status
-                FROM simulation.ComplianceWorkItem c
-                JOIN descendants d ON c.ParentWorkItemID = d.WorkItemID
-                WHERE c.RunID = ?
-            )
             SELECT wi.*
             FROM simulation.ComplianceWorkItem wi
             WHERE wi.RunID = ?
@@ -1642,10 +1339,12 @@ class ComplianceManager:
                 AND wi.UnitID IS NULL  -- Building-level only
                 AND wi.Status NOT IN ('PASSED', 'COMPLETED')  -- Not yet cleared
                 AND NOT EXISTS (
-                    -- KD-043: cleared when the spawn chain terminates cleared
-                    SELECT 1 FROM descendants d
-                    WHERE d.RootID = wi.WorkItemID
-                        AND d.Status IN ('PASSED', 'COMPLETED')
+                    -- Check if this is a FAILED inspection with COMPLETED remediation child
+                    SELECT 1
+                    FROM simulation.ComplianceWorkItem child
+                    WHERE child.RunID = wi.RunID
+                        AND child.ParentWorkItemID = wi.WorkItemID
+                        AND child.Status = 'COMPLETED'
                 )
                 AND (
                     -- Normal blocking items: block unconditionally
@@ -1655,8 +1354,7 @@ class ComplianceManager:
                     (wi.WorkType = 'DUE_DILIGENCE_REMEDIATION' AND wi.Severity IN ('MODERATE', 'MAJOR'))
                 )
         """
-        results = self.db.execute_query(
-            query, (self.run_id, property_id, self.run_id, self.run_id, property_id))
+        results = self.db.execute_query(query, (self.run_id, property_id))
         return results if results else []
 
     def _get_blocking_unit_work_items(
@@ -1667,27 +1365,15 @@ class ComplianceManager:
         """
         Get all blocking unit-level work items that are not yet cleared.
 
-        Clearance semantics identical to the building-level query (KD-043):
-        PASSED / COMPLETED, or a FAILED inspection whose spawn chain
-        terminates cleared (recursive descendant PASSED or COMPLETED).
+        A work item is "cleared" when:
+        - Status = 'PASSED' (inspection passed)
+        - Status = 'COMPLETED' (remediation completed)
+        - Status = 'FAILED' AND has remediation child with Status = 'COMPLETED'
 
         Returns:
             List of blocking work items not yet cleared
         """
         query = """
-            WITH descendants AS (
-                SELECT root.WorkItemID AS RootID, child.WorkItemID, child.Status
-                FROM simulation.ComplianceWorkItem root
-                JOIN simulation.ComplianceWorkItem child
-                  ON child.RunID = root.RunID
-                 AND child.ParentWorkItemID = root.WorkItemID
-                WHERE root.RunID = ? AND root.PropertyID = ? AND root.UnitID = ?
-                UNION ALL
-                SELECT d.RootID, c.WorkItemID, c.Status
-                FROM simulation.ComplianceWorkItem c
-                JOIN descendants d ON c.ParentWorkItemID = d.WorkItemID
-                WHERE c.RunID = ?
-            )
             SELECT wi.*
             FROM simulation.ComplianceWorkItem wi
             WHERE wi.RunID = ?
@@ -1695,16 +1381,15 @@ class ComplianceManager:
                 AND wi.UnitID = ?
                 AND wi.Status NOT IN ('PASSED', 'COMPLETED')  -- Not yet cleared
                 AND NOT EXISTS (
-                    -- KD-043: cleared when the spawn chain terminates cleared
-                    SELECT 1 FROM descendants d
-                    WHERE d.RootID = wi.WorkItemID
-                        AND d.Status IN ('PASSED', 'COMPLETED')
+                    -- Check if this is a FAILED inspection with COMPLETED remediation child
+                    SELECT 1
+                    FROM simulation.ComplianceWorkItem child
+                    WHERE child.RunID = wi.RunID
+                        AND child.ParentWorkItemID = wi.WorkItemID
+                        AND child.Status = 'COMPLETED'
                 )
         """
-        results = self.db.execute_query(
-            query,
-            (self.run_id, property_id, unit_id, self.run_id,
-             self.run_id, property_id, unit_id))
+        results = self.db.execute_query(query, (self.run_id, property_id, unit_id))
         return results if results else []
 
     def is_building_online(

@@ -12,10 +12,6 @@ docs/reference/evidence_base.md §10.
         floor_exit, base_exit)
 
   effective_discount = 1 - effective_rent / market_rent            (vs the current unit's market)
-      market_rent = market_anchor_rent * rent_factor(t) — the anchor is the unit's
-      AdjustedRent (the bath-adjusted market figure charging prices off, KD-012).
-      Charging and the deal comparator share ONE basis; do not repoint the anchor
-      at the BaseRent column (that re-splits the basis this fix killed).
   external_scarcity  = 1 - availability * (1 - affordability_gap)  (regional)
       availability      = clamp(regional_vacancy / vac_ref, 0, 1)
       affordability_gap = clamp((market_rent/income - 0.30)/(burden_ceiling - 0.30), 0, 1)
@@ -128,18 +124,15 @@ class RetentionModel:
                             regional_vacancy)
 
     # ------------------------------------------------------------------
-    def breakdown(self, ctx: _DateContext, *, effective_rent, market_anchor_rent,
+    def breakdown(self, ctx: _DateContext, *, effective_rent, base_rent,
                   signing_income, income_reference_date: date) -> dict:
         """Full component breakdown for one lease at renewal (diagnostics + the live
         decision). `voluntary_exit_prob` returns just the ['voluntary_exit'] field, so
-        this is the single source of truth for the formula.
-
-        market_anchor_rent: the unit's AdjustedRent — the same bath-adjusted
-        market basis charging uses (KD-012)."""
+        this is the single source of truth for the formula."""
         base_exit = self.base_exit
 
         # --- effective_discount: 1 - effective_rent / market_rent (the current unit) ---
-        market_rent = float(market_anchor_rent) * ctx.rent_factor_now
+        market_rent = float(base_rent) * ctx.rent_factor_now
         if market_rent <= 0.0:
             effective_discount = 0.0
         else:
@@ -181,10 +174,10 @@ class RetentionModel:
             "voluntary_exit": voluntary_exit,
         }
 
-    def voluntary_exit_prob(self, ctx: _DateContext, *, effective_rent, market_anchor_rent,
+    def voluntary_exit_prob(self, ctx: _DateContext, *, effective_rent, base_rent,
                             signing_income, income_reference_date: date) -> float:
         """Annual voluntary-exit probability for one lease at renewal. In [floor_exit, base_exit]."""
         return self.breakdown(
-            ctx, effective_rent=effective_rent, market_anchor_rent=market_anchor_rent,
+            ctx, effective_rent=effective_rent, base_rent=base_rent,
             signing_income=signing_income, income_reference_date=income_reference_date
         )["voluntary_exit"]

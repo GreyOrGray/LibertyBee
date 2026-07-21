@@ -5,7 +5,6 @@ __pycache__/
 # reproduction runtime artifacts
 corpus_regen_status.txt
 corpus_regen_logs/
-sweep.stop
 *.log
 
 # local environments + the downloaded database backups (fetched from the Release, not tracked)

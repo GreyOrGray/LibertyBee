@@ -149,9 +149,7 @@ class Simulation:
         self.last_csf_committed_target = Decimal('0')
         self.logger = logging.getLogger(__name__)
 
-    def compute_monthly_opex_breakdown(self, current_day: date,
-                                       extra_units: int = 0,
-                                       extra_properties: int = 0) -> MonthlyOpExBreakdown:
+    def compute_monthly_opex_breakdown(self, current_day: date) -> MonthlyOpExBreakdown:
         """Single source of truth for monthly_opex (expected basis).
 
         Composes payroll (from EmployeeManager) + itemized per-unit buckets
@@ -161,17 +159,6 @@ class Simulation:
         simulation.PropertyUnits regardless of occupancy;
         properties as DISTINCT PropertyID from the same table (same source, no
         count drift). Realized event draws happen in the month-end block only.
-
-        KD-042: ``extra_units`` / ``extra_properties`` fold a
-        hypothetical addition (the in-pipeline set) into every count-driven
-        bucket — the pro-forma marginal is f(owned+extra) − f(owned) of THIS
-        function, so any nonlinearity is priced by the same code the owned
-        basis runs. Defaults of 0/0 are byte-identical to the pre-KD-042
-        behavior (regression-gated). Payroll stays actual-employees; the
-        pro-forma staffing STEP is priced separately in
-        compute_acquisition_gate_bases. The ``owned_units`` /
-        ``owned_properties`` fields always report OWNED counts, whatever
-        extras were passed.
         """
         employees = self.employee_manager.get_active_employees(self.run_id, current_day)
         payroll = sum((emp.base_salary + emp.benefits_cost) / 12 for emp in employees)
@@ -185,37 +172,32 @@ class Simulation:
         )
         owned_units = int(counts_row[0][0]) if counts_row else 0
         owned_properties = int(counts_row[0][1]) if counts_row else 0
-        basis_units = owned_units + extra_units
-        basis_properties = owned_properties + extra_properties
 
         inflation_factor = self.inflation_engine.get_cumulative_opex_factor(
             self.run_id, current_day
         )
 
         def monthly_per_unit(annual: Decimal) -> Decimal:
-            return ((annual * Decimal(basis_units) / Decimal(12))
+            return ((annual * Decimal(owned_units) / Decimal(12))
                     * inflation_factor).quantize(Decimal('0.01'))
 
         property_tax = monthly_per_unit(self.config.property_tax_per_unit)
         insurance = monthly_per_unit(self.config.insurance_per_unit)
         utilities = monthly_per_unit(self.config.utilities_owner_per_unit)
-        exterior = ((self.config.exterior_per_property * Decimal(basis_properties)
+        exterior = ((self.config.exterior_per_property * Decimal(owned_properties)
                      / Decimal(12)) * inflation_factor).quantize(Decimal('0.01'))
 
         # Expected event-stream costs (base-year) -> inflated. Routine spend
         # drops to the reduced contract share once an in-house tech is active
         # (the tech's salary shows up in payroll instead); major/specialty
-        # work stays fully contracted. (Pro-forma note: the tech count is the
-        # ACTUAL headcount even when extras are passed — if the pipeline would
-        # step a first tech, the basis prices full contract share AND the
-        # step's salary; slightly conservative-high, the permitted direction.)
+        # work stays fully contracted.
         expected_routine_base = Decimal(str(
-            self.maintenance_event_manager.expected_monthly_routine_cost(basis_units)))
+            self.maintenance_event_manager.expected_monthly_routine_cost(owned_units)))
         if maint_techs > 0:
             expected_routine_base *= self.config.maint_tech_reduced_contract_pct
         expected_routine = (expected_routine_base * inflation_factor).quantize(Decimal('0.01'))
         expected_major = (Decimal(str(
-            self.maintenance_event_manager.expected_monthly_major_cost(basis_units)))
+            self.maintenance_event_manager.expected_monthly_major_cost(owned_units)))
             * inflation_factor).quantize(Decimal('0.01'))
 
         # Expected turnover make-ready: derived from the
@@ -233,7 +215,7 @@ class Simulation:
         expected_turns_per_unit_month = (1.0 - renewal_survive) / 12.0 + \
             self.config.lease_early_break_prob_monthly
         expected_turnover = (
-            Decimal(str(expected_turns_per_unit_month)) * Decimal(basis_units)
+            Decimal(str(expected_turns_per_unit_month)) * Decimal(owned_units)
             * self.config.turnover_cost_base * inflation_factor
         ).quantize(Decimal('0.01'))
 
@@ -256,144 +238,6 @@ class Simulation:
             maintenance_techs=maint_techs,
             total=total,
         )
-
-    def compute_acquisition_gate_bases(self, current_day: date, candidate=None):
-        """KD-042 (ratified design): one consistent snapshot of the
-        acquisition gate's TWO OpEx bases + the one-time onboarding lump.
-
-        - owned basis: compute_monthly_opex_breakdown as-is — feeds the CSF
-          earmark ONLY (the reserve target is never forward-priced, by ratified design).
-        - pro-forma basis: the same breakdown at (owned + pipeline) counts —
-          the set-wise marginal prices threshold crossings the per-property
-          sum would miss — plus the expected STAFFING STEP (the staffing
-          formula evaluated at combined vs owned counts, priced at expected
-          hire cost, since salaries are only drawn at hire time).
-        - onboarding lump (full ratified content): per in-pipeline property,
-          closing costs + due-diligence repair (ACTUAL EstimatedRepairCost
-          once its inspection has drawn, else the severity-weighted ACQ-band
-          expectation) + the expected compliance onboarding chains including
-          the pre-cutoff LEAD chain (post-closing, unit-scaled,
-          un-withdrawable — KD-043: reachable and calibrated; the gate
-          derives from the same knobs as the realized spawn, so pricing
-          and realization move together by construction).
-
-        Membership: every ``IsActive = 1`` attempt — priced from the
-        moment intent exists, before CashHold lands. Owned counts and the
-        pipeline set are read in the same call, so the closing handoff can
-        never leave a property out of BOTH bases (M2: overlap allowed, gap
-        never). ``candidate`` folds one more property in for the R1
-        post-commitment re-gate.
-        """
-        from property_acquisition_manager import AcquisitionGateBases
-
-        owned = self.compute_monthly_opex_breakdown(current_day)
-
-        pam = self.property_acquisition_manager
-        if not pam.acquisition_params:
-            pam.load_acquisition_parameters()
-        closing_pct = Decimal(str(pam.acquisition_params.closing_costs_pct))
-        expected_dd_repair = pam.expected_due_diligence_repair_cost()
-
-        rows = self.db.execute_query(
-            """SELECT paa.PropertyID, paa.ListingPrice, paa.OfferAmount,
-                      paa.CounterAmount, paa.LBResponseToCounter,
-                      paa.EstimatedRepairCost, rp.YearBuilt,
-                      (SELECT COUNT(*) FROM reference.Units u
-                       WHERE u.PropertyID = paa.PropertyID) AS UnitCount,
-                      paa.AssessedLeadCost, paa.LeadAssessed
-               FROM simulation.PropertyAcquisitionAttempt paa
-               JOIN reference.Properties rp ON rp.PropertyID = paa.PropertyID
-               WHERE paa.RunID = ? AND paa.IsActive = 1""",
-            (self.run_id,),
-        )
-
-        pipeline = []
-        for r in rows:
-            # Committed price: the outstanding-reservation rule (offer /
-            # accepted counter), else the listing price pre-offer.
-            reserved = pam._outstanding_reservation(r[2], r[3], r[4])
-            price = Decimal(str(reserved)) if reserved and reserved > 0 else Decimal(str(r[1]))
-            repair = Decimal(str(r[5])) if r[5] is not None else expected_dd_repair
-            # KD-193 (D3 coherence): once the property's lead is assessed at
-            # due diligence, price its onboarding lump at the KNOWN actual lead,
-            # not E[lead] — mirrors EstimatedRepairCost refining once drawn.
-            known_lead = Decimal(str(r[8])) if (r[9] and r[8] is not None) else None
-            pipeline.append({
-                'units': int(r[7]), 'price': price, 'repair': repair,
-                'year_built': int(r[6]) if r[6] is not None else None,
-                'known_lead': known_lead,
-            })
-
-        if candidate is not None:
-            yb_row = self.db.execute_query(
-                "SELECT YearBuilt FROM reference.Properties WHERE PropertyID = ?",
-                (candidate.property_id,))
-            year_built = int(yb_row[0][0]) if yb_row and yb_row[0][0] is not None else None
-            pipeline.append({
-                'units': int(candidate.unit_count),
-                'price': Decimal(str(candidate.list_price)),
-                'repair': expected_dd_repair,
-                'year_built': year_built,
-                'known_lead': None,  # candidate not yet assessed → E[lead]
-            })
-
-        pipeline_units = sum(p['units'] for p in pipeline)
-        pipeline_properties = len(pipeline)
-
-        if pipeline_properties == 0:
-            return AcquisitionGateBases(
-                owned_opex=owned.total, pro_forma_opex=owned.total,
-                onboarding_lump=Decimal('0.00'), pipeline_count=0,
-                pipeline_units=0, pipeline_properties=0)
-
-        pro_forma = self.compute_monthly_opex_breakdown(
-            current_day, extra_units=pipeline_units,
-            extra_properties=pipeline_properties)
-
-        # Expected staffing step: the SAME formula at combined vs owned counts
-        # (never vs current headcount — pending owned-driven hires belong to
-        # check_staffing_needs, and the step must be zero at zero pipeline).
-        # Admin steps price at Administration Manager's expectation: the hire
-        # loop's alternation index resets per call, and threshold crossings
-        # arrive one at a time, so the next admin hire beyond the base-2
-        # floor is Administration Manager in practice (also the
-        # pricier band, the conservative direction).
-        em = self.employee_manager
-        years_operating = (current_day - self.config.start_date).days / 365.25
-        formula_args = (self.config.maint_crossover_properties,
-                        self.config.units_per_admin_early,
-                        self.config.units_per_admin_late,
-                        self.config.early_admin_years, em.base_admin_count)
-        maint_owned, admin_owned = em.staffing_formula(
-            owned.owned_properties, owned.owned_units, years_operating, *formula_args)
-        maint_comb, admin_comb = em.staffing_formula(
-            owned.owned_properties + pipeline_properties,
-            owned.owned_units + pipeline_units, years_operating, *formula_args)
-        staffing_step = Decimal('0')
-        if maint_comb > maint_owned:
-            staffing_step += (Decimal(maint_comb - maint_owned)
-                              * em.expected_annual_role_cost("Maintenance Crew"))
-        if admin_comb > admin_owned:
-            staffing_step += (Decimal(admin_comb - admin_owned)
-                              * em.expected_annual_role_cost("Administration Manager"))
-        staffing_step /= 12
-
-        pro_forma_opex = (pro_forma.total + staffing_step).quantize(Decimal('0.01'))
-
-        lump = Decimal('0')
-        for p in pipeline:
-            lump += (p['price'] * closing_pct).quantize(Decimal('0.01'))
-            lump += p['repair']
-            lump += self.compliance_manager.expected_onboarding_compliance_cost(
-                p['units'], p['year_built'], known_lead_cost=p.get('known_lead'))
-
-        return AcquisitionGateBases(
-            owned_opex=owned.total,
-            pro_forma_opex=pro_forma_opex,
-            onboarding_lump=lump.quantize(Decimal('0.01')),
-            pipeline_count=len(pipeline),
-            pipeline_units=pipeline_units,
-            pipeline_properties=pipeline_properties)
 
     def count_turnovers_started(self, month_start: date, month_end: date) -> int:
         """Turns whose make-ready began in [month_start, month_end] —
@@ -439,18 +283,9 @@ class Simulation:
             # Wire EmployeeManager so check_staffing_needs
             # fires after each property close (post-acquisition trigger).
             self.property_acquisition_manager.set_employee_manager(self.employee_manager)
-            # KD-042: the gate's two-basis snapshot provider — the gate
-            # computes NOTHING itself (single source of truth lives here).
-            self.property_acquisition_manager.set_gate_basis_provider(
-                self.compute_acquisition_gate_bases)
 
             # Initialize compliance manager for this run
             self.compliance_manager = ComplianceManager(self.db, self.event_logger, self.run_id, fund_manager=self.fund_manager, random_seed=self.random_seed)
-
-            # KD-193: wire the pre-closing lead assessor (compliance owns the
-            # knobs + YearBuilt/unit sources; PAM calls it at due diligence).
-            self.property_acquisition_manager.set_lead_assessor(
-                self.compliance_manager.assess_property_lead_for_acquisition)
 
             # Deposit settlement params come from the registry via ProjectionConfig.
 
@@ -888,12 +723,9 @@ class Simulation:
                         if completes:
                             print(f"  {current_day}: Turnover work completed: {len(completes)} items")
 
-                    # Check if we can start a new acquisition pipeline.
-                    # KD-042: no monthly_opex passed — the gate pulls a fresh
-                    # two-basis snapshot (owned + pro-forma + lump) from
-                    # compute_acquisition_gate_bases at gate time.
+                    # Check if we can start a new acquisition pipeline
                     new_attempt_id = self.property_acquisition_manager.check_for_new_opportunities(
-                        current_day, month_count, self.config,
+                        current_day, month_count, self.config, monthly_opex,
                         self.last_csf_committed_target
                     )
                     if new_attempt_id:

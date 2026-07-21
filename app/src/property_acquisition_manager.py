@@ -52,42 +52,6 @@ class PropertyCandidate:
     vacancy_adjusted_rent: Decimal
 
 
-@dataclass(frozen=True)
-class AcquisitionGateBases:
-    """KD-042 (ratified design): the acquisition gate's TWO OpEx bases
-    plus the one-time onboarding lump — one consistent snapshot.
-
-    - ``owned_opex``: the standard expected basis on OWNED units/properties only.
-      Feeds the CSF reserve earmark and nothing else on the gate side (ratified:
-      the reserve target is defined on properties OWNED and is never
-      forward-priced — threading pro-forma into ``_reserve_earmark`` would
-      silently violate that ruling, which is why the gate carries two values).
-    - ``pro_forma_opex``: owned + the marginal expected carrying (set-wise
-      f(owned+pipeline) − f(owned): per-unit buckets, exterior, E[maintenance],
-      E[turnover], staffing step) of every ``IsActive = 1`` acquisition
-      attempt (membership rule: intent-committed, not CashHold-held) — plus
-      the candidate under consideration when re-gating (the post-commitment
-      test). Feeds the Rule 2/3 floor and the acquisition budget.
-    - ``onboarding_lump``: Σ over the same set of E[closing costs +
-      due-diligence repair + compliance onboarding chains (incl. lead)].
-      Added to the required floor ONCE — never multiplied by
-      CashFloorMonths (ratified).
-
-    Built by ``Simulation.compute_acquisition_gate_bases`` (the single
-    source of truth); the gate never derives its own floor inputs.
-    """
-    owned_opex: Decimal
-    pro_forma_opex: Decimal
-    onboarding_lump: Decimal
-    pipeline_count: int
-    pipeline_units: int
-    pipeline_properties: int
-
-    @property
-    def pipeline_marginal(self) -> Decimal:
-        return self.pro_forma_opex - self.owned_opex
-
-
 @dataclass
 class AcquisitionParameters:
     """Acquisition pipeline configuration parameters"""
@@ -193,54 +157,10 @@ class PropertyAcquisitionManager:
         self.run_id = None
         self.config = None  # Will be set via set_config()
         self.acquisition_params: Optional[AcquisitionParameters] = None
-        # KD-042: bound Simulation.compute_acquisition_gate_bases — the gate's
-        # only source of floor inputs (set via set_gate_basis_provider).
-        self.gate_basis_provider = None
-        # KD-027 fix: wired via set_employee_manager so post-acquisition
+        # Wired via set_employee_manager so post-acquisition
         # `check_staffing_needs` calls can fire after each close.
         self.employee_manager = None
-        # KD-193: bound ComplianceManager.assess_property_lead_for_acquisition —
-        # the pre-closing lead assessor (set via set_lead_assessor). None ⇒ no
-        # lead assessment (legacy/test path; AssessedLeadCost stays NULL).
-        self.lead_assessor = None
 
-    def set_lead_assessor(self, assessor) -> None:
-        """KD-193: inject the pre-closing lead assessor
-        (ComplianceManager.assess_property_lead_for_acquisition). Called at
-        the inspection stage: the org learns the property's actual abatement
-        cost during due diligence, so it informs the carry/withdraw decision
-        and is stored-and-forwarded to the post-closing abatement."""
-        self.lead_assessor = assessor
-
-    def set_gate_basis_provider(self, provider) -> None:
-        """KD-042: inject the two-basis snapshot callable
-        (Simulation.compute_acquisition_gate_bases). Fail-loud contract: the
-        opportunity scanner refuses to run without it — a gate with no
-        pro-forma basis would silently regress to the KD-042 defect."""
-        self.gate_basis_provider = provider
-
-    def expected_due_diligence_repair_cost(self) -> Decimal:
-        """KD-042: E[acquisition repair cost] before the inspection draw —
-        severity distribution (Clean/Minor/Moderate/Major probabilities from
-        reference.AcquisitionParameters) × the uniform ACQ band means. Once a
-        pipeline's inspection HAS drawn, the stored EstimatedRepairCost
-        replaces this expectation (price what is known the moment it is
-        known). Note the 8% withdrawal threshold truncates the realized major
-        tail pre-closing, so this raw expectation sits slightly conservative
-        — the permitted direction."""
-        if not self.acquisition_params:
-            self.load_acquisition_parameters()
-        p = self.acquisition_params
-        weights = {
-            'Clean': Decimal(str(p.inspection_clean_probability)),
-            'Minor': Decimal(str(p.inspection_minor_probability)),
-            'Moderate': Decimal(str(p.inspection_moderate_probability)),
-            'Major': Decimal(str(p.inspection_major_probability)),
-        }
-        expected = Decimal('0')
-        for severity, (lo, hi) in self.repair_cost_bands.items():
-            expected += weights[severity] * (Decimal(lo) + Decimal(hi)) / 2
-        return expected.quantize(Decimal('0.01'))
 
     def set_run_id(self, run_id: int):
         """Set current run ID for acquisition operations"""
@@ -732,15 +652,14 @@ class PropertyAcquisitionManager:
             # PropertyID links to the simulation.Properties record we just created
             for idx, unit in enumerate(units_result, start=1):
                 # Query returns: UnitID, UnitNumber, Beds, Baths, BaseRent, AdjustedRent
-                # KD-012 (one rent basis): AdjustedRent — the bath-adjusted market figure
-                # underwriting scored on — is carried into the run; charging and the
-                # retention market anchor price off it. BaseRent stays as provenance
-                # (the bedroom-median anchor).
-                unit_id, unit_number, beds, baths, base_rent, adjusted_rent = unit[:6]
+                # AdjustedRent is fetched here but unused at THIS call site; it IS actively
+                # used at line 947 (acquisition scoring). A "drop the column" disposition
+                # was withdrawn 2026-05-27 — semantics + usage need full audit first.
+                unit_id, unit_number, beds, baths, base_rent = unit[:5]
 
                 # CurrentRent retired at V00058: it was a
                 # set-once 0.9xBaseRent snapshot with zero independent signal; the honest
-                # rent is computed at qualification/signing (AdjustedRent x discount x inflation).
+                # rent is computed at qualification/signing (BaseRent x discount x inflation).
 
                 # Get next UnitID for this run (run-specific numbering)
                 unit_id_query = """
@@ -753,8 +672,8 @@ class PropertyAcquisitionManager:
 
                 insert_unit_query = """
                 INSERT INTO simulation.PropertyUnits
-                (RunID, UnitID, PropertyID, EventID, Unit, Beds, Baths, BaseRent, AdjustedRent, IsOccupied, UnitStatus)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 'Compliance_In_Progress');
+                (RunID, UnitID, PropertyID, EventID, Unit, Beds, Baths, BaseRent, IsOccupied, UnitStatus)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 'Compliance_In_Progress');
                 """
                 self.db.execute_non_query(insert_unit_query, (
                     self.run_id,
@@ -765,7 +684,6 @@ class PropertyAcquisitionManager:
                     beds,
                     baths,
                     base_rent,
-                    adjusted_rent,
                 ))
 
             self.logger.info(f"Added property {property_id} with {len(units_result)} units to portfolio")
@@ -961,40 +879,14 @@ class PropertyAcquisitionManager:
         balances = self.fund_manager.get_fund_balances(self.run_id, current_date)
         return max(Decimal('0'), current_target - balances.csf_balance)
 
-    def _required_cash_floor(self, bases: AcquisitionGateBases) -> Decimal:
-        """KD-042 (ratified): required floor = pro-forma RECURRING carrying ×
-        CashFloorMonths, plus the one-time onboarding lump added ONCE.
-        The single floor definition shared by the gate and the budget
-        (KD #99 same-floor guardrail — two floors drift)."""
-        return (bases.pro_forma_opex * Decimal(self.config.cash_floor_months)
-                + bases.onboarding_lump).quantize(Decimal('0.01'))
-
-    @staticmethod
-    def _floor_detail(bases: AcquisitionGateBases, cash_floor: Decimal) -> str:
-        """V-F: the floor decomposition every pass/refusal string carries —
-        auditable to the dollar."""
-        return (
-            f"floor ${cash_floor:,.2f} = (owned ${bases.owned_opex:,.2f} "
-            f"+ pipeline-marginal ${bases.pipeline_marginal:,.2f} "
-            f"[{bases.pipeline_count} attempt(s), {bases.pipeline_properties} prop / "
-            f"{bases.pipeline_units} unit]) × months + lump ${bases.onboarding_lump:,.2f}"
-        )
-
     def can_acquire_property(self, month_index: int, current_date: date,
-                            bases: AcquisitionGateBases,
+                            monthly_opex: Decimal,
                             committed_target: Decimal = Decimal('0')) -> tuple[bool, str]:
         """
-        KD #99 fix — reserve-first + genuine-draw latch;
-        KD-042 fix — the floor is FORWARD-PRICED.
-
-        The gate takes TWO OpEx bases (AcquisitionGateBases), not one number:
-        Rules 2/3 gate against the pro-forma basis (owned + expected carrying
-        of everything in-pipeline) plus the one-time onboarding lump, while
-        the CSF earmark keeps the OWNED basis (ratified design — the reserve target is
-        never forward-priced). Pre-KD-042 the floor was current-OpEx-only:
-        at month 1 that is payroll-only, so six week-one pipelines could
-        legally commit ~94% of capital (p201 s128/s131, p202 s211 — the
-        living farm's first divergence findings).
+        Reserve-first + genuine-draw latch.
+        Replaces the inflation-deadlocked "CSF >= current target" Rule 1 (the
+        target stepped up monthly on the 1st while the top-up only reached it at
+        month-end, so CSF was permanently one step short).
 
           Rule 1 (6-month grace applies HERE ONLY):
             (a) LATCH — if CSF is below the *committed* target (what the last
@@ -1006,28 +898,20 @@ class PropertyAcquisitionManager:
                 deployable Cash in Rule 3 / the budget (reserve-first — fund the
                 pending top-up first, grow on the remainder). This is NOT a
                 Cash+CSF blend: the shortfall is subtracted from the growth side.
-          Rule 2: Cash >= required floor (no grace; floor = pro-forma × months + lump).
+          Rule 2: Cash >= cash floor (no grace).
           Rule 3: deployable Cash (Cash - floor - reserve earmark) > 0.
 
-        The grace period waives Rule 1 ONLY ("no homes ⇒ no tenants to
-        protect") — it was never a waiver of solvency discipline; the
-        forward-priced floor restores Rules 2/3's teeth during grace without
-        touching the waiver.
-
         Args:
-            bases: the two-basis snapshot from the gate-basis provider
-                (Simulation.compute_acquisition_gate_bases).
             committed_target: CSF target the last month-end top-up funded to
                 (passed from simulation.py). Defaults to 0 (latch inert) for
                 callers without it.
 
         Returns:
-            (allowed, reason) — Boolean and explanation string (V-F: both
-            decompose the floor to the dollar)
+            (allowed, reason) — Boolean and explanation string
         """
         balances = self.fund_manager.get_fund_balances(self.run_id, current_date)
-        cash_floor = self._required_cash_floor(bases)
-        earmark = self._reserve_earmark(month_index, current_date, bases.owned_opex)
+        cash_floor = monthly_opex * Decimal(self.config.cash_floor_months)
+        earmark = self._reserve_earmark(month_index, current_date, monthly_opex)
 
         # Rule 1: reserve-first + genuine-draw latch (6-month grace waives it)
         if month_index <= self.csf_grace_period_months:
@@ -1050,8 +934,8 @@ class PropertyAcquisitionManager:
         # Rule 2: Cash floor discipline (NO grace — applies from month 1)
         if balances.cash_balance < cash_floor:
             reason = (
-                f"Blocked (rule 2, pro-forma Cash floor, KD-042): "
-                f"Cash ${balances.cash_balance:,.2f} < {self._floor_detail(bases, cash_floor)}"
+                f"Blocked (rule 2, Cash floor): "
+                f"Cash ${balances.cash_balance:,.2f} < floor ${cash_floor:,.2f}"
             )
             return False, reason
 
@@ -1059,39 +943,37 @@ class PropertyAcquisitionManager:
         deployable = balances.cash_balance - cash_floor - earmark
         if deployable <= 0:
             reason = (
-                f"Blocked (rule 3, deployable after reserve earmark, KD-042): "
-                f"Cash ${balances.cash_balance:,.2f} - floor - earmark ${earmark:,.2f} "
-                f"= ${deployable:,.2f}; {self._floor_detail(bases, cash_floor)}"
+                f"Blocked (rule 3, deployable after reserve earmark): "
+                f"Cash ${balances.cash_balance:,.2f} - floor ${cash_floor:,.2f} "
+                f"- earmark ${earmark:,.2f} = ${deployable:,.2f}"
             )
             return False, reason
 
         return True, (
             f"All gates pass: {csf_reason}; "
             f"deployable ${deployable:,.2f} (Cash ${balances.cash_balance:,.2f} "
-            f"- floor - earmark ${earmark:,.2f}; {self._floor_detail(bases, cash_floor)})"
+            f"- floor ${cash_floor:,.2f} - earmark ${earmark:,.2f})"
         )
 
     def get_acquisition_budget(self, current_date: date, config: ProjectionConfig,
-                               bases: AcquisitionGateBases,
+                               monthly_opex: Decimal,
                                reserve_earmark: Decimal = Decimal('0')) -> Decimal:
         """
-        KD #99 + KD-042: available acquisition budget =
-        deployable Cash (above the REQUIRED floor and the pending reserve
-        earmark) × acquisition_pct.
+        Available acquisition budget = deployable Cash
+        (above the floor AND above the pending reserve earmark) × acquisition_pct.
 
-        KD #99 guardrails carried forward; KD-042: the floor is the
-        shared ``_required_cash_floor`` — pro-forma recurring × months + the
-        one-time lump — the exact value the gate checks (same-floor
-        guardrail: the budget and the gate can never disagree). The budget
-        shrinks in lockstep as pipelines stack, which is the second brake:
-        a candidate the floor would refuse usually never gets offered on,
-        because ``find_best_property`` can't find anything inside the
-        shrunken budget.
+        Changes (both guardrails):
+          - ``monthly_opex`` is now PASSED IN (was a stale
+            ``annual_static_opex / 12`` placeholder that excluded payroll +
+            inflation), so the cash floor here matches the gate's floor exactly.
+          - ``reserve_earmark`` (the pending month-end CSF top-up) is subtracted
+            before applying ``acquisition_pct`` — reserve-first: fund the
+            reserve obligation, grow on the remainder.
 
         Args:
             current_date: Current simulation date for fund balance lookup
             config: Projection configuration (PROP_AcquisitionPct + FIN.CashFloorMonths)
-            bases: the two-basis snapshot (same one the gate evaluated)
+            monthly_opex: Current monthly OpEx (same value the gate uses)
             reserve_earmark: Pending CSF top-up to reserve before growth (>= 0)
 
         Returns:
@@ -1101,8 +983,8 @@ class PropertyAcquisitionManager:
         balances = self.fund_manager.get_fund_balances(self.run_id, current_date)
         cash_balance = balances.cash_balance
 
-        # The gate's exact floor (KD #99 same-floor guardrail, now shared code)
-        cash_floor = self._required_cash_floor(bases)
+        # Floor uses the real same-day monthly_opex the gate sees
+        cash_floor = (Decimal(str(monthly_opex)) * Decimal(config.cash_floor_months)).quantize(Decimal('0.01'))
 
         # Cash balance already excludes funds in CashHold (reserved for active offers).
         # Deployable = Cash above floor AND above the earmarked pending top-up.
@@ -1119,9 +1001,8 @@ class PropertyAcquisitionManager:
                 message=(
                     f"Acquisition budget calculated: ${budget:,.2f} "
                     f"({config.acquisition_pct:.1%} of ${deployable:,.2f} deployable cash "
-                    f"= ${cash_balance:,.2f} cash - required floor "
-                    f"- ${reserve_earmark:,.2f} reserve earmark; "
-                    f"{self._floor_detail(bases, cash_floor)})"
+                    f"= ${cash_balance:,.2f} cash - ${cash_floor:,.2f} floor "
+                    f"- ${reserve_earmark:,.2f} reserve earmark)"
                 ),
                 entity_type=EntityType.FUND,
                 effective_date=current_date
@@ -1780,36 +1661,6 @@ class PropertyAcquisitionManager:
                 expense_type=f"Property inspection (AttemptID={attempt['attempt_id']})"
             )
 
-        # KD-193: lead risk assessment is part of due diligence. Draw the
-        # ACTUAL lead outcome (doc-review → hazard → abatement ±band, dedicated
-        # RNG offset +5000 — its own stream, a full 1000 clear of every other
-        # pipeline stage (offer +1000, inspection +2000, negotiation +3000,
-        # closing +4000) so no two stages' seeds can collide within a run's
-        # attempt-ID range (Keight #3). The assessment cost is a DD cost
-        # (charged now, even on later withdrawal — you pay the assessor
-        # regardless). The abatement cost is FORESEEN and persisted
-        # (AssessedLeadCost) → store-and-forward to the post-closing
-        # LEAD_ABATEMENT, which reads it rather than re-drawing.
-        #
-        # When no assessor is wired (legacy/test path), AssessedLeadCost stays
-        # NULL and LeadAssessed stays 0 so the post-closing doc-review fallback
-        # still fires (Keight #2 — don't silently mark every attempt "clean").
-        assessed_lead_cost = None
-        lead_assessed = 0
-        if self.lead_assessor:
-            lead_assessed = 1
-            lead_rng = random.Random(
-                self.random_seed + self.SEED_OFFSET + 5000 + attempt['attempt_id'])
-            lead_assessment_cost, assessed_lead_cost = self.lead_assessor(
-                attempt['property_id'], lead_rng)
-            if lead_assessment_cost > 0 and self.fund_manager:
-                self.fund_manager.process_expense(
-                    run_id=self.run_id,
-                    expense_amount=lead_assessment_cost,
-                    ledger_date=current_date,
-                    expense_type=f"Lead risk assessment — due diligence (AttemptID={attempt['attempt_id']})"
-                )
-
         # Move to negotiation
         negotiation_delay = rng.randint(
             self.acquisition_params.negotiation_delay_days_min,
@@ -1828,9 +1679,7 @@ class PropertyAcquisitionManager:
             current_date=current_date,
             InspectionSeverity=severity,
             InspectionCost=inspection_cost,
-            EstimatedRepairCost=repair_cost,
-            AssessedLeadCost=assessed_lead_cost,  # KD-193 store-and-forward (NULL if unassessed)
-            LeadAssessed=lead_assessed
+            EstimatedRepairCost=repair_cost
         )
 
         self._record_acquisition_step(
@@ -1851,11 +1700,7 @@ class PropertyAcquisitionManager:
         repair_cost = attempt['estimated_repair_cost']
         agreed_price = attempt.get('counter_amount') or attempt['offer_amount']
 
-        # Check withdrawal threshold — REPAIR only (deal quality). Lead is
-        # deliberately EXCLUDED (KD-193 D2): ~99.6% of the stock is pre-1978,
-        # so folding lead into the deal-quality gate would auto-reject the
-        # exact housing the mission exists to serve. Lead is handled by the
-        # carryability test below.
+        # Check withdrawal threshold
         repair_pct = float(repair_cost / agreed_price) if agreed_price else 0
         if repair_pct > self.acquisition_params.lb_withdrawal_threshold_pct:
             self.fail_attempt(
@@ -1865,48 +1710,6 @@ class PropertyAcquisitionManager:
                 current_date=current_date
             )
             return
-
-        # KD-193 — lead CARRYABILITY (informed choice, not a deal-quality
-        # reject). The due-diligence assessment gave a KNOWN abatement cost;
-        # the gate lump now prices it (D3 coherence), so if carrying the
-        # pipeline INCLUDING this property's known lead drives deployable Cash
-        # negative against the reserve floor, the org withdraws THIS property.
-        # "Lead is a given; we test whether we can carry it" (Gray). Fires
-        # only for a lead-bearing property so non-lead acquisition is unchanged.
-        lead_row = self.db.execute_query(
-            "SELECT AssessedLeadCost, LeadAssessed FROM simulation.PropertyAcquisitionAttempt "
-            "WHERE RunID = ? AND AttemptID = ?", (self.run_id, attempt['attempt_id']))
-        if (lead_row and lead_row[0][1] and lead_row[0][0] is not None
-                and Decimal(str(lead_row[0][0])) > 0 and self.gate_basis_provider):
-            known_lead = Decimal(str(lead_row[0][0]))
-            month_index = ((current_date.year - self.config.start_date.year) * 12
-                           + (current_date.month - self.config.start_date.month) + 1)
-            bases = self.gate_basis_provider(current_date)
-            floor = self._required_cash_floor(bases)
-            earmark = self._reserve_earmark(month_index, current_date, bases.owned_opex)
-            balances = self.fund_manager.get_fund_balances(self.run_id, current_date)
-            deployable = balances.cash_balance - floor - earmark
-            if deployable < 0:
-                # Concise reason (column-bounded); the floor decomposition is
-                # logged to the acquisition step record for the audit trail.
-                self._record_acquisition_step(
-                    attempt_id=attempt['attempt_id'],
-                    step_type="LEAD_CARRYABILITY_WITHDRAWAL",
-                    message=(f"Withdrew: known lead abatement ${known_lead:,.2f}, "
-                             f"deployable Cash ${deployable:,.2f} < 0 after reserve "
-                             f"({self._floor_detail(bases, floor)})"),
-                    effective_date=current_date,
-                    action=ActionType.UPDATE,
-                    entity_type=EntityType.PROPERTY,
-                    entity_id=attempt['property_id'],
-                )
-                self.fail_attempt(
-                    attempt_id=attempt['attempt_id'],
-                    failure_reason=f"Lead carryability: abatement ${known_lead:,.0f} exceeds carry capacity",
-                    pipeline_stage='Withdrawn',
-                    current_date=current_date
-                )
-                return
 
         # Negotiate outcome
         roll = rng.random()
@@ -2067,28 +1870,22 @@ class PropertyAcquisitionManager:
 
     def check_for_new_opportunities(self, current_date: date, month_index: int,
                                     config: ProjectionConfig,
+                                    monthly_opex: Decimal,
                                     committed_target: Decimal = Decimal('0')) -> Optional[int]:
         """
         Check if we can start a new acquisition pipeline
 
         Called daily. Starts new pipeline if:
         1. Active count < max concurrent
-        2. CSF reserve-first gate / grace period allows acquisition (KD #99),
-           on the PRO-FORMA basis (KD-042 — in-flight pipelines priced)
+        2. CSF reserve-first gate / grace period allows acquisition
         3. Budget available (after the reserve earmark)
         4. Best property found
-        5. KD-042 post-commitment re-gate: the org AFTER committing to
-           this candidate still clears its floor (same helper, candidate
-           folded into the pipeline set — incl. its onboarding lump)
-
-        The two OpEx bases come fresh from the gate-basis provider at gate
-        time (one consistent snapshot of owned counts + pipeline set — the
-        closing handoff can never open an under-count window, M2).
 
         Args:
             current_date: Current simulation date
             month_index: Current simulation month
             config: Projection configuration
+            monthly_opex: Current monthly operating expenses
             committed_target: CSF target the last month-end top-up funded to
                 (drives the genuine-draw latch). Defaults to 0.
 
@@ -2102,66 +1899,22 @@ class PropertyAcquisitionManager:
         if active_count >= max_concurrent:
             return None
 
-        if self.gate_basis_provider is None:
-            raise RuntimeError(
-                "KD-042: gate_basis_provider not set — the acquisition gate "
-                "cannot run without its pro-forma basis (set_gate_basis_provider)")
-        bases = self.gate_basis_provider(current_date)
-
-        # Check reserve-first gate / grace period (KD #99) on the pro-forma basis
+        # Check reserve-first gate / grace period
         can_acquire, reason = self.can_acquire_property(
-            month_index, current_date, bases, committed_target
+            month_index, current_date, monthly_opex, committed_target
         )
         if not can_acquire:
-            # V-F: refusals the pipeline set caused are the KD-042 signal —
-            # log those (rare, binge-window). Rule-1 latch / owned-basis
-            # refusals stay silent as before (they recur daily for months).
-            if (bases.pipeline_count > 0
-                    and self.event_logger and "KD-042" in reason):
-                self.event_logger.log_module_event(
-                    module_name="PropertyAcquisitionManager",
-                    action=ActionType.VALIDATE,
-                    message=f"Acquisition blocked (pre-screen): {reason}",
-                    entity_type=EntityType.FUND,
-                    effective_date=current_date
-                )
             return None
 
-        # Check budget — reserve the pending CSF top-up first (KD #99 reserve-first;
-        # earmark on the OWNED basis, ratified)
-        reserve_earmark = self._reserve_earmark(month_index, current_date, bases.owned_opex)
-        budget = self.get_acquisition_budget(current_date, config, bases, reserve_earmark)
+        # Check budget — reserve the pending CSF top-up first (reserve-first)
+        reserve_earmark = self._reserve_earmark(month_index, current_date, monthly_opex)
+        budget = self.get_acquisition_budget(current_date, config, monthly_opex, reserve_earmark)
         if budget <= 0:
             return None
 
         # Find best property
         best_property = self.find_best_property(current_date, budget, config)
         if not best_property:
-            return None
-
-        # KD-042 R1: post-commitment re-gate — fold the candidate (and its
-        # one-time lump) into the SAME basis computation and ask "after
-        # committing to THIS, does the org still clear its floor?"
-        bases_with_candidate = self.gate_basis_provider(
-            current_date, candidate=best_property)
-        can_commit, commit_reason = self.can_acquire_property(
-            month_index, current_date, bases_with_candidate, committed_target
-        )
-        if not can_commit:
-            if self.event_logger:
-                self.event_logger.log_module_event(
-                    module_name="PropertyAcquisitionManager",
-                    action=ActionType.VALIDATE,
-                    message=(
-                        f"Acquisition blocked (post-commitment re-gate, KD-042): "
-                        f"candidate PropertyID={best_property.property_id} "
-                        f"(${best_property.list_price:,.2f}, "
-                        f"{best_property.unit_count} units) — {commit_reason}"
-                    ),
-                    entity_type=EntityType.PROPERTY,
-                    entity_id=best_property.property_id,
-                    effective_date=current_date
-                )
             return None
 
         # Start new pipeline

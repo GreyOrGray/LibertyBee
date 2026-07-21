@@ -191,14 +191,11 @@ class ConfigurationLoader:
             # resolve override->global, coerce by DataType, FAIL LOUD on missing).
             reg = ParameterRegistry(self.db).load(projection_id)
 
-            # Projection-existence check: a row in reference.Projection IS the
-            # projection (V00071). Previously this tested for a SIM.ProjectionName
-            # parameter row, which conflated identity with configuration — a
-            # projection seeded without that one row reported as "not found"
-            # rather than "incomplete". Preserves the "not found -> None" contract;
-            # a projection that DOES exist but lacks a required param fails loud
-            # below, which is the distinction that was missing.
-            if not reg.projection_exists:
+            # Projection-existence check: SIM.ProjectionName is per-projection
+            # (override-only, no global), so its absence = no such projection.
+            # Preserves the prior "not found -> None" contract. A projection that
+            # DOES exist but lacks a required param now fails loud (below).
+            if not reg.has('SIM', 'ProjectionName'):
                 self.logger.warning(f"No projection found with ID {projection_id}")
                 if self.event_logger:
                     self.event_logger.log_error(
@@ -211,9 +208,7 @@ class ConfigurationLoader:
             # (category, name) and coerced; a missing required param raises.
             config = ProjectionConfig(
                 projection_id=projection_id,
-                # From the entity, not a parameter row — the name now lives in
-                # exactly one place and so cannot drift from itself.
-                projection_name=reg.projection_name,
+                projection_name=reg.get_str('SIM', 'ProjectionName'),
                 start_date=reg.get_date('SIM', 'StartDate'),
                 end_date=reg.get_date('SIM', 'EndDate'),
                 starting_funds=reg.get_decimal('FIN', 'StartingFunds'),
