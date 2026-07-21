@@ -1,0 +1,5 @@
+{
+  "_comment": "Checks run during a sweep. --checks / --check-every override this. See README.md.",
+  "enabled": ["fast_death", "acquisition_binge"],
+  "every": 250
+}

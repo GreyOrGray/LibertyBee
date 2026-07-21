@@ -21,9 +21,9 @@ run reproduces exactly from a seed.
   - `site_metrics.py` — recompute **every figure on the site** from a restored corpus, vs its published value
   - `reproduction_gate.py` — prove a restored corpus reproduces from the current engine, to the penny
   - `scarcity_remeasure.py` — the retention scarcity-share decomposition
-  - `regenerate_corpus.py` — regenerate the full 800-run corpus (the sweep) from the seed database
+  - `create_corpus.py` + `regenerate_corpus.py` — build an empty corpus database, then regenerate the result
+    corpus (the sweep) from the seed database; every swept projection is seeded data
   - `runs_manifest.csv` — every run's settings, expected outcome, and exact command
-  - `reproduce_rungs.sql` — defines the low-funding projections used by the sweep
 - **`environmentscripts/migration_manager.py`** — restores the seed database from a Release asset
 - **`sql/migrations/`** — empty: the seed database ships fully built. It's also the hook for *your own* changes
   (drop a numbered `.sql` file to alter assumptions — see REPRODUCE.md → "Customize it")

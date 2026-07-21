@@ -19,9 +19,6 @@ import pyodbc
 REPO = os.path.dirname(os.path.abspath(__file__))   # this script ships at the repo root
 DRV  = os.environ.get("LB_SQL_DRIVER", "ODBC Driver 17 for SQL Server")
 SERVER = os.environ.get("LB_SQL_SERVER", "localhost")
-RUNGS_SQL = os.path.join(REPO, "reproduce_rungs.sql")   # synthetic-rung setup (300-305)
-STORED = set(range(200, 210))
-
 def conn(db):
     return pyodbc.connect(f"DRIVER={{{DRV}}};SERVER={SERVER};DATABASE={db};Trusted_Connection=yes")
 
@@ -31,9 +28,11 @@ def fresh_env(label):
     m = re.search(r"Test environment ready:\s*(\S+)", p.stdout)
     return m.group(1) if m else None
 
-def apply_rungs(db):
-    c = conn(db); c.autocommit = True
-    c.cursor().execute(open(RUNGS_SQL, encoding="utf-8").read()); c.close()
+def seed_has_projection(db, proj):
+    c = conn(db)
+    row = c.cursor().execute("SELECT 1 FROM reference.Projection WHERE ProjectionID = ?", proj).fetchone()
+    c.close()
+    return row is not None
 
 def head_run(db, proj, seed):
     p = subprocess.run([sys.executable, "app/src/simulation.py", "--env", db,
@@ -55,11 +54,78 @@ def corpus_expect(cc, proj, seed):
     cc.execute("SELECT MAX(MonthIndex) FROM v1.monthly_payment_status WHERE Rung=? AND Seed=?", r[2], seed)
     return ("halted", str(cc.fetchone()[0]))
 
+def provenance_check(cc, strict=False):
+    """Can this corpus be handed to someone else and rebuilt? Returns a failure list.
+
+    Reproducing sampled cells proves the NUMBERS are right. It does not prove the
+    corpus is self-describing, and a corpus that cannot say what produced it is
+    not a reproducible artifact no matter how well its cells re-run. Three checks:
+
+      1. v1.projection_parameters covers every rung present. This makes the corpus
+         self-describing: a corpus outlives any particular seed database, so every
+         run's exact parameter set must be readable from the corpus alone.
+         This shipped broken once; it is a gate now, not a note.
+      2. Exactly one scenario. A corpus blending two affordability populations
+         looks completely normal and is silently wrong.
+      3. No dirty-tree generation. HarnessDirty=1 means the corpus came from a
+         modified working tree and matches no published commit.
+    """
+    failures = []
+
+    cc.execute("SELECT DISTINCT ProjectionID FROM v1.run_summary")
+    rungs_present = {r[0] for r in cc.fetchall()}
+    try:
+        cc.execute("SELECT DISTINCT ProjectionID FROM v1.projection_parameters")
+        rungs_documented = {r[0] for r in cc.fetchall()}
+    except pyodbc.Error:
+        rungs_documented = set()
+    undocumented = sorted(rungs_present - rungs_documented)
+    if undocumented:
+        failures.append(
+            f"v1.projection_parameters is missing {len(undocumented)} of "
+            f"{len(rungs_present)} rungs present in the corpus: {undocumented}. "
+            f"Runs on those rungs cannot be reproduced from the published bundle.")
+    else:
+        print(f"  provenance: projection_parameters covers all {len(rungs_present)} rungs")
+
+    try:
+        cc.execute("SELECT Scenario, HarnessCommit, HarnessDirty FROM v1.corpus_meta")
+        meta = cc.fetchall()
+    except pyodbc.Error:
+        meta = None
+
+    if not meta:
+        msg = ("v1.corpus_meta is absent or empty — the corpus does not record what "
+               "generated it (pre-dates provenance stamping).")
+        if strict:
+            failures.append(msg)
+        else:
+            print(f"  provenance: WARNING — {msg}")
+        return failures
+
+    scenarios = sorted({m[0] for m in meta})
+    if len(scenarios) > 1:
+        failures.append(f"corpus mixes {len(scenarios)} scenarios {scenarios} — "
+                        f"a corpus must hold exactly one.")
+    if any(m[2] for m in meta):
+        failures.append("corpus was generated from a DIRTY working tree "
+                        "(HarnessDirty=1) — it matches no published commit.")
+    commits = sorted({(m[1] or "unknown")[:12] for m in meta})
+    if not failures:
+        print(f"  provenance: scenario={scenarios[0]}  harness={','.join(commits)}  clean")
+    return failures
+
+
 def parse_cells(spec, cc):
-    if spec == "edges":   # seed 1 + seed 50 for every projection present
-        cc.execute("SELECT DISTINCT ProjectionID FROM v1.run_summary ORDER BY ProjectionID")
-        projs = [row[0] for row in cc.fetchall()]
-        return [(p, s) for p in projs for s in (1, 50)]
+    if spec == "edges":   # lowest + highest seed actually present, per projection
+        cc.execute("SELECT ProjectionID, MIN(Seed), MAX(Seed) FROM v1.run_summary "
+                   "GROUP BY ProjectionID ORDER BY ProjectionID")
+        out = []
+        for p, lo, hi in cc.fetchall():
+            out.append((p, lo))
+            if hi != lo:
+                out.append((p, hi))
+        return out
     out = []
     for tok in spec.split(","):
         p, s = tok.split(":")
@@ -69,13 +135,29 @@ def parse_cells(spec, cc):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--corpus", required=True)
-    ap.add_argument("--sample", default="edges", help="'edges' (seed 1+50 per proj) or use --cells")
+    ap.add_argument("--sample", default="edges", help="'edges' (min+max seed per proj) or use --cells")
     ap.add_argument("--cells", default=None, help="explicit 'proj:seed,proj:seed'")
+    ap.add_argument("--strict-provenance", action="store_true",
+                    help="treat a missing v1.corpus_meta as failure (use for any corpus "
+                         "generated after provenance stamping existed)")
+    ap.add_argument("--provenance-only", action="store_true",
+                    help="run only the provenance checks and skip cell re-runs (fast)")
     args = ap.parse_args()
 
     cc = conn(args.corpus).cursor()
+    print(f"Reproduction gate: corpus={args.corpus}")
+    prov_failures = provenance_check(cc, strict=args.strict_provenance)
+    if prov_failures:
+        print("\nGATE FAILED (provenance):")
+        for f in prov_failures:
+            print(f"  - {f}")
+        sys.exit(1)
+    if args.provenance_only:
+        print("\nGATE PASSED: provenance only (cell re-runs skipped).")
+        sys.exit(0)
+
     cells = parse_cells(args.cells, cc) if args.cells else parse_cells(args.sample, cc)
-    print(f"Reproduction gate: corpus={args.corpus}  cells={len(cells)}")
+    print(f"  cells={len(cells)}")
     print(f"{'proj/seed':>10} {'kind':>9} {'corpus':>16} {'HEAD':>16}  result")
 
     failures = []
@@ -84,8 +166,10 @@ def main():
         if exp is None:
             print(f"{proj}/{seed:<4} {'MISSING':>9} — cell not in corpus"); failures.append((proj, seed, "missing")); continue
         db = fresh_env(f"gate{proj}_{seed}")
-        if db and proj not in STORED:
-            apply_rungs(db)
+        if db and not seed_has_projection(db, proj):
+            print(f"{proj}/{seed:<4} {'NO-PROJ':>9} — projection not in the seed database; "
+                  f"this corpus needs the seed that defined it")
+            failures.append((proj, seed, "projection not in seed database")); continue
         ft, hm = head_run(db, proj, seed) if db else (None, None)
         kind, val = exp
         if kind == "survived":

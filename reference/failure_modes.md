@@ -1,6 +1,6 @@
 # Modeling Failure — How Liberty Bee Dies, and How We Proved It
 
-**Status:** ✅ Canon (public bundle). First written 2026-07-03 from the coverage probes.
+**Status:** ✅ Canon (public bundle). First written 2026-07-03 from the Phase-1.5b coverage probes.
 
 A survival claim is only as credible as the failure machinery behind it. If the simulation *can't* die — or its death paths have never actually executed — then "survived 20 years" is a tautology, not a finding. This document shows the failure model in real terms: what the machinery is, why it's built this way, what happened when we deliberately forced every path, and exactly how you can force them yourself.
 
@@ -18,7 +18,7 @@ Liberty Bee dies the way a real nonprofit operator dies: **it can no longer meet
 
 Two design consequences worth stating plainly:
 
-- **Unprotected expenses never touch the CSF.** Even with Cash millions of dollars negative, the protected reserve is not raided to cover discretionary costs. We verified this at −$2.2M Cash: zero CSF draws (§3.2).
+- **Unprotected expenses never touch the CSF.** Even with Cash millions of dollars negative, the protected reserve is not raided to cover discretionary costs. We verified this at −$2.2M Cash: zero CSF draws (§3.3).
 - **"Died solvent in protections"** is a real, observable end-state: an institution whose CSF paid staff to nearly the last dollar before the halt. That's the failure mode the design *prefers* — commitments honored all the way down.
 
 Tenant-side adverse events (missed payments → arrears → eviction after 3 consecutive misses, deposit damage withholding, credit forfeiture) are part of the same honesty: the model doesn't pretend hardship away, it routes it through tenant-protective mechanisms (grace, TCS redemptions) and records what happens when they're exhausted.
@@ -27,9 +27,9 @@ Tenant-side adverse events (missed payments → arrears → eviction after 3 con
 
 At calibrated knobs, 240-month runs are institutionally healthy: across the reference seed and five fresh smoke seeds, minimum Cash never dropped below ~$188K, so the CSF backstop, the negative-Cash allowance, and the halt had **never executed outside unit tests**. Evictions are similarly rare by design — at a 2%/month payment-failure rate and a 3-consecutive-miss threshold, the expected number of eviction filings is ~0.1 per 240-month run (we observed 2 natural evictions in one of six runs, which is the math working, not a gap).
 
-Untested code guarding your most important claims is a risk. So before finalizing the baseline, we forced every path.
+Untested code guarding your most important claims is a risk. So before the V0.3 baseline, we forced every path.
 
-## 3. What we forced, and what it showed (2026-07-03)
+## 3. What we forced, and what it showed (2026-07-03, engine at the Phase-1.5b stack)
 
 ### 3.1 Starvation → CSF backstop → halt (`seed 606001`)
 Starting funds cut $8M → $700K; everything else at calibrated values. The institution can't afford property, so it burns payroll with no revenue:
@@ -58,9 +58,9 @@ Stage timeouts are structurally unreachable at calibrated values (sampled delays
 - Closing timeout at 1 day: **146 timeouts fired**, including 50 after accepted counter-offers.
 
 ### 3.5 The probes caught two real bugs — which is the point
-Forcing rare paths is also how you find what hides on them. Both findings predate the probes and were queued for fixes before the baseline was finalized:
-- **The due-diligence severity→duration map never matches** (case mismatch), so every DD remediation collapses to the 7–21-day band — Major work should take 60–180 days. Flattery-direction.
-- **Offer reservations leak:** the price-reduction delta strands at closing and the counter-offer delta strands on post-counter failure — $45–92K per normal 240-month run, attributed **to the cent** by the timeout probe ($1,170,517.23 stranded == Σ(counter − offer) across 53 forced failures, exactly).
+Forcing rare paths is also how you find what hides on them. Both findings predate the probes and are tracked for pre-baseline fixes:
+- **#148:** the due-diligence severity→duration map never matches (case mismatch), so every DD remediation collapses to the 7–21-day band — Major work should take 60–180 days. Flattery-direction.
+- **#149:** offer reservations leak: the price-reduction delta strands at closing and the counter-offer delta strands on post-counter failure — $45–92K per normal 240-month run, attributed **to the cent** by the timeout probe ($1,170,517.23 stranded == Σ(counter − offer) across 53 forced failures, exactly).
 
 A validation exercise that finds nothing should make you suspicious. This one found two.
 
@@ -73,14 +73,14 @@ All of it is knob-driven — no code edits. Recipe (Windows, trusted auth; adjus
 python environmentscripts/migration_manager.py --label mystress
 
 # 2. Push a knob outside its calibrated range (examples used above)
-sqlcmd -S localhost -d <your_test_db> -E -Q \
-  "UPDATE reference.ParameterRegistry SET Value='700000.00' WHERE ProjectionID=206 AND Category='FIN' AND Name='StartingFunds'"    # starvation
+sqlcmd -S localhost -d LibertyBee_Test_<NNN>_mystress -E -Q \
+  "UPDATE reference.ParameterRegistryDefined SET Value='700000.00' WHERE ProjectionID=206 AND Category='FIN' AND Name='StartingFunds'"    # starvation
 # ...or Value='0.20' for PAY.BaseFailProbMonthly (eviction stress)
 # ...or Value='40.0' for CMPL.DueDiligenceCostMultBase (cost shock / negative Cash)
 # ...or UPDATE reference.AcquisitionParameters SET Timeout_Closing_MaxDays=1 (timeout inversion)
 
 # 3. Run, with a seed you record
-python app/src/simulation.py --env <your_test_db> --projection-id 206 --months 240 --seed <seed>
+python app/src/simulation.py --env LibertyBee_Test_<NNN>_mystress --projection-id 206 --months 240 --seed <seed>
 ```
 
 Then interrogate the death (or survival) — the queries we used:
@@ -94,11 +94,11 @@ SELECT COUNT(*), MIN(CashBalance) FROM simulation.FundLedger WHERE RunID=@r AND 
 SELECT TOP 1 * FROM simulation.RunSnapshot WHERE RunID=@r ORDER BY SnapshotDate DESC;
 -- Eviction chain
 SELECT TerminationType, COUNT(*) FROM simulation.LeaseTermination WHERE RunID=@r GROUP BY TerminationType;
--- Stranded reservations (should equal in-flight holds)
+-- Stranded reservations (should equal in-flight holds; see #149)
 SELECT TOP 1 CashHoldBalance FROM simulation.FundLedger WHERE RunID=@r ORDER BY LedgerDate DESC, EventID DESC;
 ```
 
-**Rules of the road:** label every diagnostic run as such; never mix its numbers into baseline statistics; reset or drop the database afterward; and if a same-seed rerun ever disagrees with itself, STOP and preserve the database (a determinism violation is a bug worth chasing before you trust any result from that run).
+**Rules of the road:** label every diagnostic run as such; never mix its numbers into baseline statistics; reset or drop the database afterward; and if a same-seed rerun ever disagrees with itself, STOP and preserve the database (see the determinism protocol in the Phase-1.5 record).
 
 ## 5. Framing guardrails (binding)
 
@@ -109,4 +109,4 @@ SELECT TOP 1 CashHoldBalance FROM simulation.FundLedger WHERE RunID=@r ORDER BY 
 
 ---
 
-*Companion docs: [`users_guide.md`](users_guide.md) (all knobs, meanings, tuning), [`architecture_overview.md`](architecture_overview.md) (module map, ledger pattern), [`concept_and_philosophy.md`](concept_and_philosophy.md) (why honesty-over-flattery governs).*
+*Companion docs: [`users_guide.md`](users_guide.md) (all knobs, meanings, tuning), [`architecture_overview.md`](architecture_overview.md) (module map, ledger pattern), [`concept_and_philosophy.md`](concept_and_philosophy.md) (why honesty-over-flattery governs). Probe evidence and run records: `docs/v_0_3/phases/phase_1_5/README.md` + issues #148/#149.*

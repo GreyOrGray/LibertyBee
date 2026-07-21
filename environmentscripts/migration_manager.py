@@ -44,7 +44,7 @@ USAGE
        • Create the environment folder / db_config.json if missing
        • Ensure a venv exists and install requirements on first run
        • Run all migrations, then re-stamp dbo._provenance
-   (A legacy per-environment SQL login setup was retired.)
+   (The retired [Cate] login setup was removed 2026-06-13.)
 
 2. To create a fully isolated TEST environment with a unique test database:
 
@@ -60,19 +60,19 @@ USAGE
 
 3. To create a test environment with a human-readable label in the name:
 
-       python migration_manager.py --label mytest
+       python migration_manager.py --label Phase_3_7_6
 
    This will:
        • Create a new test database named:
-             LibertyBee_Test_mytest_<datetime>
-       • Easier to identify what the environment was created for
+             LibertyBee_Test_Phase_3_7_6_<datetime>
+       • Easier to identify what phase/feature the environment was created for
        • Sortable by name — most recent at the bottom
        • Label is sanitized: spaces → underscores, special chars stripped, max 50 chars
 
 4. To test with scratch migrations (migrations from scratch/sql/migrations/):
 
        python migration_manager.py --scratch
-       python migration_manager.py --label mytest --scratch
+       python migration_manager.py --label Phase_3_7_6 --scratch
 
    This will:
        • Create a new test database and apply migrations from scratch/sql/migrations/
@@ -141,8 +141,23 @@ TEST_DB_PREFIX = "LibertyBee_Test"
 
 # Gold seed-database backup location. Portable default (repo-relative, gitignored under
 # DBBackup/); override with the LB_GOLD_BACKUP_DIR env var. The Gold .bak ships as a
-# GitHub Release asset in the latest release — download it into this folder first; see REPRODUCE.md.
-DEFAULT_GOLD_BACKUP_DIR = Path(os.environ.get("LB_GOLD_BACKUP_DIR", str(REPO_ROOT / "DBBackup" / "gold")))
+# GitHub Release asset (tag "gold-baseline") — download it into this folder first; see SETUP.md.
+DEFAULT_GOLD_BACKUP_DIR = Path(os.environ.get(
+    "LB_BASELINE_BACKUP_DIR",
+    os.environ.get("LB_GOLD_BACKUP_DIR", str(REPO_ROOT / "DBBackup" / "gold"))))
+
+# Set by --baseline. A restore source is not always Gold: a Silver cut
+# (environmentscripts/cut_silver.py) is a baseline candidate that sweeps restore
+# from before it is promoted. LB_GOLD_BACKUP_DIR still works, but its name lies
+# about what the directory holds, so LB_BASELINE_BACKUP_DIR and --baseline say
+# what is actually meant.
+_baseline_dir_override = None
+
+
+def baseline_backup_dir() -> Path:
+    """The directory to restore a baseline from: --baseline wins, then the
+    environment, then DBBackup/gold."""
+    return Path(_baseline_dir_override) if _baseline_dir_override else DEFAULT_GOLD_BACKUP_DIR
 
 # -------------------------------------------------------
 # DB helpers
@@ -178,10 +193,10 @@ def _get_default_data_log_paths(cur) -> tuple[str, str]:
 
 def _find_latest_bak(backup_dir: Path) -> Path:
     hint = (
-        "\n  -> Get the Gold seed DB from the latest release:\n"
-        "     gh release download --repo GreyOrGray/LibertyBee "
-        f"--pattern 'LibertyBeeGold.bak' --dir \"{backup_dir}\"\n"
-        "  (or set LB_GOLD_BACKUP_DIR to a folder that contains the .bak). See REPRODUCE.md."
+        "\n  -> Get the Gold seed DB from the release:\n"
+        "     gh release download gold-baseline --repo GreyOrGray/LibertyBeeDev "
+        f"--pattern '*.bak' --dir \"{backup_dir}\"\n"
+        "  (or set LB_GOLD_BACKUP_DIR to a folder that contains the .bak). See SETUP.md."
     )
     if not backup_dir.exists():
         raise FileNotFoundError(f"Gold backup directory not found: {backup_dir}{hint}")
@@ -197,13 +212,22 @@ def _db_state(cur, db_name: str) -> str:
 
 def restore_db_from_backup(
     target_db: str,
-    backup_dir: Path = DEFAULT_GOLD_BACKUP_DIR,
+    backup_dir: Path = None,
     source_db_label: str = "LibertyBeeGold",
 ) -> None:
     """
     Restores the most recent .bak from backup_dir into target_db.
     Uses REPLACE and MOVEs files to instance default data/log directories.
+
+    backup_dir defaults to None and is resolved at CALL time via
+    baseline_backup_dir(), so --baseline / LB_BASELINE_BACKUP_DIR are honoured.
+    Binding the default at definition time would freeze it at import, before the
+    CLI has been parsed. Logical filenames are read from the backup itself, so the
+    source database's name does not matter — a Silver cut restores as readily as
+    Gold.
     """
+    if backup_dir is None:
+        backup_dir = baseline_backup_dir()
     latest_bak = _find_latest_bak(backup_dir)
 
     with connect_to_server() as conn:
@@ -338,8 +362,8 @@ def ensure_database(db_name: str) -> None:
     """Ensure the database exists (create if missing).
 
     Trusted Windows auth means the invoking account already has rights inside the
-    database, so no separate SQL db-user grant is needed (a legacy per-environment
-    SQL login was retired)."""
+    database, so no separate SQL db-user grant is needed (the legacy [Cate] login
+    was retired 2026-06-13)."""
     with connect_to_server() as conn:
         cur = conn.cursor()
         if not database_exists(db_name):
@@ -978,7 +1002,7 @@ def create_and_prepare_test_env(use_scratch: bool = False, label: str = "") -> s
     """Create a new test DB + env folder, run migrations, stamp provenance; return its name.
 
     Name = LibertyBee_Test_<NNN>[_<label>] - an incrementing id (id-first) + optional purpose
-    label (e.g. pr-66, issue-63, mytest). Each DB self-describes via dbo._provenance."""
+    label (e.g. pr-66, issue-63, phase-1-2). Each DB self-describes via dbo._provenance."""
     seq = f"{_next_test_seq():04d}"
     if label:
         db_name = f"{TEST_DB_PREFIX}_{seq}_{_sanitize_label(label)}"
@@ -1025,9 +1049,14 @@ def main() -> str:
         default="",
         help=(
             "Purpose label embedded in the ephemeral DB name (id-first), e.g. "
-            "--label mytest -> LibertyBee_Test_0007_mytest. Ignored when --envname is supplied."
+            "--label phase-1-2 -> LibertyBee_Test_0007_phase-1-2. Ignored when --envname is supplied."
         ),
     )
+    parser.add_argument("--baseline", type=str, default="",
+                        help=("Directory holding the baseline .bak to restore from "
+                              "(most recent .bak wins). Defaults to LB_BASELINE_BACKUP_DIR / "
+                              "LB_GOLD_BACKUP_DIR / DBBackup/gold. Use this to build an "
+                              "environment from a Silver cut instead of Gold."))
     parser.add_argument("--issue", type=str, default="",
                         help="Convenience: sets the label to issue-<n>.")
     parser.add_argument("--pr", type=str, default="",
@@ -1040,6 +1069,14 @@ def main() -> str:
                         help="Confirm a --drop (without it, --drop only previews).")
 
     args = parser.parse_args()
+
+    global _baseline_dir_override
+
+    if args.baseline:
+
+        _baseline_dir_override = args.baseline
+
+        print(f"Baseline source: {args.baseline}")
 
     if args.list:
         list_ephemeral()

@@ -28,8 +28,8 @@ def fresh_env(label):
     m = re.search(r"Test environment ready:\s*(\S+)", p.stdout); return m.group(1) if m else None
 def set_bg(db, beta, gamma):
     c = conn(db).cursor()
-    c.execute("UPDATE reference.ParameterRegistry SET Value=? WHERE Category='RET' AND Name='DiscountSensitivityBeta' AND ProjectionID IS NULL", beta)
-    c.execute("UPDATE reference.ParameterRegistry SET Value=? WHERE Category='RET' AND Name='ScarcitySensitivityGamma' AND ProjectionID IS NULL", gamma)
+    c.execute("UPDATE reference.ParameterRegistryDefault SET Value=? WHERE Category='RET' AND Name='DiscountSensitivityBeta'", beta)
+    c.execute("UPDATE reference.ParameterRegistryDefault SET Value=? WHERE Category='RET' AND Name='ScarcitySensitivityGamma'", gamma)
 def run_sim(db, seed):
     subprocess.run([sys.executable, "app/src/simulation.py", "--env", db, "--projection-id", "206",
                     "--seed", str(seed), "--months", "240"], cwd=REPO, capture_output=True, text=True, timeout=900)
