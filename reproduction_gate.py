@@ -55,6 +55,68 @@ def corpus_expect(cc, proj, seed):
     cc.execute("SELECT MAX(MonthIndex) FROM v1.monthly_payment_status WHERE Rung=? AND Seed=?", r[2], seed)
     return ("halted", str(cc.fetchone()[0]))
 
+def provenance_check(cc, strict=False):
+    """Can this corpus be handed to someone else and rebuilt? Returns a failure list.
+
+    Reproducing sampled cells proves the NUMBERS are right. It does not prove the
+    corpus is self-describing, and a corpus that cannot say what produced it is
+    not a reproducible artifact no matter how well its cells re-run. Three checks:
+
+      1. v1.projection_parameters covers every rung present. The extension rungs
+         (300-305) do NOT exist in the seed database — they are cloned at runtime —
+         so without these rows every sub-$5M run is unreproducible from the
+         published bundle. This shipped broken once; it is a gate now, not a note.
+      2. Exactly one scenario. A corpus blending two affordability populations
+         looks completely normal and is silently wrong.
+      3. No dirty-tree generation. HarnessDirty=1 means the corpus came from a
+         modified working tree and matches no published commit.
+    """
+    failures = []
+
+    cc.execute("SELECT DISTINCT ProjectionID FROM v1.run_summary")
+    rungs_present = {r[0] for r in cc.fetchall()}
+    try:
+        cc.execute("SELECT DISTINCT ProjectionID FROM v1.projection_parameters")
+        rungs_documented = {r[0] for r in cc.fetchall()}
+    except pyodbc.Error:
+        rungs_documented = set()
+    undocumented = sorted(rungs_present - rungs_documented)
+    if undocumented:
+        failures.append(
+            f"v1.projection_parameters is missing {len(undocumented)} of "
+            f"{len(rungs_present)} rungs present in the corpus: {undocumented}. "
+            f"Runs on those rungs cannot be reproduced from the published bundle.")
+    else:
+        print(f"  provenance: projection_parameters covers all {len(rungs_present)} rungs")
+
+    try:
+        cc.execute("SELECT Scenario, HarnessCommit, HarnessDirty FROM v1.corpus_meta")
+        meta = cc.fetchall()
+    except pyodbc.Error:
+        meta = None
+
+    if not meta:
+        msg = ("v1.corpus_meta is absent or empty — the corpus does not record what "
+               "generated it (pre-dates provenance stamping).")
+        if strict:
+            failures.append(msg)
+        else:
+            print(f"  provenance: WARNING — {msg}")
+        return failures
+
+    scenarios = sorted({m[0] for m in meta})
+    if len(scenarios) > 1:
+        failures.append(f"corpus mixes {len(scenarios)} scenarios {scenarios} — "
+                        f"a corpus must hold exactly one.")
+    if any(m[2] for m in meta):
+        failures.append("corpus was generated from a DIRTY working tree "
+                        "(HarnessDirty=1) — it matches no published commit.")
+    commits = sorted({(m[1] or "unknown")[:12] for m in meta})
+    if not failures:
+        print(f"  provenance: scenario={scenarios[0]}  harness={','.join(commits)}  clean")
+    return failures
+
+
 def parse_cells(spec, cc):
     if spec == "edges":   # seed 1 + seed 50 for every projection present
         cc.execute("SELECT DISTINCT ProjectionID FROM v1.run_summary ORDER BY ProjectionID")
@@ -71,11 +133,27 @@ def main():
     ap.add_argument("--corpus", required=True)
     ap.add_argument("--sample", default="edges", help="'edges' (seed 1+50 per proj) or use --cells")
     ap.add_argument("--cells", default=None, help="explicit 'proj:seed,proj:seed'")
+    ap.add_argument("--strict-provenance", action="store_true",
+                    help="treat a missing v1.corpus_meta as failure (use for any corpus "
+                         "generated after provenance stamping existed)")
+    ap.add_argument("--provenance-only", action="store_true",
+                    help="run only the provenance checks and skip cell re-runs (fast)")
     args = ap.parse_args()
 
     cc = conn(args.corpus).cursor()
+    print(f"Reproduction gate: corpus={args.corpus}")
+    prov_failures = provenance_check(cc, strict=args.strict_provenance)
+    if prov_failures:
+        print("\nGATE FAILED (provenance):")
+        for f in prov_failures:
+            print(f"  - {f}")
+        sys.exit(1)
+    if args.provenance_only:
+        print("\nGATE PASSED: provenance only (cell re-runs skipped).")
+        sys.exit(0)
+
     cells = parse_cells(args.cells, cc) if args.cells else parse_cells(args.sample, cc)
-    print(f"Reproduction gate: corpus={args.corpus}  cells={len(cells)}")
+    print(f"  cells={len(cells)}")
     print(f"{'proj/seed':>10} {'kind':>9} {'corpus':>16} {'HEAD':>16}  result")
 
     failures = []

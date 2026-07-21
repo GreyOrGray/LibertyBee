@@ -181,7 +181,10 @@ class LeaseRenewalManager:
         Returns:
             List of lease IDs that early broke today
         """
-        # Query active leases not already terminated
+        # Query active leases not already terminated.
+        # ORDER BY is an invariant-#8 guard (#187): one self.rng draw fires per
+        # row below, so the draw<->lease mapping must not ride plan row order.
+        # LeaseID = the clustered-PK trailing column (the stable historical order).
         query = """
             SELECT l.LeaseID
             FROM simulation.Lease l
@@ -193,6 +196,7 @@ class LeaseRenewalManager:
                     SELECT 1 FROM simulation.LeaseTermination lt
                     WHERE lt.RunID = l.RunID AND lt.LeaseID = l.LeaseID
                 )
+            ORDER BY l.LeaseID
         """
 
         leases = self.db.execute_query(query, (run_id, current_date, current_date))
@@ -227,9 +231,18 @@ class LeaseRenewalManager:
         next_month = current_date.replace(day=28) + relativedelta(days=4)
         eom = next_month - relativedelta(days=next_month.day)
 
+        # ORDER BY is an invariant-#8 guard (#187): one renewal_rng draw fires
+        # per row (landlord check or retention roll), so the draw<->lease
+        # mapping must not ride plan row order — this exact query produced the
+        # confirmed LeaseID-49 divergence between identical same-seed runs.
+        # Key = (u.PropertyID, u.UnitID), NOT l.LeaseID: the historical stable
+        # plan drives this join from PropertyUnits (captured empirically at the
+        # hardening — 85/85 multi-row batches followed unit order), and one
+        # active lease per unit makes it a total order. Re-keying to LeaseID
+        # would silently move every frozen-corpus number.
         query = """
             SELECT l.LeaseID, l.EffectiveMonthlyRent,
-                   u.BaseRent, h.SigningMonthlyIncome, CAST(h.CreatedDate AS DATE)
+                   u.AdjustedRent, h.SigningMonthlyIncome, CAST(h.CreatedDate AS DATE)
             FROM simulation.Lease l
             JOIN simulation.PropertyUnits u ON u.RunID = l.RunID AND u.UnitID = l.UnitID
             JOIN simulation.Household h ON h.RunID = l.RunID AND h.HouseholdID = l.HouseholdID
@@ -242,6 +255,7 @@ class LeaseRenewalManager:
                   SELECT 1 FROM simulation.LeaseTermination lt
                   WHERE lt.RunID = l.RunID AND lt.LeaseID = l.LeaseID
               )
+            ORDER BY u.PropertyID, u.UnitID
         """
         leases = self.db.execute_query(query, (run_id, current_date, eom))
 
@@ -254,7 +268,10 @@ class LeaseRenewalManager:
         # renewal_rng.random() per renew/exit decision (invariant).
         ctx = self.retention_model.build_date_context(run_id, current_date)
 
-        for (lease_id, eff_rent, base_rent, signing_income, created_date) in leases:
+        # u.AdjustedRent is the retention market anchor — the same bath-adjusted
+        # basis charging uses (KD-012); a BaseRent anchor here would measure the
+        # deal against a different market than the one the rent was priced from.
+        for (lease_id, eff_rent, market_anchor_rent, signing_income, created_date) in leases:
             late_months = self._count_late_months(run_id, lease_id, current_date)
 
             decision: str
@@ -263,7 +280,7 @@ class LeaseRenewalManager:
                 decision = 'LANDLORD_NONRENEWAL'
             else:
                 exit_prob = self.retention_model.voluntary_exit_prob(
-                    ctx, effective_rent=eff_rent, base_rent=base_rent,
+                    ctx, effective_rent=eff_rent, market_anchor_rent=market_anchor_rent,
                     signing_income=signing_income, income_reference_date=created_date)
                 if self.renewal_rng.random() < exit_prob:
                     decision = 'VOLUNTARY_EXIT'
@@ -292,7 +309,7 @@ class LeaseRenewalManager:
         lease's inputs for the rare mid-month case where the pre-roll didn't fire."""
         row = self.db.execute_query(
             """
-            SELECT l.EffectiveMonthlyRent, u.BaseRent, h.SigningMonthlyIncome, CAST(h.CreatedDate AS DATE)
+            SELECT l.EffectiveMonthlyRent, u.AdjustedRent, h.SigningMonthlyIncome, CAST(h.CreatedDate AS DATE)
             FROM simulation.Lease l
             JOIN simulation.PropertyUnits u ON u.RunID = l.RunID AND u.UnitID = l.UnitID
             JOIN simulation.Household h ON h.RunID = l.RunID AND h.HouseholdID = l.HouseholdID
@@ -302,10 +319,10 @@ class LeaseRenewalManager:
         )
         if not row:
             return self.retention_model.base_exit  # no inputs -> the market-equivalent base
-        eff_rent, base_rent, signing_income, created_date = row[0]
+        eff_rent, market_anchor_rent, signing_income, created_date = row[0]
         ctx = self.retention_model.build_date_context(run_id, current_date)
         return self.retention_model.voluntary_exit_prob(
-            ctx, effective_rent=eff_rent, base_rent=base_rent,
+            ctx, effective_rent=eff_rent, market_anchor_rent=market_anchor_rent,
             signing_income=signing_income, income_reference_date=created_date)
 
     def _materialize_lease_end_decisions(self, run_id: int, current_date: date) -> Dict[str, List[int]]:
@@ -323,6 +340,9 @@ class LeaseRenewalManager:
         - Renewal: 80%
         - Voluntary exit: 20%
         """
+        # ORDER BY is an invariant-#8 guard (#187): dispatch order here drives
+        # the downstream turnover/deposit sequential streams (exits settle +
+        # trigger turnover; renewals don't), so it must not ride plan row order.
         query = """
             SELECT l.LeaseID, l.RenewalDecision
             FROM simulation.Lease l
@@ -333,6 +353,7 @@ class LeaseRenewalManager:
                     SELECT 1 FROM simulation.LeaseTermination lt
                     WHERE lt.RunID = l.RunID AND lt.LeaseID = l.LeaseID
                 )
+            ORDER BY l.LeaseID
         """
         leases = self.db.execute_query(query, (run_id, current_date))
 

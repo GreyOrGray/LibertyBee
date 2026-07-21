@@ -159,7 +159,8 @@ class TenantManager:
             run_seed: RNG seed for deterministic behavior
             below_market_rent_pct: Liberty Bee below-market discount, from
                 ProjectionConfig.below_market_rent_pct (e.g. 0.10).
-                New leases sign at BaseRent x (1 - below_market_rent_pct) x inflation.
+                New leases sign at AdjustedRent x (1 - below_market_rent_pct) x inflation
+                (the bath-adjusted market figure — KD-012).
             deposit_manager: Optional SecurityDepositManager
             tenant_credit_manager: Optional TenantCreditManager (TCS init hook)
         """
@@ -571,6 +572,13 @@ class TenantManager:
         Returns:
             List of VacancyRecord objects with unit details
         """
+        # ORDER BY is an invariant-#8 guard (#187): fill order assigns
+        # Household/Lease/Person IDs via in-memory counters AND consumes the
+        # applicant/deposit streams — the deepest order-sensitive loop in the
+        # engine. Key = (u.PropertyID, u.UnitID), NOT v.VacancyID: the
+        # historical stable plan drives this join from PropertyUnits (captured
+        # empirically at the hardening — 264/264 multi-row batches followed
+        # unit order), and one open vacancy per unit makes it a total order.
         query = """
             SELECT v.VacancyID, v.UnitID, u.PropertyID, v.VacancyStartDate,
                    u.Beds, v.VacancyCreatedEventID, v.TargetFillDate
@@ -579,6 +587,7 @@ class TenantManager:
               ON v.RunID = u.RunID AND v.UnitID = u.UnitID
             WHERE v.RunID = ?
               AND v.VacancyEndDate IS NULL
+            ORDER BY u.PropertyID, u.UnitID
         """
         rows = self.db.execute_query(query, (self.run_id,))
 
@@ -1343,10 +1352,9 @@ class TenantManager:
         """
         lease_id = self.get_next_lease_id()
 
-        # compute inflation-adjusted base rent.
-        # V5 verification confirmed PropertyUnits.CurrentRent is set once at
-        # acquisition (0.9 * BaseRent) and never updated. So we use the unit's
-        # BaseRent and apply the cumulative rent inflation index up to current_date.
+        # compute inflation-adjusted rent off the unit's AdjustedRent (the
+        # underwritten bath-adjusted market figure — KD-012) with the
+        # cumulative rent inflation index up to current_date.
         # deposit-installment math repaired in parallel to handle arbitrary
         # rent values without overflowing InstallmentsPaidCount.
         # prefer the rent the screens already qualified against
@@ -1448,31 +1456,43 @@ class TenantManager:
     def _compute_inflation_adjusted_rent(self, unit_id: int, target_date: date) -> Decimal:
         """
         Compute a new lease's rent from the unit's
-        BaseRent + cumulative rent inflation (not the prior tenant's reduced rent).
+        AdjustedRent + cumulative rent inflation (not the prior tenant's reduced rent).
 
         Apply the Liberty Bee below-market
         discount. New lease rent =
-            BaseRent × (1 − below_market_rent_pct) × Π(1 + RentRate)
+            AdjustedRent × (1 − below_market_rent_pct) × Π(1 + RentRate)
         from simulation start to target_date.
 
+        KD-012 (one rent basis): AdjustedRent — the bath-adjusted market
+        figure acquisition underwrote on — is the charging basis. BaseRent
+        (the bedroom-median anchor) stays as provenance only. "Below market"
+        means below the bath-adjusted market rate.
+
         Args:
-            unit_id: UnitID to look up BaseRent for
+            unit_id: UnitID to look up AdjustedRent for
             target_date: Date to compute the inflation factor as of
 
         Returns:
-            Decimal monthly rent = BaseRent × (1 − below_market_rent_pct) ×
+            Decimal monthly rent = AdjustedRent × (1 − below_market_rent_pct) ×
             product(1 + RentRate) for each InflationSchedule month up to
             target_date. With no inflation schedule the factor is 1.0, so the
-            result is the discounted base rent.
+            result is the discounted adjusted rent.
         """
-        # Read the unit's BaseRent (immutable, set at acquisition)
-        base_rent_row = self.db.execute_query(
-            "SELECT BaseRent FROM simulation.PropertyUnits WHERE RunID = ? AND UnitID = ?",
+        # Read the unit's AdjustedRent (immutable, carried from reference at
+        # acquisition). Fail-loud on NULL — a BaseRent fallback here would
+        # silently resurrect the KD-012 basis split.
+        rent_row = self.db.execute_query(
+            "SELECT AdjustedRent FROM simulation.PropertyUnits WHERE RunID = ? AND UnitID = ?",
             (self.run_id, unit_id)
         )
-        if not base_rent_row:
+        if not rent_row:
             raise RuntimeError(f"Cannot compute rent: UnitID {unit_id} not found for RunID {self.run_id}")
-        base_rent = Decimal(str(base_rent_row[0][0]))
+        if rent_row[0][0] is None:
+            raise RuntimeError(
+                f"Cannot compute rent: UnitID {unit_id} has NULL AdjustedRent for RunID {self.run_id} "
+                f"(carry from reference.Units failed — no BaseRent fallback by design, KD-012)"
+            )
+        adjusted_rent = Decimal(str(rent_row[0][0]))
 
         # Compute cumulative compound rent inflation factor up to target_date
         # (matches the pattern used in property_market_manager for PropertyRate).
@@ -1492,10 +1512,10 @@ class TenantManager:
             factor *= (Decimal('1.0') + Decimal(str(row[0])))
 
         # sign the lease at the Liberty Bee below-market rate, not
-        # the market BaseRent. A new tenant gets the unit's standard discounted
+        # the market AdjustedRent. A new tenant gets the unit's standard discounted
         # rate, inflation-adjusted — never the prior tenant's tenure-reduced rent
         # (this preserves the turnover-hygiene intent).
-        below_market_base = base_rent * (Decimal('1.0') - self.below_market_rent_pct)
+        below_market_base = adjusted_rent * (Decimal('1.0') - self.below_market_rent_pct)
         # quantize to cents AT THE SOURCE with SQL Server's
         # rounding (half-away-from-zero), so the rent the screens qualify
         # against, the value inserted, and the stored DECIMAL(18,2) are the

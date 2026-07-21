@@ -1,12 +1,20 @@
 """
-ParameterRegistry — the single read path for the unified EAV parameter store
-(reference.ParameterRegistry + reference.ParameterCategory).
+ParameterRegistry — the single read path for the parameter store.
+
+Backed by three tables (V00071):
+  reference.Projection                 identity: a projection exists because a row
+                                       here says so. Carries Description/Kind/
+                                       ScenarioTag so meaning is queryable rather
+                                       than parsed out of a name string.
+  reference.ParameterRegistryDefault   default values, keyed (Category, Name).
+  reference.ParameterRegistryDefined   per-projection overrides, ProjectionID NOT
+                                       NULL with an FK to Projection.
 
 Replaces the scattered reads of reference.ProjectionParameters /
 reference.TenantParameters and their COALESCE / .get() fallbacks. The contract:
 
   - read ONCE per projection (load());
-  - resolve override(projection) -> else global(NULL ProjectionID);
+  - resolve override(projection) -> else default;
   - coerce by the row's DataType;
   - FAIL LOUD on a missing or malformed parameter — there are no code-side
     defaults. The codesweep showed fallbacks mask real wiring bugs, so the
@@ -14,6 +22,10 @@ reference.TenantParameters and their COALESCE / .get() fallbacks. The contract:
 
 Variable-length groups (e.g. rent-reduction tiers) read via get_category(),
 which returns whatever rows are present (absence = that lever is not configured).
+
+Before V00071 both kinds of row lived in one table separated only by a nullable
+ProjectionID, and a projection's existence was inferred from the presence of a
+SIM.ProjectionName parameter row — identity conflated with configuration.
 """
 import logging
 from decimal import Decimal, InvalidOperation
@@ -32,26 +44,51 @@ class ParameterRegistry:
         self.logger = logging.getLogger(__name__)
         self._resolved = {}        # (category, name) -> (value_str, datatype)
         self._projection_id = None
+        self._projection = None    # the reference.Projection row, or None if absent
 
     def load(self, projection_id: int) -> "ParameterRegistry":
-        """Load + resolve all parameters for one projection (override else global)."""
-        rows = self.db.execute_query(
+        """Load the projection and resolve its parameters (override else default).
+
+        Identity and configuration are read separately and mean different things:
+        the projection EXISTS if reference.Projection has a row (see
+        `projection_exists`), independently of which parameters happen to be
+        configured for it. Previously existence was inferred from the presence of
+        a SIM.ProjectionName parameter row, which conflated the two — an
+        incompletely-seeded projection reported as "not found".
+        """
+        proj = self.db.execute_query(
             """
-            SELECT Category, Name, ProjectionID, Value, DataType
-            FROM reference.ParameterRegistry
-            WHERE ProjectionID IS NULL OR ProjectionID = ?
+            SELECT ProjectionID, Name, Description, Kind, ScenarioTag
+            FROM reference.Projection
+            WHERE ProjectionID = ?
             """,
             (projection_id,),
         )
-        # override (ProjectionID set) wins over global (ProjectionID NULL)
-        staged = {}  # (cat,name) -> {'override': (val,dt), 'global': (val,dt)}
-        for cat, name, pid, val, dt in rows:
-            slot = "override" if pid is not None else "global"
+        self._projection = ({
+            "projection_id": proj[0][0], "name": proj[0][1], "description": proj[0][2],
+            "kind": proj[0][3], "scenario_tag": proj[0][4],
+        } if proj else None)
+
+        rows = self.db.execute_query(
+            """
+            SELECT Category, Name, Value, DataType, 0 AS IsOverride
+            FROM reference.ParameterRegistryDefault
+            UNION ALL
+            SELECT Category, Name, Value, DataType, 1 AS IsOverride
+            FROM reference.ParameterRegistryDefined
+            WHERE ProjectionID = ?
+            """,
+            (projection_id,),
+        )
+        # An override for this projection wins over the default.
+        staged = {}  # (cat,name) -> {'override': (val,dt), 'default': (val,dt)}
+        for cat, name, val, dt, is_override in rows:
+            slot = "override" if is_override else "default"
             staged.setdefault((cat, name), {})[slot] = (val, dt)
 
         resolved = {}
         for key, slots in staged.items():
-            resolved[key] = slots.get("override") or slots["global"]
+            resolved[key] = slots.get("override") or slots["default"]
         self._resolved = resolved
         self._projection_id = projection_id
         self.logger.info(
@@ -60,20 +97,50 @@ class ParameterRegistry:
         return self
 
     def load_globals(self) -> "ParameterRegistry":
-        """Load only the global (ProjectionID NULL) parameters — for consumers
-        that read no per-projection overrides (e.g. tenant/applicant generation,
-        whose params are all global). One read, cached; same fail-loud contract."""
+        """Load only the DEFAULT parameters — for consumers that read no
+        per-projection overrides (e.g. tenant/applicant generation, whose params
+        are all defaults). One read, cached; same fail-loud contract.
+
+        NOTE: this path is projection-blind by design. A per-projection override
+        is invisible here, so a parameter intended to vary by projection (a
+        scenario knob, say) must be read through load() instead — otherwise the
+        override silently does not apply.
+        """
         rows = self.db.execute_query(
             """
             SELECT Category, Name, Value, DataType
-            FROM reference.ParameterRegistry
-            WHERE ProjectionID IS NULL
+            FROM reference.ParameterRegistryDefault
             """
         )
         self._resolved = {(c, n): (v, dt) for c, n, v, dt in rows}
         self._projection_id = None
-        self.logger.info(f"ParameterRegistry: loaded {len(self._resolved)} global parameters")
+        self._projection = None
+        self.logger.info(f"ParameterRegistry: loaded {len(self._resolved)} default parameters")
         return self
+
+    # --- projection identity -------------------------------------------------
+    # Identity comes from the entity, never from a parameter value. A projection
+    # that exists but is missing parameters is a DIFFERENT failure from one that
+    # does not exist, and the caller can now tell them apart.
+    @property
+    def projection_exists(self) -> bool:
+        return self._projection is not None
+
+    @property
+    def projection_name(self):
+        return self._projection["name"] if self._projection else None
+
+    @property
+    def projection_kind(self):
+        return self._projection["kind"] if self._projection else None
+
+    @property
+    def projection_scenario_tag(self):
+        return self._projection["scenario_tag"] if self._projection else None
+
+    @property
+    def projection_description(self):
+        return self._projection["description"] if self._projection else None
 
     # --- scalar access -------------------------------------------------------
     def get(self, category: str, name: str):
