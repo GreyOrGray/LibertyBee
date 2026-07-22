@@ -85,9 +85,9 @@ The `v1.*` schema holds the whole corpus: `run_summary`, `lease`, `lease_termina
 Prove the pipeline, not just the stored answers: restore the **seed** database and re-run a simulation.
 
 1. Download the seed database — the `LibertyBeeGold_v0-6-0.bak` asset on this repo's **v2 pre-release**
-   (`v2.0.0-rc1`; it moves to the main v2 release when the corpus freezes). By default the tooling restores
-   the most recent `.bak` it finds in a `DBBackup/gold/` folder **at the repository root** (the folder is
-   gitignored — create it):
+   (currently `v2.0.0-rc2`; it moves to the main v2 release when the corpus freezes). By default the tooling
+   restores the most recent `.bak` it finds in a `DBBackup/gold/` folder **at the repository root** (the
+   folder is gitignored — create it):
 
    ```
    <the repo you cloned>/DBBackup/gold/LibertyBeeGold_v0-6-0.bak
@@ -190,6 +190,12 @@ python app/src/simulation.py --env <db> --projection-id <ProjectionID> --seed <S
      python create_corpus.py     --corpus MyCorpus
      python regenerate_corpus.py --corpus MyCorpus --rungs 200-209,300-305 --seeds 1-50
      ```
+
+     > `create_corpus.py` creates the database in **FULL recovery** (a result corpus is a keep-forever
+     > artifact). Manage its backups accordingly: if your instance runs a log-backup chain, take a full
+     > backup right after creating — the chain needs a base, and the log can't truncate during a long
+     > sweep without one. If this is a throwaway experiment and you don't back this instance up, switch
+     > it to SIMPLE (`ALTER DATABASE [MyCorpus] SET RECOVERY SIMPLE`).
 
      `--rungs` is required and takes a mixed list and ranges (`200-209,300-305` is the published standard
      ladder — the sixteen rungs above). There is no default set: the recipe states exactly what ran. Expect

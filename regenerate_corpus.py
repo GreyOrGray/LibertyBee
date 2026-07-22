@@ -606,7 +606,7 @@ def main():
     p.add_argument("--throttle", action="store_true",
                    help="yield to interactive use: drip to 1 worker on input, blast "
                         "only after sustained idle. Affects scheduling only, never "
-                        "results. Requires app/src/living_farm/pacing.py.")
+                        "results. (app/src/pacing.py; Windows-only, like the engine.)")
     p.add_argument("--blast-after", type=float, default=600.0,
                    help="seconds of sustained idle before blasting (with --throttle)")
     p.add_argument("--cpu-max", type=float, default=25.0,
@@ -628,16 +628,15 @@ def main():
     # The rung->funds map and the scenario are resolved from the seeded data below,
     # once the rung set is known, and handed to the CorpusStore — no module globals.
 
-    # Imported lazily and only when asked for: the pacer lives in the living-farm
-    # tree, which is not part of every checkout. A hard import at module load
-    # would break the harness for anyone reproducing the corpus without it.
+    # Imported lazily and only when asked for: the pacer is Windows-API-bound
+    # (GetLastInputInfo), so nothing else in the harness should load it.
     pacer = None
     if args.throttle:
         sys.path.insert(0, os.path.join(REPO, "app", "src"))
         try:
-            from living_farm import pacing
+            import pacing
         except ImportError as e:
-            p.error(f"--throttle needs app/src/living_farm/pacing.py, which is not "
+            p.error(f"--throttle needs app/src/pacing.py, which is not "
                     f"importable from {REPO} ({e}). Re-run without --throttle.")
         pacer = pacing.Pacer(blast_after_s=args.blast_after, cpu_max_pct=args.cpu_max)
 
