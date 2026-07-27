@@ -258,13 +258,14 @@
 </head>
 <body>
 
-<div class="wip sans"><b>Liberty Bee 1.0.</b> The numbers and charts are real, from the frozen 1.0 baseline (engine 0.5.0) — the code and the full dataset are public, and every run reproduces from a seed. Everything's sourced in <a href="#sources">the ledger</a>.</div>
+<div class="wip sans"><b>Liberty Bee V2.</b> The numbers and charts are real, from the frozen V2 corpus of record (engine 0.6.0 — 10,400 runs, zero failures, generated from the public repo with zero overrides) — the code and the full dataset are public, and every run reproduces from a seed. Everything's sourced in <a href="#sources">the ledger</a>.</div>
 
 <!-- ============ 01 · INTRO ============ -->
 <div class="hero wrap">
   <div class="mark sans"><span class="dot"></span> Liberty Bee — 01 / Intro</div>
   <h1>Can housing be run without extraction — and still survive?</h1>
   <p class="sub">Most landlords keep a few escape hatches: raise the rent, cut the maintenance, skim the surplus. Liberty Bee gives up all of them. We simulated twenty years, across every funding level and market from calm to crash, to find out whether that can actually last — and we're showing you everything, including the parts that don't flatter us, and where every number comes from.</p>
+  <p class="sub" style="font-size:.82em;opacity:.85">Liberty Bee is a released concept, but still iterating. This page will be regularly updated with new and better information as we run more simulations and expand the scope of the project. Current information is based on our <b>V2 model</b>. Legacy numbers can be found at <a href="versions.html">previous versions</a>, and a current record of known issues with the model is available at <a href="known-issues.html">known issues</a>.</p>
   <div class="cue sans">Scroll ↓</div>
 </div>
 
@@ -356,13 +357,13 @@
   <div class="sticky"><div class="figure">
     <div class="readout"><span class="rn" id="ro-n">—</span> <span class="rl" id="ro-l">20-year survival</span></div>
     <canvas id="scurve" width="520" height="300"></canvas>
-    <div class="figcap sans">Regime baseline · engine 0.5.0 · 800 runs · starting capital → % surviving 20 years</div>
+    <div class="figcap sans">Regime baseline · engine 0.6.0 · 8,000 runs · starting capital → % surviving 20 years</div>
   </div></div>
   <div class="steps wrap">
-    <div class="step" data-x="0.0" data-n="2%" data-c="die"><div class="box"><div class="lab sans" style="color:var(--die)">At the bottom</div><p>Start with too little capital — around <b>$2M</b> — and almost every version runs out of money before year twenty. Just <b>2%</b> make it.</p></div></div>
-    <div class="step" data-x="0.17" data-n="80%" data-c="amber"><div class="box"><div class="lab sans" style="color:var(--amber)">The knee</div><p>Add capital and survival climbs <em>steeply</em>: $3M&nbsp;→&nbsp;54%, $3.5M&nbsp;→&nbsp;80%, $4M&nbsp;→&nbsp;92%. A narrow band turns an under-funded experiment into a durable institution.</p></div></div>
-    <div class="step" data-x="0.28" data-n="100%" data-c="survive"><div class="box"><div class="lab sans" style="color:var(--survive)">Funded properly</div><p>At <b>$4.5M</b>, <b>every single run</b> survives the full twenty years — and the portfolio grows from about <b>19 homes</b> at the threshold to <b>~65</b> at the top of the range, holding the below-market rule the whole way.</p></div></div>
-    <div class="step" data-x="1" data-n="100%" data-c="survive"><div class="box"><p>So the story isn't "does non-extraction work?" It's "<b>how much runway does it need?</b>" — and now we can put a hard number on it: <b>$4.5M</b>.</p></div></div>
+    <div class="step" data-x="0.0" data-n="1%" data-c="die"><div class="box"><div class="lab sans" style="color:var(--die)">At the bottom</div><p>Start with too little capital — around <b>$2M</b> — and almost every version runs out of money before year twenty. Just <b>1%</b> make it.</p></div></div>
+    <div class="step" data-x="0.17" data-n="73%" data-c="amber"><div class="box"><div class="lab sans" style="color:var(--amber)">The knee</div><p>Add capital and survival climbs <em>steeply</em>: $3M&nbsp;→&nbsp;40%, $3.5M&nbsp;→&nbsp;73%, $4M&nbsp;→&nbsp;95%. A narrow band turns an under-funded experiment into a durable institution.</p></div></div>
+    <div class="step" data-x="0.33" data-n="100%" data-c="survive"><div class="box"><div class="lab sans" style="color:var(--survive)">Funded properly</div><p>At <b>$4.5M</b>, survival hits <b>99.6%</b> — 2 of 500 runs still find a way to die (our deeper V2 sweep caught tail risks the smaller V1 sample missed). At <b>$5M, every single run</b> survives the full twenty years — and the portfolio grows from about <b>20 homes</b> at the threshold to <b>~60</b> at the top of the range, holding the below-market rule the whole way.</p></div></div>
+    <div class="step" data-x="1" data-n="100%" data-c="survive"><div class="box"><p>So the story isn't "does non-extraction work?" It's "<b>how much runway does it need?</b>" — and now we can put a hard number on it: <b>$5M</b>.</p></div></div>
   </div>
 </div></section>
 
@@ -371,8 +372,8 @@
   <h2>Under-funding doesn't fail on day one. It fails years in.</h2>
   <p>Survival isn't just a yes-or-no at year twenty. A thinly-funded org can look fine for a few years, then run its reserves down and collapse. Here's the share of runs still solvent at each milestone, by starting capital:</p>
   <div class="cliff" id="horizon" style="grid-template-columns:auto repeat(4,1fr)"></div>
-  <p class="cliffnote sans">% of 50 runs still solvent · <b>$4.5M and up hold 100% at every milestone</b> · engine 0.5.0</p>
-  <div class="callout"><span class="k sans">the runway</span><p>At <b>$2M</b>, nearly half make it five years — but almost none reach ten. At <b>$3M</b>, most last a decade, then attrition sets in (54% still standing at twenty). Only past the <b>$4.5M</b> threshold does an org hold the line the whole way. Thin funding doesn't fail loudly up front — it bleeds out quietly, years in.</p></div>
+  <p class="cliffnote sans">% of 500 runs still solvent · <b>$5M and up hold 100% at every milestone</b> · engine 0.6.0</p>
+  <div class="callout"><span class="k sans">the runway</span><p>At <b>$2M</b>, nearly half make it five years — but almost none reach ten. At <b>$3M</b>, most last a decade, then attrition sets in (40% still standing at twenty). Only past the <b>$5M</b> threshold does an org hold the line the whole way. Thin funding doesn't fail loudly up front — it bleeds out quietly, years in.</p></div>
 </div></section>
 
 <section class="beat"><div class="wrap reveal">
@@ -380,7 +381,7 @@
   <h2>Affordability has an exchange rate.</h2>
   <p>How deep a discount can Liberty Bee give before the math breaks? We swept it — every discount depth against every funding level. The pattern is clean: generosity is bought from the balance sheet at a knowable price.</p>
   <div class="cliff" id="cliff"></div>
-  <p class="cliffnote sans"><span style="color:var(--survive)">■</span> survives &nbsp; <span style="color:var(--die)">■</span> fails &nbsp;·&nbsp; % of 10 seeds surviving 20 years · engine 0.5.0</p>
+  <p class="cliffnote sans"><span style="color:var(--survive)">■</span> survives &nbsp; <span style="color:var(--die)">■</span> fails &nbsp;·&nbsp; % of 10 seeds surviving 20 years · engine 0.5.0 (V1 cliff sweep — the V2 re-run of the full discount grid is on the roadmap; V2's 25%-discount ladder is in the released corpus)</p>
   <div class="callout"><span class="k sans">the finding</span><p>Every ~5 points of deeper discount raises the capital you need by roughly <b>$0.5–1M</b>.<sup class="cite"><a href="#src-10">10</a></sup> Past a point, <b>no amount of money buys a half-off-forever policy</b> — a 50%-off-forever policy survives at no funding level we tested, even $11M. That's the quantitative case for the discount we actually chose.</p></div>
 </div></section>
 
@@ -390,7 +391,7 @@
   <p class="big">Solvency is the floor, not the goal. So the model measures the thing that actually matters: <b>how much better off tenants are.</b></p>
   <div class="stats">
     <div class="stat"><div class="n g">~$33k</div><div class="lab sans">Median saved vs. market per household — and it compounds sharply the longer you stay<sup class="cite"><a href="#src-11">11</a></sup></div></div>
-    <div class="stat"><div class="n a">55–170</div><div class="lab sans">Households housed below market per org, scaling with capital ($4.5M → $11M)</div></div>
+    <div class="stat"><div class="n a">51–163</div><div class="lab sans">Households housed below market per org, scaling with capital ($4.5M → $11M)</div></div>
     <div class="stat"><div class="n">~4 yr</div><div class="lab sans">Median stay — vs. ~2.2yr for the typical market renter<sup class="cite"><a href="#src-12">12</a></sup></div></div>
   </div>
   <p style="margin-top:22px">That savings is real money that <b>stayed in the community</b> instead of leaving as someone's profit — and it compounds: the longer you stay, the deeper your discount gets.</p>
@@ -429,12 +430,12 @@
   <p><b>How and when you use it:</b> once a year you can draw up to <b>a month's rent</b> from your balance — either as a routine credit toward a month you choose, or as hardship relief when a month goes sideways. When you move out in good standing, whatever's left can go toward your final month's rent, and it stays redeemable for <b>two years</b> after you leave (an eviction forfeits it). It only ever builds on rent paid on time, and it never touches damages — that's what a deposit is for.</p>
   <p>It's also where the model is <em>least</em> finished — so here's the honest split of every credit dollar earned across the corpus:<sup class="cite"><a href="#src-16">16</a></sup></p>
   <div class="tcssplit">
-    <div style="width:50.3%;background:var(--survive)">50% redeemed</div>
-    <div style="width:20.8%;background:var(--die)">21% forfeited</div>
-    <div style="width:28.9%;background:var(--honey);color:var(--ink)">29% held</div>
+    <div style="width:50.7%;background:var(--survive)">51% redeemed</div>
+    <div style="width:20.7%;background:var(--die)">21% forfeited</div>
+    <div style="width:28.5%;background:var(--honey);color:var(--ink)">29% held</div>
   </div>
   <div class="tcslegend">
-    <span><i style="background:var(--survive)"></i> reached the tenant — about <b>$7,465</b> per household</span>
+    <span><i style="background:var(--survive)"></i> reached the tenant — about <b>$7,596</b> per household</span>
     <span><i style="background:var(--die)"></i> forfeited, unused</span>
     <span><i style="background:var(--honey)"></i> still on the books</span>
   </div>
@@ -455,7 +456,7 @@
   <h2>Treat people well, and they stay. Now we can show the mechanism.</h2>
   <p>The whole theory of change is a loop: a below-market deal that <em>deepens</em> with tenure means the longer you stay, the more you'd give up by leaving — so people put down roots, and stability compounds. This isn't just hope — below-market tenants are measurably about <b>19% less likely to move</b><sup class="cite"><a href="#src-13">13</a></sup>. The model captures it directly: your odds of leaving fall as your deal gets better.</p>
   <div class="callout honest"><span class="k sans">not all loyalty is love</span>
-  <p>We're honest about <em>why</em> people stay — and it <b>shifts over time.</b> Early in a tenancy, "nowhere else affordable to go" is a big part of it: the discount is still shallow and the market is tight. But as your below-market deal <em>deepens</em> with tenure, <b>the deal itself becomes the reason.</b> Averaged across a whole tenancy, that "nowhere to go" constraint accounts for <b>about 44%</b> of why people stay — a large minority, but the deal itself is the bigger half.<sup class="cite"><a href="#src-14">14</a></sup></p>
+  <p>We're honest about <em>why</em> people stay — and it <b>shifts over time.</b> Early in a tenancy, "nowhere else affordable to go" is a big part of it: the discount is still shallow and the market is tight. But as your below-market deal <em>deepens</em> with tenure, <b>the deal itself becomes the reason.</b> Averaged across a whole tenancy, that "nowhere to go" constraint accounts for <b>about 48%</b> of why people stay — a large minority, but the deal itself is still the bigger half.<sup class="cite"><a href="#src-14">14</a></sup></p>
   <p>But let's be real: <b>"nowhere to go" is only a win for a <em>traditional</em> landlord.</b> Our goal isn't captive tenants. Yes, it keeps people in the Liberty Bee system — but that's not <em>why</em> we want them here. It's a symptom of a broken housing landscape, and even where it "benefits" us on paper, <b>we'd far rather people stay because they want to than because they have nowhere else to go.</b></p></div>
 </div></section>
 
@@ -546,17 +547,17 @@
 <section class="live-sec"><div class="wrap reveal">
   <p class="eyebrow sans">Beyond the frozen baseline — live, not cited</p>
   <h2>The model keeps running.</h2>
-  <p>Everything above this line is frozen — 800 runs, every number reproducible from a seed,
-  and none of it will ever move. Everything below this line is <b>alive</b>. The same released
-  engine keeps running on a machine in the corner of a room, on fresh seeds no cited run ever
-  used — not to change the answer, but to keep measuring it.</p>
+  <p>Everything above this line is frozen — 10,400 runs across two scenarios, every number
+  reproducible from a seed, and none of it will ever move. Everything below this line is
+  <b>alive</b>. The same released engine keeps running on a machine in the corner of a room, on
+  fresh seeds no cited run ever used — not to change the answer, but to keep measuring it.</p>
   <div class="lv-tally">
     <p class="lv-asof">Live runs paused · cutting a new baseline</p>
     <p style="color:var(--lv-text);font-size:17px;margin:2px 0 12px;font-family:ui-sans-serif,system-ui,sans-serif;font-weight:700">We're formalizing a new set of numbers.</p>
     <p style="margin:0 0 12px">When a new baseline is cut, the live runs pause while the new engine version is re-run end to end — a half-finished baseline is never shown here as live. Throughout, the shipped version's complete record stays on the <a href="versions.html">version archive</a>; when the new baseline is live, the live numbers return here, on the new version.</p>
-    <p style="margin:0">Right now the next baseline is being cut on the newest engine version being prepared for release. Liberty Bee <b>1.0</b>'s full living record — <b>5,903</b> fresh-seed runs, every rung, both scenarios, the fuller picture the frozen 800 couldn't show — is on the <a href="versions.html">version archive&nbsp;→</a>.</p>
+    <p style="margin:0">The new baseline is <b>done</b>: everything above this line is now the V2 corpus of record (engine 0.6.0 — 10,400 runs, zero failures, generated from the public repo with zero overrides and verified cell-by-cell against an independent earlier sweep). Live runs resume on the V2 engine soon. Liberty Bee <b>1.0</b>'s full living record — <b>5,903</b> fresh-seed runs — remains on the <a href="versions.html">version archive&nbsp;→</a>.</p>
   </div>
-  <p class="lv-methods">A living run: engine <b>0.5.0</b>, a fresh seed no cited run ever used, a fresh
+  <p class="lv-methods">A living run: the released engine (<b>0.6.0</b> when live runs resume), a fresh seed no cited run ever used, a fresh
   database restored from the released Gold every time, keyed (scenario · engine · funding · seed).
   Published only through a tripwire-gated, human-merged pull request — eight invariant checks stand
   between the machine and this page. Data contract: <a href="data/schema.md">data/schema.md</a>.</p>
@@ -637,6 +638,26 @@
   <p>Maybe some altruistic billionaire will take it and run with it. Probably a non-zero chance of that as well.</p>
 </div></section>
 
+<section class="close-sec"><div class="wrap reveal">
+  <p class="eyebrow sans">What do I get out of this?</p>
+  <p class="first">A couple of people have asked me this now, so I figured I'd address it here.</p>
+  <p>What do I get out of this?</p>
+  <p><b>Short answer:</b> Nothing material. Nothing is for sale. The code and data are free and licensed to stay that way. If anything, I operate at a financial loss every single month that I work on this.</p>
+  <p><b>Long answer…</b></p>
+  <p>Let me start by quoting Alan Watts…</p>
+  <p><em>"…the idea that all existence is relative, that all existence is transactional. The transaction being typically exemplified by, say, the operation of buying and selling, in which there can be no buying without somebody selling, and there can be no selling without somebody else buying."</em></p>
+  <p>There's an idea of material transaction that pervades our society. If something is not a job then it's either a side hustle or a hobby.</p>
+  <p>And that's very often true. Because we're all struggling. So things are most often a way to struggle less, or to take our minds off the struggle.</p>
+  <p>Watts followed up with this, though: <em>"That kind of interdependence of the inside going together with the outside, what is in you going together with what is outside you, is absolutely fundamental to existence. It is existence. Existence is relativity."</em></p>
+  <p>And that's where I land. As a person working with databases, "transactions" are my bread and butter. They're literally called "transactional databases". This for that. That for this. I understand <em>why</em> people think this is the only way. But Watts spoke of a different transaction. A spiritual and philosophical transaction. I exist in relation to everyone else. What I am "selling" is an idea. A philosophy. What you are "buying" is, hopefully, recognition. That this is an idea deserving of existence. The cost of my selling is my time… and, honestly, a bit of sanity. The price of you buying is an open mind.</p>
+  <p>There was an idea, once, called Noblesse Oblige, meaning "Nobility Obliges". It was an idea that people with wealth, power, or status had a duty to provide for those… lower… than themselves. It's why we have all of these old parks and libraries and museums that were funded by industrialists and robber barons. Things useful and helpful to the common person provided by arguably terrible people.</p>
+  <p>I don't have wealth, power, or status, but I believe in a similar, more reachable idea: <b><em>Praesentia Obligat</em></b> — "Presence Obliges". Because I am here, because I can see the need, and because I have <em>capacity</em> to contribute, my presence creates an obligation. I can't give you a library, but I can give you an idea.</p>
+  <p>When I first started work on this idea, I told a handful of people, "Hey, we could help people and make a living still," but, at this point, the plan is to just fire this off into the void and hope it touches someone.</p>
+  <p>Liberty Bee operates through moral reciprocity. You should, if you can, contribute to the world that sustains you — without requiring the benefit to return to you personally or directly.</p>
+  <p class="thesis">That's what I get out of this.</p>
+  <p style="font-size:.8em;opacity:.75">The Watts passages are from the <a href="https://www.organism.earth/library/document/out-of-your-mind-4" target="_blank" rel="noopener"><em>Out of Your Mind</em> lecture series (part 4)</a> — cited because checkability is the house style, even for philosophy.</p>
+</div></section>
+
 <section class="beat"><div class="wrap reveal">
   <p class="eyebrow sans">One last disclosure</p>
   <h2>I built this with AI — and I'm telling you that on purpose.</h2>
@@ -666,7 +687,7 @@
   <h2>Every number on this page — and where it comes from.</h2>
   <p>Two kinds of number live here: <span class="stag pub">public data</span> anyone can look up, and <span class="stag mod">our model</span> outputs anyone can reproduce. Both are traceable to a tracked source in our documentation.</p>
   <ol>
-    <li id="src-1"><span class="stag mod">our model</span> <b>76.5%</b> of Salem renters can't afford a typical below-market 2BR — Liberty Bee reach analysis (Phase 1.8 baseline of record §5b), computed from the Census renter-income distribution against our modeled 2BR rent. <span class="track">reference: business_rules.md</span></li>
+    <li id="src-1"><span class="stag mod">our model</span> <b>76.5%</b> of Salem renters can't afford a typical below-market 2BR — Liberty Bee reach analysis, computed from the Census renter-income distribution against our modeled 2BR rent ($2,906 market → $2,615 below-market; income needed @30% ≈ $105k). Re-derived on the V2 engine (0.6.0): unchanged from V1 — the reach inputs (market reference rents, income model) were untouched by the V2 fixes. <span class="track">reproduce: reach_probe.py · reference: business_rules.md</span></li>
     <li id="src-2"><span class="stag pub">public data</span> Salem rental vacancy <b>1.9%</b> (healthy ≈ 6%) — City of Salem Housing Roadmap Report Card, Oct 22 2025. <a href="https://www.salemma.gov/m/newsflash/Home/Detail/190">salemma.gov</a> · <span class="track">evidence_base §4a</span></li>
     <li id="src-3"><span class="stag pub">public data</span> Salem renter median income <b>~$58k</b> (vs ~$85k all households) — U.S. Census B25118, ACS 2024 5-year. <a href="https://censusreporter.org/profiles/16000US2559105-salem-ma/">Census Reporter</a> · <span class="track">evidence_base §9a</span></li>
     <li id="src-4"><span class="stag pub">public data</span> Median 2-bedroom rent <b>~$2,800/mo</b> — Zumper &amp; RentCafe, 2026. <a href="https://www.zumper.com/rent-research/salem-ma">Zumper</a> · <a href="https://www.rentcafe.com/average-rent-market-trends/us/ma/salem/">RentCafe</a> · <span class="track">evidence_base §4b</span></li>
@@ -674,20 +695,20 @@
     <li id="src-6"><span class="stag pub">public data</span> Median home value <b>$542,800</b> — ACS 2019–23 5-year. <a href="https://datausa.io/profile/geo/salem-ma/">DataUSA</a> · <span class="track">evidence_base §4c</span></li>
     <li id="src-7"><span class="stag pub">public data</span> Salem rents <b>+34.8%</b> 2020–2025 — RentCafe market trends, 2026. <a href="https://www.rentcafe.com/average-rent-market-trends/us/ma/salem/">RentCafe</a> · <span class="track">evidence_base §4b / §7</span></li>
     <li id="src-8"><span class="stag pub">public data</span> <b>Salem</b> real gross rent <b>+27%</b> vs real median household income <b>+7%</b>, 2016→2024 (nominal +66% vs +39%) — derived from ACS 5-yr: median gross rent <b>$1,106→$1,836</b> (Census B25064), median household income <b>$61,083→$85,153</b> (B19013), CPI-U adjusted. 2016 via <a href="https://patch.com/massachusetts/salem/one-two-salem-renters-rent-burdened-census">Patch / 2016 ACS</a>, 2024 Census-verified. Note: all-household income (Salem renter series unavailable before 2024). <span class="track">evidence_base §9c</span></li>
-    <li id="src-9"><span class="stag mod">our model</span> Survival curve &amp; 100%-survival funding threshold — Liberty Bee 1.0 frozen Monte-Carlo baseline, 800 regime runs (16 funding levels × 50 seeds; engine 0.5.0), reproducible from seed. <span class="track">reproduce: reproduction_gate.py</span></li>
+    <li id="src-9"><span class="stag mod">our model</span> Survival curve &amp; 100%-survival funding threshold — Liberty Bee V2 corpus of record, 8,000 regime runs (16 funding levels × 500 seeds; engine 0.6.0), generated from the public repo with zero overrides and reproducible from seed. The threshold moved from $4.5M (V1) to <b>$5M</b>: 500 seeds caught two $4.5M tail failures the 50-seed V1 sample missed. <span class="track">reproduce: reproduction_gate.py · corpus_diff.py</span></li>
     <li id="src-10"><span class="stag mod">our model</span> Discount exchange rate ≈ <b>$0.5–1M capital per 5 points</b> of up-front discount — Liberty Bee deep-discount cliff sweep. <span class="track">reproduce: the frozen Cliff corpus</span></li>
-    <li id="src-11"><span class="stag mod">our model</span> Tenant savings vs. market — median <b>~$33k</b>/household (mean $84k, skewed by long tenure; the median grows to ~<b>$140k</b> by year 10), households housed <b>55–172</b> by funding rung, median tenancy <b>~4&nbsp;yr</b> — Liberty Bee 1.0 corpus, 671 survived runs, engine 0.5.0. Month-by-month integration: market = unit BaseRent × cumulative rent inflation; contract = signed rent × tenure reductions (invariant #1, sitting rent flat). <span class="track">reproduce: site_metrics.py; evidence_base §10e</span></li>
+    <li id="src-11"><span class="stag mod">our model</span> Tenant savings vs. market — median <b>~$33k</b>/household (mean $85k, skewed by long tenure; the median grows to ~<b>$140k</b> by year 10), households housed <b>51–163</b> by funding rung, median tenancy <b>~4&nbsp;yr</b> — Liberty Bee V2 corpus of record, 6,602 survived runs, engine 0.6.0. Month-by-month integration: market = unit BaseRent × cumulative rent inflation; contract = signed rent × tenure reductions (invariant #1, sitting rent flat). <span class="track">reproduce: site_metrics.py; evidence_base §10e</span></li>
     <li id="src-12"><span class="stag pub">public data</span> Median market renter tenure <b>~2.2yr</b> (public-housing benchmark ~4.9yr) — Redfin / Census ACS; Collinson et al., NBER w21071 (2015). <a href="https://www.nber.org/papers/w21071">NBER</a> · <span class="track">evidence_base §10a</span></li>
     <li id="src-13"><span class="stag pub">public data</span> Below-market/rent-protected tenants <b>~19% less likely to move</b> (causal) — Diamond, McQuade &amp; Qian, NBER w24181 / <em>AER</em> 2019. <a href="https://www.nber.org/papers/w24181">NBER</a> · <span class="track">evidence_base §10b</span></li>
-    <li id="src-14"><span class="stag mod">our model</span> Share of <em>realized</em> retention attributable to regional scarcity ≈ <b>44%</b> (the deal ≈ 56%) — measured by 20-year composed turnover with retention off (base, β=0/γ=0 → 21.7%), the deal only (γ=0 → 17.4%), and full (γ=0.5 → 14.0%): scarcity's slice = (deal-only − full) ÷ (base − full), pooled over 8 seeds at a viable funding level, each run in its own freshly-restored database (engine 0.5.0). Strongly tenure-dependent: scarcity dominates early when the deal is shallow, the deal takes over as it deepens. <span class="track">reproduce: scarcity_remeasure.py</span></li>
+    <li id="src-14"><span class="stag mod">our model</span> Share of <em>realized</em> retention attributable to regional scarcity ≈ <b>48%</b> (the deal ≈ 52%) — re-measured on the V2 engine (0.6.0), by 20-year composed turnover with retention off (base, β=0/γ=0 → 21.8%), the deal only (γ=0 → 17.6%), and full (γ=0.5 → 13.6%): scarcity's slice = (deal-only − full) ÷ (base − full), pooled over 8 seeds at a viable funding level, each run in its own freshly-restored database. Strongly tenure-dependent: scarcity dominates early when the deal is shallow, the deal takes over as it deepens. <span class="track">reproduce: scarcity_remeasure.py</span></li>
     <li id="src-15"><span class="stag pub">public data</span> In-kind housing transfers cost roughly <b>2.4×</b> per dollar of tenant benefit — Olsen, <em>Journal of Political Economy</em> 1972. <span class="track">evidence_base §10e (local olsen1972.pdf)</span></li>
-    <li id="src-16"><span class="stag mod">our model</span> Tenant Credit System — of all credits accrued across survived runs, <b>50.3%</b> redeemed (~<b>$7,465</b>/household), <b>20.8%</b> forfeited, <b>28.9%</b> still held at year 20. Median cumulative savings by tenure year (yr5 ~$46k / yr10 ~$140k / yr20 ~$512k), and cumulative community value (below-market rent + credits redeemed) per surviving org — ~$5M at $4.5M funding to ~$13.5M at $11M over 20 years — from the same corpus integration as [11] (viable rungs only, n=50/rung). <span class="track">reproduce: site_metrics.py</span></li>
+    <li id="src-16"><span class="stag mod">our model</span> Tenant Credit System — of all credits accrued across survived runs, <b>50.7%</b> redeemed (~<b>$7,596</b>/household), <b>20.7%</b> forfeited, <b>28.5%</b> still held at year 20. Median cumulative savings by tenure year (yr5 ~$45k / yr10 ~$140k / yr20 ~$505k), and cumulative community value (below-market rent + credits redeemed) per surviving org — ~$5M at $4.5M funding to ~$13.5M at $11M over 20 years — from the same corpus integration as [11] (viable rungs only, n=50/rung). <span class="track">reproduce: site_metrics.py</span></li>
   </ol>
   <p style="margin-top:20px;font-size:14px;color:var(--ink-soft)" class="sans"><span class="track">Full provenance, with verbatim quotes against link-rot, lives in <b>evidence_base.md</b> in the repository. This ledger is the site's window onto it.</span></p>
 </div></section>
 
 <footer class="wrap">
-  <p>Liberty Bee — a non-extractive housing model, simulated in the open. Baseline <b>1.0 / retention-realistic</b> · engine <b>0.5.0</b> · <b>800</b> Monte-Carlo runs (frozen baseline; +100 static, +1,440 cliff) · itemized cost model, regime inflation, retention model, zero-debt acquisition · reproducible from seed · plus a living series that ran to 5,903 fresh-seed runs, now paused while the next baseline is cut (see <i>the model keeps running</i>, above, and the <a href="versions.html">version archive</a>).</p>
+  <p>Liberty Bee — a non-extractive housing model, simulated in the open. Baseline <b>V2</b> · engine <b>0.6.0</b> · <b>8,000</b> regime runs + <b>2,400</b> deep-discount (frozen corpus of record; V1's +100 static and +1,440 cliff remain on the version archive) · itemized cost model, regime inflation, retention model, zero-debt acquisition · reproducible from seed · plus a living series that ran to 5,903 fresh-seed runs, now paused while the next baseline is cut (see <i>the model keeps running</i>, above, and the <a href="versions.html">version archive</a>).</p>
   <p style="margin-top:10px">The code and the full dataset are on GitHub; every figure is cited in <a href="#sources">the ledger</a>. Nothing here is launch-capital guidance — it's what this model shows, under this market's assumptions, told honestly.</p>
   <p style="margin-top:14px;font-size:12px;">© 2026 Liberty Bee · open source under the <a href="https://github.com/GreyOrGray/LibertyBee/blob/main/LICENSE" target="_blank" rel="noopener">GNU AGPL-3.0</a> · bee icon by <a href="https://lucide.dev" target="_blank" rel="noopener">Lucide Lab</a> (ISC).</p>
 </footer>
@@ -701,8 +722,8 @@
 
   function css(v){return getComputedStyle(root).getPropertyValue(v).trim();}
 
-  // REAL regime survival (engine 0.5.0, 800 runs): [starting capital $M, survival fraction]
-  var SURV=[[2,.02],[2.5,.14],[3,.54],[3.5,.80],[4,.92],[4.5,1],[5,1],[5.5,1],[6,1],[6.5,1],[7,1],[7.5,1],[8,1],[9,1],[10,1],[11,1]];
+  // REAL regime survival (engine 0.6.0, 8,000 runs): [starting capital $M, survival fraction]
+  var SURV=[[2,.012],[2.5,.118],[3,.398],[3.5,.734],[4,.946],[4.5,.996],[5,1],[5.5,1],[6,1],[6.5,1],[7,1],[7.5,1],[8,1],[9,1],[10,1],[11,1]];
   function survAtFund(f){
     if(f<=SURV[0][0])return SURV[0][1];
     for(var k=1;k<SURV.length;k++){if(f<=SURV[k][0]){var a=SURV[k-1],b=SURV[k];return a[1]+(b[1]-a[1])*(f-a[0])/(b[0]-a[0]);}}
@@ -774,7 +795,7 @@
   var hz=document.getElementById('horizon');
   if(hz){
     var hcols=['5 yr','10 yr','15 yr','20 yr'];
-    var HZ=[['$2M',[46,4,2,2]],['$2.5M',[84,44,18,14]],['$3M',[94,78,62,54]],['$3.5M',[100,92,86,80]],['$4M',[100,100,98,92]],['$4.5M',[100,100,100,100]]];
+    var HZ=[['$2M',[48,5,2,1]],['$2.5M',[88,34,15,12]],['$3M',[97,71,51,40]],['$3.5M',[100,93,81,73]],['$4M',[100,99,97,95]],['$4.5M',[100,100,100,99.6]],['$5M',[100,100,100,100]]];
     var hh='<div class="collab"></div>';
     hcols.forEach(function(c){hh+='<div class="collab">'+c+'</div>';});
     HZ.forEach(function(row){
@@ -788,7 +809,7 @@
   var sc=document.getElementById('savecurve');
   if(sc){
     var sctx=sc.getContext('2d'), sdpr=Math.min(window.devicePixelRatio||1,2);
-    var SD=[[1,5651],[2,12628],[3,20882],[4,32665],[5,45950],[6,60491],[7,78328],[8,97666],[9,118039],[10,140342],[11,167800],[12,197237],[13,228515],[14,261589],[15,294452],[16,329156],[17,367890],[18,412514],[19,460345],[20,512516]];
+    var SD=[[1,5411],[2,12141],[3,20257],[4,31913],[5,44978],[6,59411],[7,77304],[8,96647],[9,117357],[10,139709],[11,167355],[12,196697],[13,227948],[14,260806],[15,295046],[16,331205],[17,370419],[18,412423],[19,457316],[20,505436]];
     var w=560,h=300,pl=52,pr=16,pt=16,pb=30,maxY=520000;
     sc.width=w*sdpr;sc.height=h*sdpr;sc.style.height='auto';sctx.setTransform(sdpr,0,0,sdpr,0,0);sctx.clearRect(0,0,w,h);
     var SX=function(t){return pl+(t-1)/19*(w-pl-pr);},SY=function(v){return (h-pb)-v/maxY*(h-pt-pb);};

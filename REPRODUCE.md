@@ -4,6 +4,10 @@ Every number on [libertybee.org](https://libertybee.org) comes out of this engin
 deterministic: the same `(projection, seed, engine version)` produces the identical result, to the penny.
 This file shows you how to check that yourself — two ways, from least to most effort.
 
+> **First time?** [`RUNBOOK.md`](RUNBOOK.md) is the sequential walkthrough — numbered steps,
+> copy-paste commands, and the exact output to expect at each one. This file is the reference
+> it draws on.
+
 - **Engine version of record:** `0.6.0`
 - **Corpus of record:** the **v2 corpus is being generated now**, from exactly this bundle; its `.bak`s land on
   the Release page when it freezes. Until then, the numbers on the site are from **Release v1.0** (engine
@@ -59,11 +63,20 @@ time. Rule of thumb: **one run, one fresh restore.** (The reproduction tools in 
 
 Fastest way to check any chart on the site: restore a frozen corpus and query it directly.
 
-1. Download a corpus `.bak` from the **Release that produced it**. Today that means
-   `LibertyBee_V03R4_Baseline.bak` from **Release v1.0** — the corpus behind the site's current numbers.
-   (When the v2 corpus freezes, its `.bak`s will sit on the latest Release instead, and this step will point
-   there.)
-2. Restore it in SQL Server (SSMS → *Restore Database*, or `RESTORE DATABASE`).
+1. Download a corpus from the **Release that produced it** — for the site's current numbers that is
+   Release **v2.0.0**: `LibertyBee_V04R1_Standard` (8,000 runs, shipped as 8 `.bak` stripes) or
+   `LibertyBee_V04R1_DeepDiscount25` (2,400 runs, 2 stripes). Large backups ship **striped** — several
+   `_NofM.bak` files that are one backup set; download every stripe. (V1's corpora remain on Release v1.0.)
+2. Restore the full stripe set in SQL Server — SSMS → *Restore Database* → add **all** the files, or:
+
+   ```sql
+   RESTORE DATABASE MyCorpus FROM
+     DISK='C:\baks\LibertyBee_V04R1_Standard_1of8.bak', DISK='C:\baks\LibertyBee_V04R1_Standard_2of8.bak',
+     DISK='C:\baks\LibertyBee_V04R1_Standard_3of8.bak', DISK='C:\baks\LibertyBee_V04R1_Standard_4of8.bak',
+     DISK='C:\baks\LibertyBee_V04R1_Standard_5of8.bak', DISK='C:\baks\LibertyBee_V04R1_Standard_6of8.bak',
+     DISK='C:\baks\LibertyBee_V04R1_Standard_7of8.bak', DISK='C:\baks\LibertyBee_V04R1_Standard_8of8.bak'
+   WITH RECOVERY;
+   ```
 3. Query the results. Every figure on the site traces to these tables — for example, the survival curve:
 
    ```sql
@@ -84,13 +97,13 @@ The `v1.*` schema holds the whole corpus: `run_summary`, `lease`, `lease_termina
 
 Prove the pipeline, not just the stored answers: restore the **seed** database and re-run a simulation.
 
-1. Download the seed database — the `LibertyBeeGold_v0-6-0.bak` asset on this repo's **v2 pre-release**
-   (currently `v2.0.0-rc2`; it moves to the main v2 release when the corpus freezes). By default the tooling
+1. Download the seed database — the `LibertyBeeGold_v0-6-1.bak` asset on this repo's **v2 release**
+   (`v2.0.0`; during the release-candidate window it sits on the current `v2.0.0-rc*` pre-release). By default the tooling
    restores the most recent `.bak` it finds in a `DBBackup/gold/` folder **at the repository root** (the
    folder is gitignored — create it):
 
    ```
-   <the repo you cloned>/DBBackup/gold/LibertyBeeGold_v0-6-0.bak
+   <the repo you cloned>/DBBackup/gold/LibertyBeeGold_v0-6-1.bak
    ```
 
    Prefer to keep the `.bak` somewhere else? Point `LB_GOLD_BACKUP_DIR` at that folder (the folder, not the
@@ -215,6 +228,13 @@ you name the projections that carry it, and the tool reads their scenario from t
 |---|---|---|
 | `standard` | `200-209,300-305` | the seed database's own below-market rent (10%) — the published baseline |
 | `deep-discount-25` | `400-409,500-505` | rents set 25% below market |
+| `deep-discount-15` | `600-609,700-705` | 15% below market (discount-grid column) |
+| `deep-discount-20` | `800-809,900-905` | 20% below market (discount-grid column) |
+| `deep-discount-30` | `1000-1009,1100-1105` | 30% below market (discount-grid column) |
+| `deep-discount-35` | `1200-1209,1300-1305` | 35% below market (discount-grid column) |
+| `deep-discount-40` | `1400-1409,1500-1505` | 40% below market (discount-grid column) |
+| `deep-discount-45` | `1600-1609,1700-1705` | 45% below market (discount-grid column) |
+| `deep-discount-50` | `1800-1809,1900-1905` | 50% below market (discount-grid column) |
 
 ```bash
 python regenerate_corpus.py --corpus MyDeepDiscount --rungs 400-409,500-505 --seeds 1-50
@@ -262,6 +282,24 @@ provenance stamping existed — the 1.0 corpora pre-date it and will warn instea
 Passing the numbers but failing provenance is a real and useful distinction: it means the corpus is
 *correct* but not *handable* — nobody else could rebuild it.
 
+### Comparing an entire corpus
+
+The gate re-runs *sampled* cells. If you regenerated a whole corpus and want to know whether **all of
+it** matches the released one, `corpus_diff.py` compares two corpus databases table by table, cell by
+cell — row counts plus checksums over every substantive column:
+
+```bash
+python corpus_diff.py --corpus-a <your_regenerated_db> --corpus-b <the_restored_release_db>
+```
+
+Three things are deliberately excluded from comparison, and they are the whole list: surrogate
+identity columns (extraction-order bookkeeping), which worker database ran each cell, and wall-clock
+stamps. Everything else must match to the byte — simulation dates included, because they are
+deterministic outputs. The corpora must hold the same scenario (refused otherwise, since a
+cross-scenario diff looks like massive drift and means nothing), and projection *naming* differences
+are reported as lineage notes rather than failures — but a numeric parameter that differs while
+results match fails hard, because it means a corpus misdescribes itself.
+
 ### Watching a long sweep
 
 A full sweep takes days, so `corpus_checks/` runs checks against the corpus as it fills — every 250
@@ -283,11 +321,11 @@ file in it on top of the seed, in filename order, recording each in `dbo.SchemaV
 To layer a change of your own, drop a numbered SQL file in `sql/migrations/`:
 
 ```
-sql/migrations/V00074__my_change.sql
+sql/migrations/V00075__my_change.sql
 ```
 
-- The **version** is the part before `__` (here `V00074`). It must not already be applied — the released seed
-  database contains everything **through V00073**, so start your own at **V00074** and count up.
+- The **version** is the part before `__` (here `V00075`). It must not already be applied — the released seed
+  database contains everything **through V00074**, so start your own at **V00075** and count up.
 - Files starting with **`V`** are treated as schema/structural and run **before** files starting with **`S`**
   (seed data). Both are just SQL.
 
@@ -298,7 +336,7 @@ overrides in `reference.ParameterRegistryDefined` (`reference/users_guide.md` ma
 mean). Then rebuild and run:
 
 ```bash
-python environmentscripts/migration_manager.py --label mytest   # restores the seed, then applies your V00074+
+python environmentscripts/migration_manager.py --label mytest   # restores the seed, then applies your V00075+
 python app/src/simulation.py --env <LibertyBee_Test_..._mytest> --projection-id 206 --seed 12345 --months 240
 ```
 
