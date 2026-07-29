@@ -105,7 +105,7 @@ def main():
 
     emit("== SAVINGS vs market (survived runs) ==")
     emit(f"  realized below-market: {M['below_market_pct']}%   [site: ~27%]")
-    emit(f"  per household  MEAN  : ${M['saved_per_hh_mean']:,}        [site 'mean' ~$84k]")
+    emit(f"  per household  MEAN  : ${M['saved_per_hh_mean']:,}        [site 'mean' ~$85k]")
     emit(f"  per household MEDIAN : ${M['saved_per_hh_median']:,}   (n={len(per_hh)} households)  [site headline '~$33k median']")
     emit(f"  per person     MEAN  : ${M['saved_per_person_mean']:,}")
     emit("== TENURE ==")
@@ -113,7 +113,7 @@ def main():
     emit(f"  censored-inclusive: median {M['tenure_censored_median_yr']}yr   [site ~4yr]")
     emit("== SAVINGS BY TENURE YEAR (median per lease reaching year Y) ==")
     for Y in (5, 10, 20):
-        emit(f"  yr{Y:>2}: ${M['savings_curve'][f'yr{Y}']:>10,}   [site ~$46k / $140k / $512k]")
+        emit(f"  yr{Y:>2}: ${M['savings_curve'][f'yr{Y}']:>10,}   [site ~$45k / $140k / $505k]")
 
     acc = red = forf = 0.0; hhq = 0
     for a_, r_, f_, h_ in cu.execute("SELECT TCSAccruedTotal,TCSRedeemedTotal,TCSForfeitedTotal,HouseholdCount FROM v1.run_summary WHERE Survived=1"):
@@ -121,8 +121,8 @@ def main():
     M["tcs_redeemed_pct"] = round(100*red/acc, 1); M["tcs_forfeited_pct"] = round(100*forf/acc, 1)
     M["tcs_held_pct"] = round(100*(acc-red-forf)/acc, 1); M["tcs_redeemed_per_hh"] = round(red/hhq)
     emit("== TENANT CREDITS (survived) ==")
-    emit(f"  redeemed {M['tcs_redeemed_pct']}% / forfeited {M['tcs_forfeited_pct']}% / held {M['tcs_held_pct']}%   [site 50.3/20.8/28.9]")
-    emit(f"  redeemed per household: ${M['tcs_redeemed_per_hh']:,}   [site ~$7,465]")
+    emit(f"  redeemed {M['tcs_redeemed_pct']}% / forfeited {M['tcs_forfeited_pct']}% / held {M['tcs_held_pct']}%   [site 50.7/20.7/28.5]")
+    emit(f"  redeemed per household: ${M['tcs_redeemed_per_hh']:,}   [site ~$7,596]")
 
     byr = defaultdict(list)
     for r in sv: byr[r[0]].append(hhc[r])
@@ -131,7 +131,7 @@ def main():
     thr = min((rg for rg in byr if rg >= 4_500_000), default=min(byr))
     M["reach"] = {f"${rg/1e6:.1f}M": round(st.mean(v)) for rg, v in sorted(byr.items())}
     emit("== REACH (survived households per org) ==")
-    emit(f"  ${thr/1e6:.1f}M (survival threshold) -> {round(st.mean(byr[thr]))} ... ${hi/1e6:.1f}M -> {round(st.mean(byr[hi]))}   [site ~55 -> ~172]")
+    emit(f"  ${thr/1e6:.1f}M (survival threshold) -> {round(st.mean(byr[thr]))} ... ${hi/1e6:.1f}M -> {round(st.mean(byr[hi]))}   [site ~61 -> ~163]")
     cx.close()
 
     if a.out:

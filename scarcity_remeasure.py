@@ -53,7 +53,7 @@ def main():
     OUT = a.out
     if OUT: open(OUT, "w").close()
     log("=== SCARCITY re-measure, clean HEAD, FRESH DB PER RUN ===")
-    log(f"proj 206, {a.seeds} seeds x 3 configs; scarcity share = (deal_only - full)/(base - full)  [site: ~46%]")
+    log(f"proj 206, {a.seeds} seeds x 3 configs; scarcity share = (deal_only - full)/(base - full)  [site: ~48%]")
     res = {}
     for cfg, (b, g) in CONFIGS.items():
         tt = 0; ty = 0.0
@@ -70,7 +70,7 @@ def main():
     log(f"  deal contribution     (base -> deal_only): {base - deal:.2f}pp")
     log(f"  scarcity contribution (deal_only -> full): {deal - full:.2f}pp")
     if base - full:
-        log(f"  SCARCITY SHARE = {100 * (deal - full) / (base - full):.1f}%   [site: ~46%]")
+        log(f"  SCARCITY SHARE = {100 * (deal - full) / (base - full):.1f}%   [site: ~48%]")
     log("=== DONE ===")
 
 if __name__ == "__main__":
