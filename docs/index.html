@@ -222,7 +222,7 @@
   .lv-panel h3{font-family:ui-sans-serif,system-ui,sans-serif;font-size:14px;font-weight:700;
     letter-spacing:.08em;text-transform:uppercase;margin:0 0 4px;color:var(--lv-text);}
   .lv-panel .pnote{font-size:14px;color:var(--lv-soft);margin:0 0 18px;font-family:ui-sans-serif,system-ui,sans-serif;}
-  .lv-panel.flavor{margin-left:26px;border-left:3px solid var(--lv-flavor);}
+  .lv-panel.flavor{border-left:3px solid var(--lv-flavor);}  /* aligned with the standard panel (Gray, 2026-07-30) — the border+header carry the distinction */
   .lv-panel.flavor h3{color:var(--lv-flavor);}
   .live-sec svg text{font-family:ui-sans-serif,system-ui,sans-serif;}
   .lv-legend{display:flex;flex-wrap:wrap;gap:6px 20px;font-family:ui-sans-serif,system-ui,sans-serif;
@@ -567,24 +567,161 @@
 
 <!-- ============ THE LIVE SECTION — beyond the frozen baseline ============ -->
 <section class="live-sec"><div class="wrap reveal">
-  <!-- MODEL-DATA v2 2026-07-28 · frozen-runs count 13,200 + farm status text · src: release corpora + farm state -->
-<p class="eyebrow sans">Beyond the frozen baseline — live, not cited</p>
+  <p class="eyebrow sans">Beyond the frozen baseline — live, not cited</p>
   <h2>The model keeps running.</h2>
   <p>Everything above this line is frozen — 13,200 runs across nine scenario ladders, every number
   reproducible from a seed, and none of it will ever move. Everything below this line is
   <b>alive</b>. The same released engine keeps running on a machine in the corner of a room, on
   fresh seeds no cited run ever used — not to change the answer, but to keep measuring it.</p>
-  <div class="lv-tally">
-    <p class="lv-asof">Live runs paused · cutting a new baseline</p>
-    <p style="color:var(--lv-text);font-size:17px;margin:2px 0 12px;font-family:ui-sans-serif,system-ui,sans-serif;font-weight:700">We're formalizing a new set of numbers.</p>
-    <p style="margin:0 0 12px">When a new baseline is cut, the live runs pause while the new engine version is re-run end to end — a half-finished baseline is never shown here as live. Throughout, the shipped version's complete record stays on the <a href="versions.html">version archive</a>; when the new baseline is live, the live numbers return here, on the new version.</p>
-    <p style="margin:0">The new baseline is <b>done</b>: everything above this line is now the V2 corpus of record (engine 0.6.0 — 13,200 runs, zero failures, generated from the public repo with zero overrides and verified cell-by-cell against an independent earlier sweep). Live runs resume on the V2 engine soon. Liberty Bee <b>1.0</b>'s full living record — <b>5,903</b> fresh-seed runs — remains on the <a href="versions.html">version archive&nbsp;→</a>.</p>
-  </div>
+  <div id="lvBody"><p class="lv-unavail">Loading live data…</p></div>
   <p class="lv-methods">A living run: the released engine (<b>0.6.0</b> when live runs resume), a fresh seed no cited run ever used, a fresh
   database restored from the released Gold every time, keyed (scenario · engine · funding · seed).
   Published only through a tripwire-gated, human-merged pull request — eight invariant checks stand
   between the machine and this page. Data contract: <a href="data/schema.md">data/schema.md</a>.</p>
-</div></section>
+</div></section><script>
+(function(){
+  var GATE=500, LIVE='#7FB4C9', FLAVOR='#B49BD6';
+  function esc(t){var d=document.createElement('div');d.textContent=t;return d.innerHTML;}
+
+  // draw into an EXISTING svg, sized to ITS OWN panel's content box —
+  // measuring any outer container overflows the padded/indented panels
+  function drawChart(svgEl, refRungs, liveRungs, color, fill, dashedRef){
+    var byFunds={}; liveRungs.forEach(function(r){byFunds[r.starting_funds]=r;});
+    var funds=refRungs.map(function(r){return r.starting_funds;});
+    var panel=svgEl.parentNode, cs=getComputedStyle(panel);
+    var W=Math.max(260, panel.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight));
+    var H=Math.max(200, Math.round(W*0.42)), L=40, R=24, T=16, B=30;
+    var slot=(W-L-R)/funds.length, bw=slot*0.58;
+    function x(i){return L+slot*(i+0.5);}
+    function y(v){return T+(H-T-B)*(1-v);}
+    var g='', strips=[];
+    [0,.5,1].forEach(function(v){
+      g+='<line x1="'+L+'" y1="'+y(v)+'" x2="'+(W-R)+'" y2="'+y(v)+'" stroke="#3A3626" stroke-width="1"/>'
+        +'<text x="'+(L-8)+'" y="'+(y(v)+4)+'" text-anchor="end" font-size="11" fill="#B5B0A0">'+(v*100)+'%</text>';
+    });
+    funds.forEach(function(f,i){
+      var lr=byFunds[f], annotated=lr&&lr.annotations;
+      if(lr && lr.n>=GATE && lr.survival_ci){
+        g+='<rect x="'+(x(i)-bw/2)+'" y="'+y(lr.survival_rate)+'" width="'+bw
+          +'" height="'+(y(0)-y(lr.survival_rate))+'" fill="'+fill+'" stroke="'+color+'" stroke-width="1">'
+          +'<title>'+esc('$'+(f/1e6).toFixed(1)+'M: '+(lr.survival_rate*100).toFixed(1)+'% of '+lr.n+' living runs')+'</title></rect>'
+          +'<line x1="'+x(i)+'" y1="'+y(lr.survival_ci.lo)+'" x2="'+x(i)+'" y2="'+y(lr.survival_ci.hi)+'" stroke="'+color+'" stroke-width="1.5"/>'
+          +'<line x1="'+(x(i)-3.5)+'" y1="'+y(lr.survival_ci.lo)+'" x2="'+(x(i)+3.5)+'" y2="'+y(lr.survival_ci.lo)+'" stroke="'+color+'" stroke-width="1.5"/>'
+          +'<line x1="'+(x(i)-3.5)+'" y1="'+y(lr.survival_ci.hi)+'" x2="'+(x(i)+3.5)+'" y2="'+y(lr.survival_ci.hi)+'" stroke="'+color+'" stroke-width="1.5"/>';
+      } else {
+        strips.push({funds:f, n:lr?lr.n:0, ann:annotated});
+      }
+      if(i%3===0||i===funds.length-1||annotated)
+        g+='<text x="'+x(i)+'" y="'+(H-10)+'" text-anchor="middle" font-size="11" fill="#B5B0A0">$'+(f/1e6)+'M'
+          +(annotated?' <a href="#lv-note"><tspan fill="'+color+'">\u2020</tspan></a>':'')+'</text>';
+    });
+    g+='<polyline points="'+refRungs.map(function(r,i){return x(i)+','+y(r.survival_rate);}).join(' ')
+      +'" fill="none" stroke="#B5B0A0" stroke-width="2"'+(dashedRef?' stroke-dasharray="6 5"':'')+'/>';
+    svgEl.setAttribute('viewBox','0 0 '+W+' '+H);
+    svgEl.setAttribute('width',W); svgEl.setAttribute('height',H);
+    svgEl.style.display='block';
+    svgEl.innerHTML=g;
+    return strips;
+  }
+
+  function stripRows(strips, cls){
+    if(!strips.length) return '';
+    var h='<div class="lv-strips">';
+    strips.forEach(function(s){
+      var pct=Math.min(100,100*s.n/GATE);
+      var dag=s.ann?' <a href="#lv-note" style="color:#7FB4C9;text-decoration:none" title="human-dispositioned divergence \u2014 see the note below">\u2020</a>':'';
+      h+='<div class="rl">$'+(s.funds/1e6).toFixed(1)+'M'+dag+'</div>'
+        +'<div class="bar" title="'+s.n+' of '+GATE+' living runs"><i class="'+cls+'" style="width:'+pct+'%"></i></div>'
+        +'<div class="n">'+s.n+' / '+GATE+'</div>';
+    });
+    return h+'</div>';
+  }
+
+  function render(d){
+    var segs={}; d.living.segments.forEach(function(s){segs[s.scenario]=s;});
+    var std=segs['standard']||{runs:0,deaths:0,rungs:[]};
+    var flv=segs['deep-discount-25']||{runs:0,deaths:0,rungs:[]};
+    var asof=d.generated_utc.replace('T',' ').replace('Z',' UTC');
+    var sha=(std.engine_sha||flv.engine_sha||'').slice(0,8);
+    var anns=[];
+    d.living.segments.forEach(function(s){(s.rungs||[]).forEach(function(r){
+      (r.annotations||[]).forEach(function(a){anns.push({rung:r, seg:s, a:a});});});});
+
+    var h='<div class="lv-tally"><div class="row">'
+      +'<span><span class="fz">'+d.frozen.total_runs+'</span> <span class="lab">frozen baseline runs (cited, above)</span></span>'
+      +'<span style="color:#B5B0A0;font-size:26px">+</span>'
+      +'<span><span class="lv">'+d.living.total_runs.toLocaleString()+'</span> <span class="lab">living runs \u2014 and counting</span></span>'
+      +'</div><div class="sub">'
+      +'<span class="lv-asof">as of '+esc(asof)+'</span>'
+      +'<span><b>'+d.living.total_deaths.toLocaleString()+'</b> living deaths recorded</span>'
+      +'<span>standard <b>'+std.runs.toLocaleString()+'</b></span>'
+      +'<span>deep-discount-25 <b>'+flv.runs.toLocaleString()+'</b></span>'
+      +'<span>engine <b>'+esc(d.engine_version)+'</b> \u00b7 segment <b>'+esc(sha)+'</b></span>'
+      +'</div></div>';
+
+    h+='<div class="lv-panel"><h3>Standard series \u2014 shipped defaults</h3>'
+      +'<p class="pnote">The gray line is the frozen curve, cited in chapter 03 \u2014 it does not move. '
+      +'Living runs accumulate against it; a funding level earns its bar and confidence whisker at '
+      +GATE+' living runs. Until then, the honest display is the count.</p>'
+      +'<svg id="lvStdChart" role="img" aria-label="Living survival vs the frozen curve"></svg>'
+      +'<div class="lv-legend"><span><span class="sw" style="background:#B5B0A0"></span>frozen curve (cited, does not move)</span>'
+      +'<span><span class="swb" style="background:rgba(127,180,201,.35);border:1px solid '+LIVE+'"></span>living rate per level (bar) + 95% CI (whisker)</span></div>'
+      +'<div id="lvStdStrips"></div></div>';
+
+    if(anns.length){
+      h+='<div class="lv-note" id="lv-note"><p class="tag">the deal we committed to in advance \u2014 and its first instance</p>'
+        +'<p style="font-style:italic">When the living runs disagree with the frozen curve \u2014 as they now have, once \u2014 '
+        +'here is the deal we committed to before it happened: the cited numbers above stay exactly as published \u2014 '
+        +'that is what frozen means. This section shows the fuller truth, with the note attached. A real disagreement '
+        +'is a finding \u2014 investigated in the open, and if it holds, it becomes the starting point of the next '
+        +'engine\u2019s baseline, never a silent edit to this one.</p>';
+      anns.forEach(function(x){
+        var ref=x.a.public_ref||'known-issues.html';
+        h+='<p class="kd">\u2020 <b>$'+(x.rung.starting_funds/1e6).toFixed(1)+'M ('+esc(x.seg.scenario)+', '
+          +x.rung.survived+'/'+x.rung.n+' surviving so far):</b> '+esc(x.a.summary||x.a.note)
+          +' <a href="'+esc(ref)+'" style="color:'+LIVE+';font-weight:700">Full account: '+esc(x.a.kd)+' \u2192</a></p>';
+      });
+      h+='</div>';
+    }
+
+    h+='<div class="lv-panel flavor"><h3>Exploratory \u2014 deep-discount-25</h3>'
+      +'<p class="pnote">The same engine at 25% below market up-front instead of 10%, kept to at most a '
+      +'quarter of living runs. Its dashed reference is the frozen deep-discount cliff row (cited in the sources ledger below: '
+      +'deeper generosity up front demands visibly more capital). This series keeps measuring that price.</p>'
+      +'<svg id="lvFlvChart" role="img" aria-label="Living deep-discount survival vs the frozen cliff row"></svg>'
+      +'<div class="lv-legend"><span><span class="sw" style="border-top:3px dashed #B5B0A0;height:0;background:none"></span>frozen deep-discount-25 record row (cited, 150 seeds/level)</span>'
+      +'<span><span class="swb" style="background:rgba(180,155,214,.35);border:1px solid '+FLAVOR+'"></span>living rate per level (bar) + 95% CI (whisker)</span></div>'
+      +'<div id="lvFlvStrips"></div></div>';
+
+    document.getElementById('lvBody').innerHTML=h;
+
+    // second pass: the panels exist now — measure THEM and draw
+    var s1=drawChart(document.getElementById('lvStdChart'), d.frozen.rungs, std.rungs||[],
+                     LIVE, 'rgba(127,180,201,.35)', false);
+    document.getElementById('lvStdStrips').innerHTML=stripRows(s1,'std');
+    var s2=drawChart(document.getElementById('lvFlvChart'), d.frozen.dd25_reference.rungs, flv.rungs||[],
+                     FLAVOR, 'rgba(180,155,214,.35)', true);
+    document.getElementById('lvFlvStrips').innerHTML=stripRows(s2,'flv');
+  }
+
+  var data=null;
+  function go(){
+    fetch('data/live.json').then(function(r){
+      if(!r.ok) throw new Error(r.status);
+      return r.json();
+    }).then(function(d){
+      data=d; render(d);
+    }).catch(function(){
+      document.getElementById('lvBody').innerHTML=
+        '<p class="lv-unavail">Live data temporarily unavailable \u2014 the frozen numbers above are unaffected.</p>';
+    });
+  }
+  go();
+  var rt; window.addEventListener('resize', function(){
+    if(data){clearTimeout(rt); rt=setTimeout(function(){render(data);},150);}
+  });
+})();
+</script>
 
 <!-- ============ 05 · THE PERSONAL ============ -->
 <div class="chapter"><div class="wrap"><div class="cnum">05</div><div>
