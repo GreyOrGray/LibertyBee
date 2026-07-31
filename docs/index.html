@@ -653,11 +653,11 @@
       +'<span style="color:#B5B0A0;font-size:26px">+</span>'
       +'<span><span class="lv">'+d.living.total_runs.toLocaleString()+'</span> <span class="lab">living runs \u2014 and counting</span></span>'
       +'</div><div class="sub">'
-      +'<span class="lv-asof">as of '+esc(asof)+'</span>'
-      +'<span><b>'+d.living.total_deaths.toLocaleString()+'</b> living deaths recorded</span>'
-      +'<span>standard <b>'+std.runs.toLocaleString()+'</b></span>'
-      +'<span>deep-discount-25 <b>'+flv.runs.toLocaleString()+'</b></span>'
-      +'<span>engine <b>'+esc(d.engine_version)+'</b> \u00b7 segment <b>'+esc(sha)+'</b></span>'
+      +'<span class="lv-asof">last updated '+esc(asof).replace('T',' ').replace('Z',' UTC')+'</span>'
+      +'<span>standard series: <b>'+std.runs.toLocaleString()+'</b> runs</span>'
+      +'<span>deep-discount-25 series: <b>'+flv.runs.toLocaleString()+'</b> runs</span>'
+      +'<span><b>'+d.living.total_deaths.toLocaleString()+'</b> simulated org failures across both</span>'
+      +'<span>engine <b>'+esc(d.engine_version||d.frozen.engine_version)+'</b> \u00b7 evidence segment <b>'+esc(sha)+'</b></span>'
       +'</div></div>';
 
     h+='<div class="lv-panel"><h3>Standard series \u2014 shipped defaults</h3>'
