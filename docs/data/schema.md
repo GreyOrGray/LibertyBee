@@ -36,4 +36,8 @@ Per segment rung: `n`, `survived`, `deaths` (dead runs are always
 published — no survivorship in the reporting), `survival_rate`,
 `final_cash_csf.p10/p50/p90` (PERCENTILE_CONT semantics, matching the
 corpus reporting). Per segment: `death_year_histogram` (fixed 20 buckets,
-death year 1-20 from run span).
+death year 1-20 from run span). Each rung also carries its own
+`death_year_histogram` (same 20 buckets, that rung only; shipping since
+2026-08-02), and the frozen `rungs` / `dd25_reference.rungs` blocks carry
+matching per-rung `deaths` + `death_year_histogram` — the reference side of
+the death-timing heatmaps and the publish gate's timing guard.

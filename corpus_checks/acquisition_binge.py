@@ -15,9 +15,7 @@ scenarios, disable it in checks.json — it will produce noise that means nothin
 
 DESCRIPTION = "fast deaths off the known KD-042 over-acquisition signature (HALTS)"
 
-FAST_MONTHS = 12
-SIG_PROPERTIES = (5, 8)     # inclusive property-count band for the known class
-SIG_EVICTIONS = 0
+from signature_constants import FAST_MONTHS, SIG_PROPERTIES, SIG_EVICTIONS  # single source (see that module's dual-disposition note)
 
 
 def check(cursor, ctx):
