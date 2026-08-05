@@ -575,7 +575,7 @@
 </div></section>
 
 <!-- ============ THE LIVE SECTION — beyond the frozen baseline ============ -->
-<!-- MODEL-DATA v2 2026-08-05 · live death-timing heatmaps (deaths-per-100, ember ramp, extinction-null cells, one shared scale) rendered from live.json per-rung death_year_histogram (living + frozen refs) · design spec: LibertyBeeDev#217 -->
+<!-- MODEL-DATA v2 2026-08-05 · live death-timing heatmaps (deaths-per-100, fire ramp red→yellow, extinction-null cells, one shared scale) rendered from live.json per-rung death_year_histogram (living + frozen refs) · design spec: LibertyBeeDev#217 -->
 <!-- MODEL-DATA v2 2026-07-30 · live section RENDERED from data/live.json (tripwire-gated publishes); frozen refs = anchor rungs (n=500) + dd25_reference (n=150); intro cites 13,200 frozen · src: farm store via aggregate pipeline -->
 <section class="live-sec"><div class="wrap reveal">
   <p class="eyebrow sans">Beyond the frozen baseline — live, not cited</p>
@@ -652,7 +652,7 @@
   // per-100 semantics; ember-on-coals ramp (the live band is dark: heat = brightness);
   // zero-step (any death is a visible step); extinction renders null, never pale.
   function heatRamp(t){
-    var stops=[[34,31,21],[109,29,19],[201,138,60]];
+    var stops=[[96,20,12],[214,96,25],[255,208,74]];  // fire: yellow = most deaths (Gray, 2026-08-05)
     t=Math.max(0,Math.min(1,t)); t=Math.pow(t,0.75);
     var seg=t*(stops.length-1), i=Math.min(Math.floor(seg),stops.length-2), f=seg-i;
     var a=stops[i], b=stops[i+1];
@@ -684,10 +684,16 @@
           g+='<div class="hc hx" title="'+lbl+': no organization was still alive to enter this year"></div>';
           continue;
         }
-        var v=100*hist[y]/r.n, t=v>0?0.18+0.82*(v/vmax):0;
-        var edge=t<0.35?(0.16*(1-t/0.35)):0;
-        g+='<div class="hc" style="background:'+heatRamp(t)
-          +(edge>0.02?';box-shadow:inset 0 0 0 1px rgba(237,234,224,'+edge.toFixed(2)+')':'')
+        var v=100*hist[y]/r.n, bg, sh;
+        if(v>0){
+          var t=0.18+0.82*(v/vmax), edge=t<0.35?(0.16*(1-t/0.35)):0;
+          bg=heatRamp(t);
+          sh=edge>0.02?';box-shadow:inset 0 0 0 1px rgba(237,234,224,'+edge.toFixed(2)+')':'';
+        } else {
+          bg='#3A362A';  // zero-death: the lighter-dark bump (Gray's pick B) — quiet, but the grid holds shape
+          sh=';box-shadow:inset 0 0 0 1px rgba(237,234,224,0.20)';
+        }
+        g+='<div class="hc" style="background:'+bg+sh
           +'" title="'+lbl+' \u2014 entered alive: '+atRisk+' \u00b7 died: '+hist[y]
           +' \u00b7 remained: '+(atRisk-hist[y])+' (n='+r.n+' starters, '+tot+' deaths total)"></div>';
       }
@@ -714,7 +720,7 @@
       +heatGrid('the record \u2014 n=150 per level (frozen)', d.frozen.dd25_reference.rungs, vmax)
       +l2
       +'<div class="lv-legend" style="margin-top:10px">'
-      +'<span><span class="swb" style="background:#221F15;border:1px solid #3A3626"></span>zero deaths that year \u2014 still alive</span>'
+      +'<span><span class="swb" style="background:#3A362A;border:1px solid rgba(237,234,224,.25)"></span>zero deaths that year \u2014 still alive</span>'
       +'<span><span class="swb" style="background:'+heatRamp(0.18)+'"></span>at least one death \u2014 any death is a visible step</span>'
       +'<span><span class="swb" style="background:linear-gradient(90deg,'+heatRamp(0.18)+','+heatRamp(1)+')"></span>more deaths per 100</span>'
       +'<span><span class="swb hx"></span>extinction \u2014 no one left alive to enter the year</span>'
