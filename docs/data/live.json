@@ -1,5 +1,5 @@
 {
-  "generated_utc": "2026-08-05T14:00:02Z",
+  "generated_utc": "2026-08-05T19:40:15Z",
   "engine_version": "0.6.0",
   "contract": {
     "band_display_min_n": 500,
@@ -984,33 +984,33 @@
     }
   },
   "living": {
-    "total_runs": 10230,
-    "total_deaths": 2136,
+    "total_runs": 10674,
+    "total_deaths": 2235,
     "segments": [
       {
         "scenario": "deep-discount-25",
         "engine_sha": "2ecc815f637c2a12e71a12870d56a2bc161b30b6",
         "engine_version": "0.6.0",
         "gold_sha256": "d0aaab5c3844e5ab6ea97ac23693217d4521a79832ce1fc003b5306e7ff3d0e5",
-        "runs": 2561,
-        "survived": 1774,
-        "deaths": 787,
+        "runs": 2673,
+        "survived": 1841,
+        "deaths": 832,
         "rungs": [
           {
             "projection_id": 400,
             "starting_funds": 5000000.0,
-            "n": 161,
-            "survived": 135,
-            "deaths": 26,
-            "survival_rate": 0.8385,
+            "n": 168,
+            "survived": 139,
+            "deaths": 29,
+            "survival_rate": 0.8274,
             "survival_ci": {
-              "lo": 0.7739,
-              "hi": 0.8873
+              "lo": 0.7631,
+              "hi": 0.877
             },
             "final_cash_csf": {
               "p10": 0.0,
-              "p50": 819627.75,
-              "p90": 1566381.82
+              "p50": 800123.14,
+              "p90": 1582059.64
             },
             "death_year_histogram": [
               0,
@@ -1022,12 +1022,12 @@
               1,
               1,
               0,
-              2,
-              0,
+              3,
+              1,
               1,
               2,
               5,
-              2,
+              3,
               2,
               6,
               3,
@@ -1038,18 +1038,18 @@
           {
             "projection_id": 401,
             "starting_funds": 5500000.0,
-            "n": 160,
-            "survived": 155,
-            "deaths": 5,
-            "survival_rate": 0.9688,
+            "n": 167,
+            "survived": 161,
+            "deaths": 6,
+            "survival_rate": 0.9641,
             "survival_ci": {
-              "lo": 0.9289,
-              "hi": 0.9866
+              "lo": 0.9238,
+              "hi": 0.9834
             },
             "final_cash_csf": {
-              "p10": 381429.4,
-              "p50": 1123676.38,
-              "p90": 1784848.72
+              "p10": 366308.56,
+              "p50": 1118351.11,
+              "p90": 1793345.61
             },
             "death_year_histogram": [
               0,
@@ -1062,7 +1062,7 @@
               0,
               0,
               1,
-              0,
+              1,
               0,
               0,
               0,
@@ -1077,18 +1077,18 @@
           {
             "projection_id": 402,
             "starting_funds": 6000000.0,
-            "n": 160,
-            "survived": 158,
+            "n": 167,
+            "survived": 165,
             "deaths": 2,
-            "survival_rate": 0.9875,
+            "survival_rate": 0.988,
             "survival_ci": {
-              "lo": 0.9556,
-              "hi": 0.9966
+              "lo": 0.9574,
+              "hi": 0.9967
             },
             "final_cash_csf": {
-              "p10": 893247.52,
-              "p50": 1306289.0,
-              "p90": 1893041.75
+              "p10": 880848.71,
+              "p50": 1308289.74,
+              "p90": 1864320.74
             },
             "death_year_histogram": [
               0,
@@ -1116,18 +1116,18 @@
           {
             "projection_id": 403,
             "starting_funds": 6500000.0,
-            "n": 160,
-            "survived": 160,
-            "deaths": 0,
-            "survival_rate": 1.0,
+            "n": 167,
+            "survived": 166,
+            "deaths": 1,
+            "survival_rate": 0.994,
             "survival_ci": {
-              "lo": 0.9766,
-              "hi": 1.0
+              "lo": 0.9669,
+              "hi": 0.9989
             },
             "final_cash_csf": {
-              "p10": 1026091.31,
-              "p50": 1467017.76,
-              "p90": 2012601.95
+              "p10": 1025047.74,
+              "p50": 1475452.11,
+              "p90": 2007036.43
             },
             "death_year_histogram": [
               0,
@@ -1145,7 +1145,7 @@
               0,
               0,
               0,
-              0,
+              1,
               0,
               0,
               0,
@@ -1155,18 +1155,18 @@
           {
             "projection_id": 404,
             "starting_funds": 7000000.0,
-            "n": 160,
-            "survived": 160,
-            "deaths": 0,
-            "survival_rate": 1.0,
+            "n": 167,
+            "survived": 166,
+            "deaths": 1,
+            "survival_rate": 0.994,
             "survival_ci": {
-              "lo": 0.9766,
-              "hi": 1.0
+              "lo": 0.9669,
+              "hi": 0.9989
             },
             "final_cash_csf": {
-              "p10": 1104710.92,
-              "p50": 1539977.78,
-              "p90": 2023840.9
+              "p10": 1104026.61,
+              "p50": 1540755.64,
+              "p90": 2035179.78
             },
             "death_year_histogram": [
               0,
@@ -1187,25 +1187,25 @@
               0,
               0,
               0,
-              0,
+              1,
               0
             ]
           },
           {
             "projection_id": 405,
             "starting_funds": 7500000.0,
-            "n": 160,
-            "survived": 160,
+            "n": 167,
+            "survived": 167,
             "deaths": 0,
             "survival_rate": 1.0,
             "survival_ci": {
-              "lo": 0.9766,
+              "lo": 0.9775,
               "hi": 1.0
             },
             "final_cash_csf": {
-              "p10": 1140636.61,
-              "p50": 1580453.0,
-              "p90": 2042451.79
+              "p10": 1136965.88,
+              "p50": 1578950.97,
+              "p90": 2045710.2
             },
             "death_year_histogram": [
               0,
@@ -1233,18 +1233,18 @@
           {
             "projection_id": 406,
             "starting_funds": 8000000.0,
-            "n": 160,
-            "survived": 160,
+            "n": 167,
+            "survived": 167,
             "deaths": 0,
             "survival_rate": 1.0,
             "survival_ci": {
-              "lo": 0.9766,
+              "lo": 0.9775,
               "hi": 1.0
             },
             "final_cash_csf": {
-              "p10": 1154389.91,
-              "p50": 1592164.8,
-              "p90": 2210969.21
+              "p10": 1163122.77,
+              "p50": 1592779.56,
+              "p90": 2218043.76
             },
             "death_year_histogram": [
               0,
@@ -1272,18 +1272,18 @@
           {
             "projection_id": 407,
             "starting_funds": 9000000.0,
-            "n": 160,
-            "survived": 160,
+            "n": 167,
+            "survived": 167,
             "deaths": 0,
             "survival_rate": 1.0,
             "survival_ci": {
-              "lo": 0.9766,
+              "lo": 0.9775,
               "hi": 1.0
             },
             "final_cash_csf": {
-              "p10": 1278923.79,
-              "p50": 1716486.35,
-              "p90": 2251091.7
+              "p10": 1277198.55,
+              "p50": 1712524.99,
+              "p90": 2262441.44
             },
             "death_year_histogram": [
               0,
@@ -1311,18 +1311,18 @@
           {
             "projection_id": 408,
             "starting_funds": 10000000.0,
-            "n": 160,
-            "survived": 160,
+            "n": 167,
+            "survived": 167,
             "deaths": 0,
             "survival_rate": 1.0,
             "survival_ci": {
-              "lo": 0.9766,
+              "lo": 0.9775,
               "hi": 1.0
             },
             "final_cash_csf": {
-              "p10": 1365110.61,
-              "p50": 1872915.49,
-              "p90": 2456019.98
+              "p10": 1356507.7,
+              "p50": 1853052.72,
+              "p90": 2447816.66
             },
             "death_year_histogram": [
               0,
@@ -1350,18 +1350,18 @@
           {
             "projection_id": 409,
             "starting_funds": 11000000.0,
-            "n": 160,
-            "survived": 160,
+            "n": 167,
+            "survived": 167,
             "deaths": 0,
             "survival_rate": 1.0,
             "survival_ci": {
-              "lo": 0.9766,
+              "lo": 0.9775,
               "hi": 1.0
             },
             "final_cash_csf": {
-              "p10": 1405137.01,
-              "p50": 1836369.79,
-              "p90": 2438426.99
+              "p10": 1403574.84,
+              "p50": 1832988.28,
+              "p90": 2451289.68
             },
             "death_year_histogram": [
               0,
@@ -1389,26 +1389,26 @@
           {
             "projection_id": 500,
             "starting_funds": 2000000.0,
-            "n": 160,
+            "n": 167,
             "survived": 0,
-            "deaths": 160,
+            "deaths": 167,
             "survival_rate": 0.0,
             "survival_ci": {
               "lo": 0.0,
-              "hi": 0.0234
+              "hi": 0.0225
             },
             "final_cash_csf": {
               "p10": 0.0,
-              "p50": 2854.58,
-              "p90": 8421.67
+              "p50": 2667.62,
+              "p90": 8552.01
             },
             "death_year_histogram": [
               0,
               6,
-              47,
-              37,
+              49,
+              41,
               32,
-              20,
+              21,
               9,
               6,
               2,
@@ -1428,29 +1428,29 @@
           {
             "projection_id": 501,
             "starting_funds": 2500000.0,
-            "n": 160,
+            "n": 167,
             "survived": 1,
-            "deaths": 159,
-            "survival_rate": 0.0063,
+            "deaths": 166,
+            "survival_rate": 0.006,
             "survival_ci": {
               "lo": 0.0011,
-              "hi": 0.0345
+              "hi": 0.0331
             },
             "final_cash_csf": {
               "p10": 0.0,
               "p50": 0.0,
-              "p90": 9309.93
+              "p90": 9267.91
             },
             "death_year_histogram": [
               0,
               0,
-              10,
-              25,
-              26,
-              36,
-              21,
-              18,
               11,
+              27,
+              26,
+              37,
+              22,
+              19,
+              12,
               5,
               3,
               3,
@@ -1467,32 +1467,32 @@
           {
             "projection_id": 502,
             "starting_funds": 3000000.0,
-            "n": 160,
+            "n": 167,
             "survived": 9,
-            "deaths": 151,
-            "survival_rate": 0.0563,
+            "deaths": 158,
+            "survival_rate": 0.0539,
             "survival_ci": {
-              "lo": 0.0299,
-              "hi": 0.1034
+              "lo": 0.0286,
+              "hi": 0.0992
             },
             "final_cash_csf": {
               "p10": 0.0,
               "p50": 0.0,
-              "p90": 9848.92
+              "p90": 9923.98
             },
             "death_year_histogram": [
               0,
               0,
               7,
               21,
-              19,
-              22,
-              10,
               21,
-              8,
+              23,
               11,
+              22,
+              8,
+              12,
               9,
-              3,
+              4,
               5,
               4,
               1,
@@ -1506,57 +1506,57 @@
           {
             "projection_id": 503,
             "starting_funds": 3500000.0,
-            "n": 160,
+            "n": 167,
             "survived": 33,
-            "deaths": 127,
-            "survival_rate": 0.2062,
+            "deaths": 134,
+            "survival_rate": 0.1976,
             "survival_ci": {
-              "lo": 0.1508,
-              "hi": 0.2755
+              "lo": 0.1443,
+              "hi": 0.2645
             },
             "final_cash_csf": {
               "p10": 0.0,
               "p50": 0.0,
-              "p90": 508399.67
+              "p90": 474739.98
             },
             "death_year_histogram": [
               0,
               0,
               2,
-              4,
+              5,
               9,
-              10,
+              11,
               14,
-              17,
+              20,
               17,
               15,
               11,
               5,
               7,
-              3,
+              4,
               3,
               2,
               0,
               3,
               0,
-              5
+              6
             ]
           },
           {
             "projection_id": 504,
             "starting_funds": 4000000.0,
-            "n": 160,
-            "survived": 59,
-            "deaths": 101,
-            "survival_rate": 0.3688,
+            "n": 167,
+            "survived": 60,
+            "deaths": 107,
+            "survival_rate": 0.3593,
             "survival_ci": {
-              "lo": 0.2979,
-              "hi": 0.4458
+              "lo": 0.2904,
+              "hi": 0.4345
             },
             "final_cash_csf": {
               "p10": 0.0,
               "p50": 0.0,
-              "p90": 845641.87
+              "p90": 852185.55
             },
             "death_year_histogram": [
               0,
@@ -1565,17 +1565,17 @@
               2,
               3,
               4,
-              5,
-              7,
-              13,
+              6,
+              8,
               14,
+              16,
               9,
               10,
               9,
               3,
               6,
               6,
-              4,
+              5,
               1,
               4,
               1
@@ -1584,18 +1584,18 @@
           {
             "projection_id": 505,
             "starting_funds": 4500000.0,
-            "n": 160,
-            "survived": 104,
-            "deaths": 56,
-            "survival_rate": 0.65,
+            "n": 167,
+            "survived": 106,
+            "deaths": 61,
+            "survival_rate": 0.6347,
             "survival_ci": {
-              "lo": 0.5734,
-              "hi": 0.7196
+              "lo": 0.5594,
+              "hi": 0.704
             },
             "final_cash_csf": {
               "p10": 0.0,
-              "p50": 425539.41,
-              "p90": 1299630.63
+              "p50": 386112.69,
+              "p90": 1239020.94
             },
             "death_year_histogram": [
               0,
@@ -1605,16 +1605,16 @@
               1,
               0,
               1,
-              7,
+              8,
               1,
               4,
               6,
-              7,
+              9,
               4,
               2,
-              6,
+              7,
               5,
-              4,
+              5,
               4,
               1,
               3
@@ -1624,24 +1624,24 @@
         "death_year_histogram": [
           0,
           6,
-          66,
-          89,
-          90,
+          69,
+          96,
           92,
-          62,
-          77,
-          52,
-          53,
-          38,
-          29,
+          96,
+          65,
+          84,
+          54,
+          57,
+          40,
+          32,
           27,
-          18,
-          18,
+          19,
           20,
-          17,
+          21,
+          19,
           13,
-          8,
-          12
+          9,
+          13
         ]
       },
       {
@@ -1649,25 +1649,25 @@
         "engine_sha": "2ecc815f637c2a12e71a12870d56a2bc161b30b6",
         "engine_version": "0.6.0",
         "gold_sha256": "d0aaab5c3844e5ab6ea97ac23693217d4521a79832ce1fc003b5306e7ff3d0e5",
-        "runs": 7669,
-        "survived": 6320,
-        "deaths": 1349,
+        "runs": 8001,
+        "survived": 6598,
+        "deaths": 1403,
         "rungs": [
           {
             "projection_id": 200,
             "starting_funds": 5000000.0,
-            "n": 481,
-            "survived": 481,
+            "n": 501,
+            "survived": 501,
             "deaths": 0,
             "survival_rate": 1.0,
             "survival_ci": {
-              "lo": 0.9921,
+              "lo": 0.9924,
               "hi": 1.0
             },
             "final_cash_csf": {
               "p10": 1024490.97,
-              "p50": 1473345.49,
-              "p90": 2029954.08
+              "p50": 1474621.82,
+              "p90": 2056578.58
             },
             "death_year_histogram": [
               0,
@@ -1695,18 +1695,18 @@
           {
             "projection_id": 201,
             "starting_funds": 5500000.0,
-            "n": 480,
-            "survived": 480,
+            "n": 500,
+            "survived": 500,
             "deaths": 0,
             "survival_rate": 1.0,
             "survival_ci": {
-              "lo": 0.9921,
+              "lo": 0.9924,
               "hi": 1.0
             },
             "final_cash_csf": {
-              "p10": 1126487.3,
+              "p10": 1124787.65,
               "p50": 1551591.97,
-              "p90": 2074224.65
+              "p90": 2072304.15
             },
             "death_year_histogram": [
               0,
@@ -1734,17 +1734,17 @@
           {
             "projection_id": 202,
             "starting_funds": 6000000.0,
-            "n": 480,
-            "survived": 480,
+            "n": 500,
+            "survived": 500,
             "deaths": 0,
             "survival_rate": 1.0,
             "survival_ci": {
-              "lo": 0.9921,
+              "lo": 0.9924,
               "hi": 1.0
             },
             "final_cash_csf": {
               "p10": 1176827.98,
-              "p50": 1602018.41,
+              "p50": 1607713.48,
               "p90": 2241572.68
             },
             "death_year_histogram": [
@@ -1773,18 +1773,18 @@
           {
             "projection_id": 203,
             "starting_funds": 6500000.0,
-            "n": 480,
-            "survived": 480,
+            "n": 500,
+            "survived": 500,
             "deaths": 0,
             "survival_rate": 1.0,
             "survival_ci": {
-              "lo": 0.9921,
+              "lo": 0.9924,
               "hi": 1.0
             },
             "final_cash_csf": {
-              "p10": 1236668.62,
-              "p50": 1698858.86,
-              "p90": 2227607.65
+              "p10": 1236731.1,
+              "p50": 1700543.57,
+              "p90": 2218974.14
             },
             "death_year_histogram": [
               0,
@@ -1812,18 +1812,18 @@
           {
             "projection_id": 204,
             "starting_funds": 7000000.0,
-            "n": 479,
-            "survived": 479,
+            "n": 500,
+            "survived": 500,
             "deaths": 0,
             "survival_rate": 1.0,
             "survival_ci": {
-              "lo": 0.992,
+              "lo": 0.9924,
               "hi": 1.0
             },
             "final_cash_csf": {
-              "p10": 1305108.65,
-              "p50": 1768402.87,
-              "p90": 2384424.22
+              "p10": 1301431.75,
+              "p50": 1765709.85,
+              "p90": 2386714.04
             },
             "death_year_histogram": [
               0,
@@ -1851,18 +1851,18 @@
           {
             "projection_id": 205,
             "starting_funds": 7500000.0,
-            "n": 479,
-            "survived": 479,
+            "n": 500,
+            "survived": 500,
             "deaths": 0,
             "survival_rate": 1.0,
             "survival_ci": {
-              "lo": 0.992,
+              "lo": 0.9924,
               "hi": 1.0
             },
             "final_cash_csf": {
-              "p10": 1382844.42,
-              "p50": 1788121.55,
-              "p90": 2439049.35
+              "p10": 1382296.48,
+              "p50": 1782036.21,
+              "p90": 2441791.84
             },
             "death_year_histogram": [
               0,
@@ -1890,18 +1890,18 @@
           {
             "projection_id": 206,
             "starting_funds": 8000000.0,
-            "n": 479,
-            "survived": 479,
+            "n": 500,
+            "survived": 500,
             "deaths": 0,
             "survival_rate": 1.0,
             "survival_ci": {
-              "lo": 0.992,
+              "lo": 0.9924,
               "hi": 1.0
             },
             "final_cash_csf": {
-              "p10": 1406513.34,
-              "p50": 1795416.54,
-              "p90": 2439196.48
+              "p10": 1406677.4,
+              "p50": 1794055.25,
+              "p90": 2440100.91
             },
             "death_year_histogram": [
               0,
@@ -1929,18 +1929,18 @@
           {
             "projection_id": 207,
             "starting_funds": 9000000.0,
-            "n": 479,
-            "survived": 479,
+            "n": 500,
+            "survived": 500,
             "deaths": 0,
             "survival_rate": 1.0,
             "survival_ci": {
-              "lo": 0.992,
+              "lo": 0.9924,
               "hi": 1.0
             },
             "final_cash_csf": {
-              "p10": 1461556.58,
-              "p50": 1869912.92,
-              "p90": 2455709.97
+              "p10": 1466165.08,
+              "p50": 1870784.34,
+              "p90": 2472337.15
             },
             "death_year_histogram": [
               0,
@@ -1968,18 +1968,18 @@
           {
             "projection_id": 208,
             "starting_funds": 10000000.0,
-            "n": 479,
-            "survived": 479,
+            "n": 500,
+            "survived": 500,
             "deaths": 0,
             "survival_rate": 1.0,
             "survival_ci": {
-              "lo": 0.992,
+              "lo": 0.9924,
               "hi": 1.0
             },
             "final_cash_csf": {
-              "p10": 1578830.75,
-              "p50": 1994353.12,
-              "p90": 2613679.22
+              "p10": 1578947.62,
+              "p50": 1992239.12,
+              "p90": 2613659.06
             },
             "death_year_histogram": [
               0,
@@ -2007,18 +2007,18 @@
           {
             "projection_id": 209,
             "starting_funds": 11000000.0,
-            "n": 479,
-            "survived": 479,
+            "n": 500,
+            "survived": 500,
             "deaths": 0,
             "survival_rate": 1.0,
             "survival_ci": {
-              "lo": 0.992,
+              "lo": 0.9924,
               "hi": 1.0
             },
             "final_cash_csf": {
-              "p10": 1677102.24,
-              "p50": 2076843.4,
-              "p90": 2728481.75
+              "p10": 1670284.99,
+              "p50": 2072385.67,
+              "p90": 2726927.24
             },
             "death_year_histogram": [
               0,
@@ -2046,30 +2046,30 @@
           {
             "projection_id": 300,
             "starting_funds": 2000000.0,
-            "n": 479,
+            "n": 500,
             "survived": 10,
-            "deaths": 469,
-            "survival_rate": 0.0209,
+            "deaths": 490,
+            "survival_rate": 0.02,
             "survival_ci": {
-              "lo": 0.0114,
-              "hi": 0.038
+              "lo": 0.0109,
+              "hi": 0.0364
             },
             "final_cash_csf": {
               "p10": 0.0,
               "p50": 0.0,
-              "p90": 9256.74
+              "p90": 9270.32
             },
             "death_year_histogram": [
               0,
               2,
-              62,
-              107,
-              79,
-              78,
-              50,
-              34,
+              67,
+              110,
+              83,
+              80,
+              54,
+              36,
               21,
-              13,
+              14,
               9,
               5,
               6,
@@ -2085,37 +2085,37 @@
           {
             "projection_id": 301,
             "starting_funds": 2500000.0,
-            "n": 479,
-            "survived": 55,
-            "deaths": 424,
-            "survival_rate": 0.1148,
+            "n": 500,
+            "survived": 57,
+            "deaths": 443,
+            "survival_rate": 0.114,
             "survival_ci": {
-              "lo": 0.0893,
-              "hi": 0.1465
+              "lo": 0.089,
+              "hi": 0.1448
             },
             "final_cash_csf": {
               "p10": 0.0,
               "p50": 0.0,
-              "p90": 178926.55
+              "p90": 178369.9
             },
             "death_year_histogram": [
               0,
               0,
-              7,
+              8,
               16,
-              43,
-              61,
-              67,
-              61,
-              39,
-              32,
-              20,
-              28,
+              45,
+              65,
+              69,
+              63,
+              40,
+              34,
+              22,
+              29,
               10,
-              11,
+              12,
               9,
               4,
-              8,
+              9,
               3,
               3,
               2
@@ -2124,18 +2124,18 @@
           {
             "projection_id": 302,
             "starting_funds": 3000000.0,
-            "n": 479,
-            "survived": 195,
-            "deaths": 284,
-            "survival_rate": 0.4071,
+            "n": 500,
+            "survived": 205,
+            "deaths": 295,
+            "survival_rate": 0.41,
             "survival_ci": {
-              "lo": 0.364,
-              "hi": 0.4517
+              "lo": 0.3677,
+              "hi": 0.4536
             },
             "final_cash_csf": {
               "p10": 0.0,
               "p50": 0.0,
-              "p90": 911527.89
+              "p90": 902082.15
             },
             "death_year_histogram": [
               0,
@@ -2143,19 +2143,19 @@
               0,
               4,
               8,
-              22,
+              23,
               39,
-              25,
-              36,
-              22,
-              20,
+              27,
+              39,
+              23,
+              23,
               27,
               17,
               13,
               16,
               10,
               7,
-              7,
+              8,
               4,
               7
             ]
@@ -2163,18 +2163,18 @@
           {
             "projection_id": 303,
             "starting_funds": 3500000.0,
-            "n": 479,
-            "survived": 343,
-            "deaths": 136,
-            "survival_rate": 0.7161,
+            "n": 500,
+            "survived": 361,
+            "deaths": 139,
+            "survival_rate": 0.722,
             "survival_ci": {
-              "lo": 0.6741,
-              "hi": 0.7546
+              "lo": 0.6812,
+              "hi": 0.7595
             },
             "final_cash_csf": {
               "p10": 0.0,
-              "p50": 635353.79,
-              "p90": 1496201.58
+              "p50": 637754.84,
+              "p90": 1492341.35
             },
             "death_year_histogram": [
               0,
@@ -2190,10 +2190,10 @@
               21,
               13,
               8,
-              6,
+              8,
               13,
               12,
-              7,
+              8,
               10,
               4,
               4
@@ -2202,18 +2202,18 @@
           {
             "projection_id": 304,
             "starting_funds": 4000000.0,
-            "n": 479,
-            "survived": 445,
+            "n": 500,
+            "survived": 466,
             "deaths": 34,
-            "survival_rate": 0.929,
+            "survival_rate": 0.932,
             "survival_ci": {
-              "lo": 0.9024,
-              "hi": 0.9488
+              "lo": 0.9065,
+              "hi": 0.9509
             },
             "final_cash_csf": {
-              "p10": 235301.96,
-              "p50": 1078903.65,
-              "p90": 1703114.48
+              "p10": 270325.48,
+              "p50": 1077965.82,
+              "p90": 1706561.92
             },
             "death_year_histogram": [
               0,
@@ -2241,18 +2241,18 @@
           {
             "projection_id": 305,
             "starting_funds": 4500000.0,
-            "n": 479,
-            "survived": 477,
+            "n": 500,
+            "survived": 498,
             "deaths": 2,
-            "survival_rate": 0.9958,
+            "survival_rate": 0.996,
             "survival_ci": {
-              "lo": 0.9849,
+              "lo": 0.9855,
               "hi": 0.9989
             },
             "final_cash_csf": {
-              "p10": 849359.11,
-              "p50": 1307686.47,
-              "p90": 1887530.36
+              "p10": 854184.46,
+              "p50": 1307369.58,
+              "p90": 1885382.49
             },
             "death_year_histogram": [
               0,
@@ -2281,22 +2281,22 @@
         "death_year_histogram": [
           0,
           2,
-          69,
-          129,
-          130,
-          162,
-          163,
-          130,
-          107,
-          78,
-          72,
+          75,
+          132,
+          136,
+          169,
+          169,
+          136,
+          111,
+          82,
           77,
+          78,
           42,
-          34,
+          37,
           43,
           29,
-          28,
-          25,
+          30,
+          26,
           14,
           15
         ]
