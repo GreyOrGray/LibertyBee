@@ -713,18 +713,19 @@
       +'in this year?</i> The record grids are frozen alongside the baseline; the living grids '
       +'accumulate daily against them. One color scale across all four grids \u2014 hover any cell '
       +'for exact counts.</p>'
+      +'<div class="lv-legend" style="margin:2px 0 14px">'
+      +'<span><span class="swb" style="background:#3A362A;border:1px solid rgba(237,234,224,.25)"></span>zero deaths that year \u2014 still alive</span>'
+      +'<span><span class="swb" style="background:'+heatRamp(0.18)+'"></span>at least one death \u2014 any death is a visible step</span>'
+      +'<span><span class="swb" style="background:linear-gradient(90deg,'+heatRamp(0.18)+','+heatRamp(1)+')"></span>more deaths per 100</span>'
+      +'<span><span class="swb hx"></span>extinction \u2014 no one left alive to enter the year</span>'
+      +'</div>'
       +'<div class="lvhm-sub">Standard series</div>'
       +heatGrid('the record \u2014 n=500 per level (frozen)', d.frozen.rungs, vmax)
       +l1
       +'<div class="lvhm-sub" style="margin-top:14px">Deep-discount-25 series</div>'
       +heatGrid('the record \u2014 n=150 per level (frozen)', d.frozen.dd25_reference.rungs, vmax)
       +l2
-      +'<div class="lv-legend" style="margin-top:10px">'
-      +'<span><span class="swb" style="background:#3A362A;border:1px solid rgba(237,234,224,.25)"></span>zero deaths that year \u2014 still alive</span>'
-      +'<span><span class="swb" style="background:'+heatRamp(0.18)+'"></span>at least one death \u2014 any death is a visible step</span>'
-      +'<span><span class="swb" style="background:linear-gradient(90deg,'+heatRamp(0.18)+','+heatRamp(1)+')"></span>more deaths per 100</span>'
-      +'<span><span class="swb hx"></span>extinction \u2014 no one left alive to enter the year</span>'
-      +'</div></div>';
+      +'</div>';
   }
 
   function render(d){
