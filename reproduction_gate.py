@@ -52,7 +52,15 @@ def corpus_expect(cc, proj, seed):
     if r[0]:
         return ("survived", f"{r[1]:.2f}")
     cc.execute("SELECT MAX(MonthIndex) FROM v1.monthly_payment_status WHERE Rung=? AND Seed=?", r[2], seed)
-    return ("halted", str(cc.fetchone()[0]))
+    dm = cc.fetchone()[0]
+    if dm is None or dm <= 0:
+        # KD-046: a cell whose only payment-status rows are the -1 sentinels (a run
+        # can die before any realized payment month). Fall back to the ledger span,
+        # the same measure the fast-death checks use.
+        cc.execute("SELECT DATEDIFF(MONTH, MIN(LedgerDate), MAX(LedgerDate)) + 1 "
+                   "FROM v1.fund_ledger WHERE Rung=? AND Seed=?", r[2], seed)
+        dm = cc.fetchone()[0]
+    return ("halted", str(dm))
 
 def provenance_check(cc, strict=False):
     """Can this corpus be handed to someone else and rebuilt? Returns a failure list.

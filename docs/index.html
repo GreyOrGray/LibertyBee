@@ -224,6 +224,15 @@
   .lv-panel .pnote{font-size:14px;color:var(--lv-soft);margin:0 0 18px;font-family:ui-sans-serif,system-ui,sans-serif;}
   .lv-panel.flavor{border-left:3px solid var(--lv-flavor);}  /* aligned with the standard panel (Gray, 2026-07-30) — the border+header carry the distinction */
   .lv-panel.flavor h3{color:var(--lv-flavor);}
+  .lvhm-sub{font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;font-weight:700;
+    color:var(--lv-text);letter-spacing:.04em;margin:8px 0 2px;}
+  .lvhm-title{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px;color:var(--lv-soft);margin:6px 0 3px;}
+  .lvhm{display:grid;grid-template-columns:auto repeat(20,1fr);gap:1px;margin:0 0 6px;}
+  .lvhm .hyl{font:10px ui-monospace,Consolas,monospace;color:var(--lv-soft);text-align:center;}
+  .lvhm .hrl{font:10px ui-monospace,Consolas,monospace;color:var(--lv-soft);
+    display:flex;align-items:center;justify-content:flex-end;padding-right:5px;}
+  .lvhm .hc{height:9px;border-radius:1px;background:#221F15;}
+  .hx{background:repeating-linear-gradient(45deg,rgba(181,176,160,.38) 0 2px,rgba(181,176,160,.06) 2px 5px) !important;}
   .live-sec svg text{font-family:ui-sans-serif,system-ui,sans-serif;}
   .lv-legend{display:flex;flex-wrap:wrap;gap:6px 20px;font-family:ui-sans-serif,system-ui,sans-serif;
     font-size:12px;color:var(--lv-soft);margin:12px 0 0;align-items:center;}
@@ -566,6 +575,7 @@
 </div></section>
 
 <!-- ============ THE LIVE SECTION — beyond the frozen baseline ============ -->
+<!-- MODEL-DATA v2 2026-08-05 · live death-timing heatmaps (deaths-per-100, ember ramp, extinction-null cells, one shared scale) rendered from live.json per-rung death_year_histogram (living + frozen refs) · design spec: LibertyBeeDev#217 -->
 <!-- MODEL-DATA v2 2026-07-30 · live section RENDERED from data/live.json (tripwire-gated publishes); frozen refs = anchor rungs (n=500) + dd25_reference (n=150); intro cites 13,200 frozen · src: farm store via aggregate pipeline -->
 <section class="live-sec"><div class="wrap reveal">
   <p class="eyebrow sans">Beyond the frozen baseline — live, not cited</p>
@@ -575,9 +585,9 @@
   <b>alive</b>. The same released engine keeps running on a machine in the corner of a room, on
   fresh seeds no cited run ever used — not to change the answer, but to keep measuring it.</p>
   <div id="lvBody"><p class="lv-unavail">Loading live data…</p></div>
-  <p class="lv-methods">A living run: the released engine (<b>0.6.0</b> when live runs resume), a fresh seed no cited run ever used, a fresh
+  <p class="lv-methods">A living run: the released engine (<b>0.6.0</b>), a fresh seed no cited run ever used, a fresh
   database restored from the released Gold every time, keyed (scenario · engine · funding · seed).
-  Published only through a tripwire-gated, human-merged pull request — eight invariant checks stand
+  Published only through a tripwire-gated, human-merged pull request — eleven invariant checks stand
   between the machine and this page. Data contract: <a href="data/schema.md">data/schema.md</a>.</p>
 </div></section><script>
 (function(){
@@ -638,6 +648,79 @@
     return h+'</div>';
   }
 
+  // ---- death-timing heatmaps (LibertyBeeDev#217) ----
+  // per-100 semantics; ember-on-coals ramp (the live band is dark: heat = brightness);
+  // zero-step (any death is a visible step); extinction renders null, never pale.
+  function heatRamp(t){
+    var stops=[[34,31,21],[109,29,19],[201,138,60]];
+    t=Math.max(0,Math.min(1,t)); t=Math.pow(t,0.75);
+    var seg=t*(stops.length-1), i=Math.min(Math.floor(seg),stops.length-2), f=seg-i;
+    var a=stops[i], b=stops[i+1];
+    return 'rgb('+Math.round(a[0]+(b[0]-a[0])*f)+','+Math.round(a[1]+(b[1]-a[1])*f)+','
+      +Math.round(a[2]+(b[2]-a[2])*f)+')';
+  }
+  function heatVmax(sets){
+    var m=0;
+    sets.forEach(function(rs){(rs||[]).forEach(function(r){
+      var h=r.death_year_histogram||[];
+      for(var y=0;y<h.length;y++) m=Math.max(m,100*h[y]/r.n);
+    });});
+    return m||1;
+  }
+  function heatGrid(title, rungs, vmax){
+    var rows=(rungs||[]).slice().sort(function(a,b){return a.starting_funds-b.starting_funds;});
+    if(!rows.length||!rows[0].death_year_histogram) return '';
+    var g='<div class="lvhm-title">'+title+'</div><div class="lvhm">';
+    g+='<div></div>';
+    for(var yy=1;yy<=20;yy++) g+='<div class="hyl">'+((yy===1||yy%5===0)?('y'+yy):'')+'</div>';
+    rows.forEach(function(r){
+      var hist=r.death_year_histogram, dead=0, tot=0, y;
+      for(y=0;y<20;y++) tot+=hist[y];
+      g+='<div class="hrl">$'+(r.starting_funds/1e6)+'M</div>';
+      for(y=0;y<20;y++){
+        var atRisk=r.n-dead; dead+=hist[y];
+        var lbl='$'+(r.starting_funds/1e6)+'M, year '+(y+1);
+        if(atRisk===0){
+          g+='<div class="hc hx" title="'+lbl+': no organization was still alive to enter this year"></div>';
+          continue;
+        }
+        var v=100*hist[y]/r.n, t=v>0?0.18+0.82*(v/vmax):0;
+        var edge=t<0.35?(0.16*(1-t/0.35)):0;
+        g+='<div class="hc" style="background:'+heatRamp(t)
+          +(edge>0.02?';box-shadow:inset 0 0 0 1px rgba(237,234,224,'+edge.toFixed(2)+')':'')
+          +'" title="'+lbl+' \u2014 entered alive: '+atRisk+' \u00b7 died: '+hist[y]
+          +' \u00b7 remained: '+(atRisk-hist[y])+' (n='+r.n+' starters, '+tot+' deaths total)"></div>';
+      }
+    });
+    return g+'</div>';
+  }
+  function heatBlock(d, std, flv){
+    var vmax=heatVmax([d.frozen.rungs, std.rungs, d.frozen.dd25_reference.rungs, flv.rungs]);
+    var stdN=(std.rungs&&std.rungs.length)?std.rungs[0].n:0;
+    var flvN=(flv.rungs&&flv.rungs.length)?flv.rungs[0].n:0;
+    var l1=heatGrid('living \u2014 n\u2248'+stdN+' per level, growing daily', std.rungs, vmax);
+    var l2=heatGrid('living \u2014 n\u2248'+flvN+' per level, growing daily', flv.rungs, vmax);
+    if(!l1&&!l2) return '';
+    return '<div class="lv-panel"><h3>Death timing \u2014 when the failures happen</h3>'
+      +'<p class="pnote">Each row is a funding level; each cell is a year of the twenty-year run. '
+      +'Color answers one question: <i>of 100 organizations starting at this level, how many failed '
+      +'in this year?</i> The record grids are frozen alongside the baseline; the living grids '
+      +'accumulate daily against them. One color scale across all four grids \u2014 hover any cell '
+      +'for exact counts.</p>'
+      +'<div class="lvhm-sub">Standard series</div>'
+      +heatGrid('the record \u2014 n=500 per level (frozen)', d.frozen.rungs, vmax)
+      +l1
+      +'<div class="lvhm-sub" style="margin-top:14px">Deep-discount-25 series</div>'
+      +heatGrid('the record \u2014 n=150 per level (frozen)', d.frozen.dd25_reference.rungs, vmax)
+      +l2
+      +'<div class="lv-legend" style="margin-top:10px">'
+      +'<span><span class="swb" style="background:#221F15;border:1px solid #3A3626"></span>zero deaths that year \u2014 still alive</span>'
+      +'<span><span class="swb" style="background:'+heatRamp(0.18)+'"></span>at least one death \u2014 any death is a visible step</span>'
+      +'<span><span class="swb" style="background:linear-gradient(90deg,'+heatRamp(0.18)+','+heatRamp(1)+')"></span>more deaths per 100</span>'
+      +'<span><span class="swb hx"></span>extinction \u2014 no one left alive to enter the year</span>'
+      +'</div></div>';
+  }
+
   function render(d){
     var segs={}; d.living.segments.forEach(function(s){segs[s.scenario]=s;});
     var std=segs['standard']||{runs:0,deaths:0,rungs:[]};
@@ -693,6 +776,8 @@
       +'<div class="lv-legend"><span><span class="sw" style="border-top:3px dashed #B5B0A0;height:0;background:none"></span>frozen deep-discount-25 record row (cited, 150 seeds/level)</span>'
       +'<span><span class="swb" style="background:rgba(180,155,214,.35);border:1px solid '+FLAVOR+'"></span>living rate per level (bar) + 95% CI (whisker)</span></div>'
       +'<div id="lvFlvStrips"></div></div>';
+
+    h+=heatBlock(d, std, flv);
 
     document.getElementById('lvBody').innerHTML=h;
 
