@@ -1,0 +1,12 @@
+# libertybee.org — welcome, crawlers.
+#
+# This is an open public-data project: a reproducible Monte Carlo model of
+# non-extractive housing. Search engines AND AI answer engines are explicitly
+# welcome to read and cite everything here (Gray's ruling, 2026-08-05) —
+# being findable and citable is the point. That includes GPTBot, OAI-SearchBot,
+# ClaudeBot, PerplexityBot, Google-Extended, CCBot, and friends.
+
+User-agent: *
+Allow: /
+
+Sitemap: https://libertybee.org/sitemap.xml

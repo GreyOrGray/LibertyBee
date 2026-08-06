@@ -17,6 +17,88 @@
 <meta name="twitter:title" content="Liberty Bee — a non-extractive housing model">
 <meta name="twitter:description" content="An open Monte Carlo simulation testing whether below-market, tenant-protective housing can stay solvent over 20 years. Reproducible to the penny; code + data public.">
 <meta name="twitter:image" content="https://libertybee.org/social-card.png">
+<link rel="canonical" href="https://libertybee.org/">
+<!-- MODEL-DATA v2 2026-08-05 · JSON-LD cites 13,200 runs / engine 0.6.0 / release v2.0.0 + live.json contract · update on any re-baseline · src: V2 record + farm pipeline -->
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@graph": [
+  {
+   "@type": "WebSite",
+   "@id": "https://libertybee.org/#website",
+   "name": "Liberty Bee",
+   "url": "https://libertybee.org/",
+   "description": "An open Monte Carlo simulation testing whether below-market, tenant-protective housing can stay solvent over 20 years. Reproducible to the penny; code + data public.",
+   "publisher": {
+    "@id": "https://libertybee.org/#org"
+   }
+  },
+  {
+   "@type": "Organization",
+   "@id": "https://libertybee.org/#org",
+   "name": "Liberty Bee",
+   "url": "https://libertybee.org/"
+  },
+  {
+   "@type": "Dataset",
+   "name": "Liberty Bee V2 corpus of record",
+   "description": "13,200 simulated 20-year housing-operation runs (0 failures) across nine scenario ladders - standard defaults at 16 funding levels x 500 seeds, deep-discount-25 at 16 x 150, and seven discount-grid depths at 16 x 25. Engine 0.6.0; every run reproducible from its seed via the published engine and reproduction gate.",
+   "url": "https://github.com/GreyOrGray/LibertyBee/releases/tag/v2.0.0",
+   "license": "https://github.com/GreyOrGray/LibertyBee/blob/main/LICENSE",
+   "creator": {
+    "@id": "https://libertybee.org/#org"
+   },
+   "isBasedOn": "https://github.com/GreyOrGray/LibertyBee",
+   "keywords": [
+    "housing",
+    "affordable housing",
+    "Monte Carlo simulation",
+    "nonprofit sustainability",
+    "open data",
+    "below-market rent"
+   ],
+   "distribution": [
+    {
+     "@type": "DataDownload",
+     "encodingFormat": "application/octet-stream",
+     "contentUrl": "https://github.com/GreyOrGray/LibertyBee/releases/tag/v2.0.0",
+     "description": "19 checksummed assets: SQL Server .bak corpora + Gold seed + SHA256SUMS"
+    }
+   ]
+  },
+  {
+   "@type": "Dataset",
+   "name": "Liberty Bee living farm data",
+   "description": "Daily-updated aggregate of the living run farm: the released engine re-run on fresh seeds no cited run ever used, published only through an eleven-check tripwire gate and a human-merged pull request. Survival rates with confidence intervals, death-timing histograms, and provenance per rung.",
+   "url": "https://libertybee.org/",
+   "license": "https://github.com/GreyOrGray/LibertyBee/blob/main/LICENSE",
+   "creator": {
+    "@id": "https://libertybee.org/#org"
+   },
+   "distribution": [
+    {
+     "@type": "DataDownload",
+     "encodingFormat": "application/json",
+     "contentUrl": "https://libertybee.org/data/live.json",
+     "description": "Data contract: https://libertybee.org/data/schema.md"
+    }
+   ]
+  },
+  {
+   "@type": "SoftwareSourceCode",
+   "name": "Liberty Bee simulation engine",
+   "codeRepository": "https://github.com/GreyOrGray/LibertyBee",
+   "programmingLanguage": "Python",
+   "runtimePlatform": "Python 3.12 + SQL Server",
+   "version": "0.6.0",
+   "license": "https://github.com/GreyOrGray/LibertyBee/blob/main/LICENSE",
+   "author": {
+    "@id": "https://libertybee.org/#org"
+   }
+  }
+ ]
+}
+</script>
 <!-- analytics: Umami (cookieless, privacy-friendly) -->
 <script defer src="https://cloud.umami.is/script.js" data-website-id="62c97540-eb96-42f0-8c22-4040df1f03d0"></script>
 <style>
