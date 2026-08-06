@@ -357,8 +357,8 @@
   list of what must be re-derived or re-verified. Nothing on this page may
   cite a superseded baseline (Gray's V2 ruling: nothing stale ships).
 ============================================================================= -->
-<!-- MODEL-DATA v2 2026-07-28 · banner: engine 0.6.0, 13,200 runs · src: V04R1 corpora -->
-<div class="wip sans"><b>Liberty Bee V2.</b> The numbers and charts are real, from the frozen V2 corpus of record (engine 0.6.0 — 13,200 runs, zero failures, generated from the public repo with zero overrides) — the code and the full dataset are public, and every run reproduces from a seed. Everything's sourced in <a href="#sources">the ledger</a>.</div>
+<!-- MODEL-DATA v2 2026-08-06 · banner: engine 0.6.0, 13,200 runs (frozen, cited) + living-count span filled from live.json at render · src: V04R1 corpora + farm pipeline -->
+<div class="wip sans"><b>Liberty Bee V2.</b> The numbers and charts are real, from the frozen V2 corpus of record (engine 0.6.0 — 13,200 runs, zero failures, generated from the public repo with zero overrides) — the code and the full dataset are public, and every run reproduces from a seed. Everything's sourced in <a href="#sources">the ledger</a>. And the model hasn't stopped: a living series keeps running on fresh seeds<span id="lvBannerN"></span> — <a href="#live">updated daily below</a>.</div>
 
 <!-- ============ 01 · INTRO ============ -->
 <div class="hero wrap">
@@ -659,7 +659,7 @@
 <!-- ============ THE LIVE SECTION — beyond the frozen baseline ============ -->
 <!-- MODEL-DATA v2 2026-08-05 · live death-timing heatmaps (deaths-per-100, fire ramp red→yellow, extinction-null cells, one shared scale) rendered from live.json per-rung death_year_histogram (living + frozen refs) · design spec: LibertyBeeDev#217 -->
 <!-- MODEL-DATA v2 2026-07-30 · live section RENDERED from data/live.json (tripwire-gated publishes); frozen refs = anchor rungs (n=500) + dd25_reference (n=150); intro cites 13,200 frozen · src: farm store via aggregate pipeline -->
-<section class="live-sec"><div class="wrap reveal">
+<section class="live-sec" id="live"><div class="wrap reveal">
   <p class="eyebrow sans">Beyond the frozen baseline — live, not cited</p>
   <h2>The model keeps running.</h2>
   <p>Everything above this line is frozen — 13,200 runs across nine scenario ladders, every number
@@ -811,6 +811,8 @@
   }
 
   function render(d){
+    var bn=document.getElementById('lvBannerN');
+    if(bn) bn.innerHTML=': <b>'+d.living.total_runs.toLocaleString()+'</b> runs and counting';
     var segs={}; d.living.segments.forEach(function(s){segs[s.scenario]=s;});
     var std=segs['standard']||{runs:0,deaths:0,rungs:[]};
     var flv=segs['deep-discount-25']||{runs:0,deaths:0,rungs:[]};
