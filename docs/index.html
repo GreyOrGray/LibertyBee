@@ -69,7 +69,7 @@
   {
    "@type": "Dataset",
    "name": "Liberty Bee living farm data",
-   "description": "Daily-updated aggregate of the living run farm: the released engine re-run on fresh seeds no cited run ever used, published only through an eleven-check tripwire gate and a human-merged pull request. Survival rates with confidence intervals, death-timing histograms, and provenance per rung.",
+   "description": "Aggregate of the living run farm (updates paused August 17, 2026 while the v3 re-baseline is prepared): the released engine re-run on fresh seeds no cited run ever used, published only through an eleven-check tripwire gate and a human-merged pull request. Survival rates with confidence intervals, death-timing histograms, and provenance per rung.",
    "url": "https://libertybee.org/",
    "license": "https://github.com/GreyOrGray/LibertyBee/blob/main/LICENSE",
    "creator": {
@@ -286,6 +286,9 @@
     background:var(--ink);color:var(--lv-text);border-top:3px solid var(--lv-live);
     border-bottom:3px solid var(--lv-live);padding:64px 0 56px;}
   .live-sec .eyebrow{color:var(--lv-live);letter-spacing:.15em;}
+  .lv-paused{background:var(--lv-card);border:1px solid var(--lv-live);border-left-width:4px;
+    border-radius:8px;padding:16px 20px;margin:0 0 22px;color:var(--lv-soft);font-size:15.5px;}
+  .lv-paused b{color:var(--lv-live);}
   .live-sec h2{color:var(--lv-text);}
   .live-sec p{color:var(--lv-soft);} .live-sec p b{color:var(--lv-text);}
   .lv-asof{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px;letter-spacing:.05em;
@@ -358,7 +361,7 @@
   cite a superseded baseline (Gray's V2 ruling: nothing stale ships).
 ============================================================================= -->
 <!-- MODEL-DATA v2 2026-08-06 · banner: engine 0.6.0, 13,200 runs (frozen, cited) + living-count span filled from live.json at render · src: V04R1 corpora + farm pipeline -->
-<div class="wip sans"><b>Liberty Bee V2.</b> The numbers and charts are real, from the frozen V2 corpus of record (engine 0.6.0 — 13,200 runs, zero failures, generated from the public repo with zero overrides) — the code and the full dataset are public, and every run reproduces from a seed. Everything's sourced in <a href="#sources">the ledger</a>. And the model hasn't stopped: a living series keeps running on fresh seeds<span id="lvBannerN"></span> — <a href="#live">updated daily below</a>.</div>
+<div class="wip sans"><b>Liberty Bee V2.</b> The numbers and charts are real, from the frozen V2 corpus of record (engine 0.6.0 — 13,200 runs, zero failures, generated from the public repo with zero overrides) — the code and the full dataset are public, and every run reproduces from a seed. Everything's sourced in <a href="#sources">the ledger</a>. The living series<span id="lvBannerN"></span> is <a href="#live">paused</a> while the next baseline — the same model rebuilt on fully public government data — is prepared.</div>
 
 <!-- ============ 01 · INTRO ============ -->
 <div class="hero wrap">
@@ -666,6 +669,11 @@
   reproducible from a seed, and none of it will ever move. Everything below this line is
   <b>alive</b>. The same released engine keeps running on a machine in the corner of a room, on
   fresh seeds no cited run ever used — not to change the answer, but to keep measuring it.</p>
+  <div class="lv-paused"><b>Paused — August 17, 2026.</b> The farm is deliberately idle while the
+  next baseline is prepared: the property universe rebuilt from public government records
+  (MassGIS parcels + Census ACS), the engine proven penny-identical on a fully open stack. The
+  tallies below stand exactly as last published. Nothing here moves until the new baseline
+  ships — and the frozen record above never moves at all.</div>
   <div id="lvBody"><p class="lv-unavail">Loading live data…</p></div>
   <p class="lv-methods">A living run: the released engine (<b>0.6.0</b>), a fresh seed no cited run ever used, a fresh
   database restored from the released Gold every time, keyed (scenario · engine · funding · seed).
@@ -812,7 +820,7 @@
 
   function render(d){
     var bn=document.getElementById('lvBannerN');
-    if(bn) bn.innerHTML=': <b>'+d.living.total_runs.toLocaleString()+'</b> runs and counting';
+    if(bn) bn.innerHTML=' (<b>'+d.living.total_runs.toLocaleString()+'</b> runs)';
     var segs={}; d.living.segments.forEach(function(s){segs[s.scenario]=s;});
     var std=segs['standard']||{runs:0,deaths:0,rungs:[]};
     var flv=segs['deep-discount-25']||{runs:0,deaths:0,rungs:[]};
@@ -1039,7 +1047,7 @@
     <li id="src-12"><span class="stag pub">public data</span> Median market renter tenure <b>~2.2yr</b> (public-housing benchmark ~4.9yr) — Redfin / Census ACS; Collinson et al., NBER w21071 (2015). <a href="https://www.nber.org/papers/w21071">NBER</a> · <span class="track">evidence_base §10a</span></li>
     <li id="src-13"><span class="stag pub">public data</span> Below-market/rent-protected tenants <b>~19% less likely to move</b> (causal) — Diamond, McQuade &amp; Qian, NBER w24181 / <em>AER</em> 2019. <a href="https://www.nber.org/papers/w24181">NBER</a> · <span class="track">evidence_base §10b</span></li>
     <li id="src-14"><span class="stag mod">our model</span> Share of <em>realized</em> retention attributable to regional scarcity ≈ <b>48%</b> (the deal ≈ 52%) — re-measured on the V2 engine (0.6.0), by 20-year composed turnover with retention off (base, β=0/γ=0 → 21.8%), the deal only (γ=0 → 17.6%), and full (γ=0.5 → 13.6%): scarcity's slice = (deal-only − full) ÷ (base − full), pooled over 8 seeds at a viable funding level, each run in its own freshly-restored database. Strongly tenure-dependent: scarcity dominates early when the deal is shallow, the deal takes over as it deepens. <span class="track">reproduce: scarcity_remeasure.py</span></li>
-    <li id="src-15"><span class="stag pub">public data</span> In-kind housing transfers cost roughly <b>2.4×</b> per dollar of tenant benefit — Olsen, <em>Journal of Political Economy</em> 1972. <span class="track">evidence_base §10e (local olsen1972.pdf)</span></li>
+    <li id="src-15"><span class="stag pub">public data</span> In-kind housing transfers cost roughly <b>2.4×</b> per dollar of tenant benefit — Olsen, "An Econometric Analysis of Rent Control," <em>Journal of Political Economy</em> 80(6), 1972. <a href="https://doi.org/10.1086/259949">DOI</a> · <span class="track">evidence_base §10e</span></li>
     <li id="src-16"><span class="stag mod">our model</span> Tenant Credit System — of all credits accrued across survived runs, <b>50.7%</b> redeemed (~<b>$7,596</b>/household), <b>20.7%</b> forfeited, <b>28.5%</b> still held at year 20. Median cumulative savings by tenure year (yr5 ~$45k / yr10 ~$140k / yr20 ~$505k), and cumulative community value (below-market rent + credits redeemed) per surviving org — ~$5M at $4.5M funding to ~$13.5M at $11M over 20 years — from the same corpus integration as [11] (viable rungs only, n=50/rung). <span class="track">reproduce: site_metrics.py</span></li>
   </ol>
   <p style="margin-top:20px;font-size:14px;color:var(--ink-soft)" class="sans"><span class="track">Full provenance, with verbatim quotes against link-rot, lives in <b>evidence_base.md</b> in the repository. This ledger is the site's window onto it.</span></p>
