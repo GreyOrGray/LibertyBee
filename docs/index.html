@@ -69,7 +69,7 @@
   {
    "@type": "Dataset",
    "name": "Liberty Bee living farm data",
-   "description": "Daily-updated aggregate of the living run farm: the released engine re-run on fresh seeds no cited run ever used, published only through an eleven-check tripwire gate and a human-merged pull request. Survival rates with confidence intervals, death-timing histograms, and provenance per rung.",
+   "description": "Aggregate of the living run farm (updates paused August 17, 2026 while the v3 re-baseline is prepared): the released engine re-run on fresh seeds no cited run ever used, published only through an eleven-check tripwire gate and a human-merged pull request. Survival rates with confidence intervals, death-timing histograms, and provenance per rung.",
    "url": "https://libertybee.org/",
    "license": "https://github.com/GreyOrGray/LibertyBee/blob/main/LICENSE",
    "creator": {
@@ -286,6 +286,9 @@
     background:var(--ink);color:var(--lv-text);border-top:3px solid var(--lv-live);
     border-bottom:3px solid var(--lv-live);padding:64px 0 56px;}
   .live-sec .eyebrow{color:var(--lv-live);letter-spacing:.15em;}
+  .lv-paused{background:var(--lv-card);border:1px solid var(--lv-live);border-left-width:4px;
+    border-radius:8px;padding:16px 20px;margin:0 0 22px;color:var(--lv-soft);font-size:15.5px;}
+  .lv-paused b{color:var(--lv-live);}
   .live-sec h2{color:var(--lv-text);}
   .live-sec p{color:var(--lv-soft);} .live-sec p b{color:var(--lv-text);}
   .lv-asof{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px;letter-spacing:.05em;
@@ -666,6 +669,11 @@
   reproducible from a seed, and none of it will ever move. Everything below this line is
   <b>alive</b>. The same released engine keeps running on a machine in the corner of a room, on
   fresh seeds no cited run ever used — not to change the answer, but to keep measuring it.</p>
+  <div class="lv-paused"><b>Paused — August 17, 2026.</b> The farm is deliberately idle while the
+  next baseline is prepared: the property universe rebuilt from public government records
+  (MassGIS parcels + Census ACS), the engine proven penny-identical on a fully open stack. The
+  tallies below stand exactly as last published. Nothing here moves until the new baseline
+  ships — and the frozen record above never moves at all.</div>
   <div id="lvBody"><p class="lv-unavail">Loading live data…</p></div>
   <p class="lv-methods">A living run: the released engine (<b>0.6.0</b>), a fresh seed no cited run ever used, a fresh
   database restored from the released Gold every time, keyed (scenario · engine · funding · seed).
