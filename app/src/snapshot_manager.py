@@ -219,10 +219,11 @@ class SnapshotManager:
         """Latest FundLedger row at or before current_date."""
         row = self.db.execute_query(
             """
-            SELECT TOP 1 CashBalance, CSFBalance, EIPBalance, EscrowBalance
+            SELECT CashBalance, CSFBalance, EIPBalance, EscrowBalance
             FROM simulation.FundLedger
             WHERE RunID=? AND LedgerDate<=?
             ORDER BY LedgerDate DESC, EventID DESC
+            OFFSET 0 ROWS FETCH FIRST 1 ROWS ONLY
             """,
             (self.run_id, current_date),
         )
@@ -277,7 +278,7 @@ class SnapshotManager:
         # where event metadata mentions RENT.
         rent_row = self.db.execute_query(
             """
-            SELECT ISNULL(SUM(fl.CashCredit), 0)
+            SELECT COALESCE(SUM(fl.CashCredit), 0)
             FROM simulation.FundLedger fl
             JOIN simulation.Event e ON e.RunID=fl.RunID AND e.EventID=fl.EventID
             WHERE fl.RunID=? AND fl.LedgerDate >= ? AND fl.LedgerDate < ?
@@ -295,7 +296,7 @@ class SnapshotManager:
         # LIKE to the new producer's tag, and use the correct column.
         opex_row = self.db.execute_query(
             """
-            SELECT ISNULL(SUM(fl.CashDebit), 0)
+            SELECT COALESCE(SUM(fl.CashDebit), 0)
             FROM simulation.FundLedger fl
             JOIN simulation.Event e ON e.RunID=fl.RunID AND e.EventID=fl.EventID
             WHERE fl.RunID=? AND fl.LedgerDate >= ? AND fl.LedgerDate < ?
@@ -316,7 +317,7 @@ class SnapshotManager:
         # to reconcile to simulation.Payroll.TotalCost month-by-month.
         pay_row = self.db.execute_query(
             """
-            SELECT ISNULL(SUM(fl.CashDebit), 0)
+            SELECT COALESCE(SUM(fl.CashDebit), 0)
             FROM simulation.FundLedger fl
             JOIN simulation.Event e ON e.RunID=fl.RunID AND e.EventID=fl.EventID
             WHERE fl.RunID=? AND fl.LedgerDate >= ? AND fl.LedgerDate < ?

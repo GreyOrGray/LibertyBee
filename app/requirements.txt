@@ -1,29 +1,4 @@
-# Liberty Bee Housing Simulation System Requirements
-
-# Core data manipulation and analysis
-pandas>=1.5.0
-numpy>=1.21.0
-
-# Database connectivity
-pyodbc>=4.0.0
-
-# Data visualization and reporting
-matplotlib>=3.5.0
-seaborn>=0.11.0
-
-# Statistical and numerical computing
-scipy>=1.9.0
-
-# Configuration and utilities
-python-dateutil>=2.8.0
-uuid
-
-# Optional: Enhanced performance
-# numba>=0.56.0  # For JIT compilation of Monte Carlo loops
-# joblib>=1.2.0  # For parallel processing
-
-# Development and testing (optional)
-# pytest>=7.0.0
-# pytest-cov>=4.0.0
-# black>=22.0.0
-# flake8>=5.0.0
+pyodbc==5.2.0
+pandas==2.3.2
+numpy==2.3.3
+python-dateutil==2.9.0.post0

@@ -17,6 +17,8 @@ import sys
 
 import pyodbc
 
+import corpus_conn
+
 from corpus_runner import *          # noqa: F401,F403  the shared generic runner
 from corpus_runner import (          # explicit re-import for the names used below,
     CONN_TMPL, DEV_REPO_MARKER, ENGINE_VERSION, REPO, STOP_FLAG,  # so a reader sees the surface
@@ -55,6 +57,13 @@ def bind_scenario(corpus, scenario, sweep_mode, allow_dirty=False, allow_dev_tre
             f"          from any published commit, so its provenance is unverifiable.\n"
             f"          Commit the changes, or pass --allow-dirty for a throwaway run\n"
             f"          (the corpus will be permanently marked HarnessDirty=1).")
+
+    # an allow-dev-tree corpus is equally unreproducible from a published commit —
+    # the override must mark the artifact, not just skip the refusal
+    if origin and DEV_REPO_MARKER in origin and allow_dev_tree:
+        print("  [provenance] dev-tree override in effect — corpus will be "
+              "permanently marked HarnessDirty=1 (not a corpus of record)", flush=True)
+        dirty = True
 
     with conn(corpus) as c:
         cur = c.cursor()
@@ -178,7 +187,7 @@ def ensure_projection_parameters(central_db, worker_db, projection_id, sweep_mod
                   g("RR", "ThirdReductionMonths"), g("RR", "ThirdReductionPct"),
                   g("RR", "FourthReductionMonths"), g("RR", "FourthReductionPct"),
                   g("RR", "FifthReductionMonths"), g("RR", "FifthReductionPct")))
-    except pyodbc.IntegrityError:
+    except corpus_conn.integrity_errors():
         pass  # sibling worker raced us and won - same end state, harmless
 
 
@@ -187,164 +196,183 @@ def extract_to_central(central_db, worker_db, rung, funds_tag, seed, run_id,
     """Copy result rows from worker.simulation.* into the corpus DB's v1.*
     tables tagged (Rung, Seed). Also computes v1.run_summary.
 
-    All INSERTs are wrapped in a single transaction (autocommit=False). If any
+    D1 (pg_corpus_harness_design.md): TWO-CONNECTION STREAMING — each old
+    cross-database ``INSERT INTO v1.X SELECT ?, ?, … FROM [worker].…``
+    becomes a worker-side SELECT (identical column list and WHERE) streamed
+    through Python into a batched INSERT on the corpus connection. One code
+    path for both engines (PG cannot cross-database query; SQL Server uses
+    the same form so the two never drift). Row content is identical by
+    construction — verified by the D1 parity gate.
+
+    All corpus INSERTs are wrapped in a single transaction (autocommit=False
+    on the CORPUS connection; worker reads are read-only autocommit). If any
     INSERT fails, the entire extract rolls back — so v1.run_summary remains
     absent and the driver's skip-already-done check correctly re-processes
     this (rung, seed) on the next sweep call. No partial state in v1.* tables.
     """
     rung_val = funds_tag
-    # Cross-DB inserts via 4-part naming: [db].[schema].[table].
-    # autocommit=False so the extract is atomic: all-or-nothing.
-    central_conn = pyodbc.connect(CONN_TMPL.format(central_db), timeout=30, autocommit=False)
+    central_conn = corpus_conn.connect(central_db, timeout=30, autocommit=False)
+    worker_conn = corpus_conn.connect(worker_db, timeout=30, autocommit=True)
     try:
         cur = central_conn.cursor()
+        wcur = worker_conn.cursor()
+
+        def stream(insert_sql, select_sql, select_params, batch=5000):
+            """Worker SELECT -> (Rung, Seed)-prefixed batched corpus INSERT."""
+            wcur.execute(select_sql, select_params)
+            while True:
+                rows = wcur.fetchmany(batch)
+                if not rows:
+                    break
+                cur.executemany(insert_sql,
+                                [(rung_val, seed) + tuple(r) for r in rows])
 
         # ----- v1.fund_ledger (all rows) ---------------------------------
-        cur.execute(f"""
-            INSERT INTO v1.fund_ledger
-              (Rung, Seed, EventID, LedgerDate,
-               CashDebit, CashCredit, CashBalance,
-               CSFDebit, CSFCredit, CSFBalance,
-               EIPDebit, EIPCredit, EIPBalance,
-               CashHoldCredit, CashHoldDebit, CashHoldBalance,
-               EscrowDebit, EscrowCredit, EscrowBalance)
-            SELECT ?, ?, EventID, LedgerDate,
-                   CashDebit, CashCredit, CashBalance,
-                   CSFDebit, CSFCredit, CSFBalance,
-                   EIPDebit, EIPCredit, EIPBalance,
-                   CashHoldCredit, CashHoldDebit, CashHoldBalance,
-                   EscrowDebit, EscrowCredit, EscrowBalance
-            FROM [{worker_db}].simulation.FundLedger
-            WHERE RunID = ?
-        """, (rung_val, seed, run_id))
+        stream(
+            """INSERT INTO v1.fund_ledger
+                 (Rung, Seed, EventID, LedgerDate,
+                  CashDebit, CashCredit, CashBalance,
+                  CSFDebit, CSFCredit, CSFBalance,
+                  EIPDebit, EIPCredit, EIPBalance,
+                  CashHoldCredit, CashHoldDebit, CashHoldBalance,
+                  EscrowDebit, EscrowCredit, EscrowBalance)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            """SELECT EventID, LedgerDate,
+                      CashDebit, CashCredit, CashBalance,
+                      CSFDebit, CSFCredit, CSFBalance,
+                      EIPDebit, EIPCredit, EIPBalance,
+                      CashHoldCredit, CashHoldDebit, CashHoldBalance,
+                      EscrowDebit, EscrowCredit, EscrowBalance
+               FROM simulation.FundLedger WHERE RunID = ?""",
+            (run_id,))
 
         # ----- v1.tcs_ledger ---------------------------------------------
-        cur.execute(f"""
-            INSERT INTO v1.tcs_ledger
-              (Rung, Seed, CreditTransactionID, HouseholdID, TransactionDate,
-               TransactionType, Amount, BalanceAfter,
-               RelatedCollectionID, RelatedLeaseID, CreatedEventID, Notes)
-            SELECT ?, ?, CreditTransactionID, HouseholdID, TransactionDate,
-                   TransactionType, Amount, BalanceAfter,
-                   RelatedCollectionID, RelatedLeaseID, CreatedEventID, Notes
-            FROM [{worker_db}].simulation.TenantCreditLedger
-            WHERE RunID = ?
-        """, (rung_val, seed, run_id))
+        stream(
+            """INSERT INTO v1.tcs_ledger
+                 (Rung, Seed, CreditTransactionID, HouseholdID, TransactionDate,
+                  TransactionType, Amount, BalanceAfter,
+                  RelatedCollectionID, RelatedLeaseID, CreatedEventID, Notes)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+            """SELECT CreditTransactionID, HouseholdID, TransactionDate,
+                      TransactionType, Amount, BalanceAfter,
+                      RelatedCollectionID, RelatedLeaseID, CreatedEventID, Notes
+               FROM simulation.TenantCreditLedger WHERE RunID = ?""",
+            (run_id,))
 
         # ----- v1.lease ---------------------------------------------------
-        cur.execute(f"""
-            INSERT INTO v1.lease
-              (Rung, Seed, LeaseID, HouseholdID, UnitID, VacancyID,
-               LeaseSignedDate, LeaseStartDate, LeaseEndDate, MonthlyRent,
-               LeaseStatus, TerminationDate, TerminationReason,
-               ConsecutiveMissedPayments, RenewalDecision,
-               CumulativeRentReductionPct, EffectiveMonthlyRent)
-            SELECT ?, ?, LeaseID, HouseholdID, UnitID, VacancyID,
-                   LeaseSignedDate, LeaseStartDate, LeaseEndDate, MonthlyRent,
-                   LeaseStatus, NULL, NULL,  -- Lease.TerminationDate/Reason DROPPED at V00054 (dead cols); truth in v1.lease_termination
-                   ConsecutiveMissedPayments, RenewalDecision,
-                   CumulativeRentReductionPct, EffectiveMonthlyRent
-            FROM [{worker_db}].simulation.Lease
-            WHERE RunID = ?
-        """, (rung_val, seed, run_id))
+        stream(
+            """INSERT INTO v1.lease
+                 (Rung, Seed, LeaseID, HouseholdID, UnitID, VacancyID,
+                  LeaseSignedDate, LeaseStartDate, LeaseEndDate, MonthlyRent,
+                  LeaseStatus, TerminationDate, TerminationReason,
+                  ConsecutiveMissedPayments, RenewalDecision,
+                  CumulativeRentReductionPct, EffectiveMonthlyRent)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            """SELECT LeaseID, HouseholdID, UnitID, VacancyID,
+                      LeaseSignedDate, LeaseStartDate, LeaseEndDate, MonthlyRent,
+                      LeaseStatus, NULL, NULL,  -- Lease.TerminationDate/Reason DROPPED at V00054 (dead cols); truth in v1.lease_termination
+                      ConsecutiveMissedPayments, RenewalDecision,
+                      CumulativeRentReductionPct, EffectiveMonthlyRent
+               FROM simulation.Lease WHERE RunID = ?""",
+            (run_id,))
 
         # ----- v1.lease_termination --------------------------------------
-        cur.execute(f"""
-            INSERT INTO v1.lease_termination
-              (Rung, Seed, LeaseID, TerminationType, TerminationDate, TerminationReason,
-               ArrearsAtExit, DepositWithheldAmount, DepositForfeited, EarlyBreakPenalty,
-               EvictionFiledDate, EvictionExecutionDate)
-            SELECT ?, ?, LeaseID, TerminationType, TerminationDate, TerminationReason,
-                   ArrearsAtExit, DepositWithheldAmount, DepositForfeited, EarlyBreakPenalty,
-                   EvictionFiledDate, EvictionExecutionDate
-            FROM [{worker_db}].simulation.LeaseTermination
-            WHERE RunID = ?
-        """, (rung_val, seed, run_id))
+        stream(
+            """INSERT INTO v1.lease_termination
+                 (Rung, Seed, LeaseID, TerminationType, TerminationDate, TerminationReason,
+                  ArrearsAtExit, DepositWithheldAmount, DepositForfeited, EarlyBreakPenalty,
+                  EvictionFiledDate, EvictionExecutionDate)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+            """SELECT LeaseID, TerminationType, TerminationDate, TerminationReason,
+                      ArrearsAtExit, DepositWithheldAmount, DepositForfeited, EarlyBreakPenalty,
+                      EvictionFiledDate, EvictionExecutionDate
+               FROM simulation.LeaseTermination WHERE RunID = ?""",
+            (run_id,))
 
         # ----- v1.lease_termination_ledger -------------------------------
-        cur.execute(f"""
-            INSERT INTO v1.lease_termination_ledger
-              (Rung, Seed, LedgerID, LeaseID, EventID, TxnDate, TxnType,
-               Description, Amount, Metadata)
-            SELECT ?, ?, LedgerID, LeaseID, EventID, TxnDate, TxnType,
-                   Description, Amount, Metadata
-            FROM [{worker_db}].simulation.LeaseTerminationLedger
-            WHERE RunID = ?
-        """, (rung_val, seed, run_id))
+        stream(
+            """INSERT INTO v1.lease_termination_ledger
+                 (Rung, Seed, LedgerID, LeaseID, EventID, TxnDate, TxnType,
+                  Description, Amount, Metadata)
+               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+            """SELECT LedgerID, LeaseID, EventID, TxnDate, TxnType,
+                      Description, Amount, Metadata
+               FROM simulation.LeaseTerminationLedger WHERE RunID = ?""",
+            (run_id,))
 
         # ----- v1.household ------------------------------------------------
-        cur.execute(f"""
-            INSERT INTO v1.household
-              (Rung, Seed, HouseholdID, HouseholdType, HouseholdIncomeBand,
-               AdultCount, ChildCount, CreatedDate, TCSRedemptionProbability, SigningMonthlyIncome)
-            SELECT ?, ?, HouseholdID, HouseholdType, HouseholdIncomeBand,
-                   AdultCount, ChildCount, CreatedDate, TCSRedemptionProbability, SigningMonthlyIncome
-            FROM [{worker_db}].simulation.Household
-            WHERE RunID = ?
-        """, (rung_val, seed, run_id))
+        stream(
+            """INSERT INTO v1.household
+                 (Rung, Seed, HouseholdID, HouseholdType, HouseholdIncomeBand,
+                  AdultCount, ChildCount, CreatedDate, TCSRedemptionProbability, SigningMonthlyIncome)
+               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+            """SELECT HouseholdID, HouseholdType, HouseholdIncomeBand,
+                      AdultCount, ChildCount, CreatedDate, TCSRedemptionProbability, SigningMonthlyIncome
+               FROM simulation.Household WHERE RunID = ?""",
+            (run_id,))
 
         # ----- v1.properties ----------------------------------------------
-        cur.execute(f"""
-            INSERT INTO v1.properties
-              (Rung, Seed, PropertyID, PropertyType, AcquisitionDate,
-               BasePrice, InflationAdjustedPrice, TotalUnits)
-            SELECT ?, ?, PropertyID, PROPERTYTYPE, AcquisitionDate,
-                   BasePrice, InflationAdjustedPrice, TotalUnits
-            FROM [{worker_db}].simulation.Properties
-            WHERE RunID = ?
-        """, (rung_val, seed, run_id))
+        stream(
+            """INSERT INTO v1.properties
+                 (Rung, Seed, PropertyID, PropertyType, AcquisitionDate,
+                  BasePrice, InflationAdjustedPrice, TotalUnits)
+               VALUES (?,?,?,?,?,?,?,?)""",
+            """SELECT PropertyID, PROPERTYTYPE, AcquisitionDate,
+                      BasePrice, InflationAdjustedPrice, TotalUnits
+               FROM simulation.Properties WHERE RunID = ?""",
+            (run_id,))
 
         # ----- v1.property_units ------------------------------------------
-        cur.execute(f"""
-            INSERT INTO v1.property_units
-              (Rung, Seed, UnitID, PropertyID, Beds, Baths, BaseRent, AdjustedRent)
-            SELECT ?, ?, UnitID, PropertyID, Beds, Baths, BaseRent, AdjustedRent
-            FROM [{worker_db}].simulation.PropertyUnits
-            WHERE RunID = ?
-        """, (rung_val, seed, run_id))
+        stream(
+            """INSERT INTO v1.property_units
+                 (Rung, Seed, UnitID, PropertyID, Beds, Baths, BaseRent, AdjustedRent)
+               VALUES (?,?,?,?,?,?,?,?)""",
+            """SELECT UnitID, PropertyID, Beds, Baths, BaseRent, AdjustedRent
+               FROM simulation.PropertyUnits WHERE RunID = ?""",
+            (run_id,))
 
         # ----- v1.inflation_schedule (per-month inflation path) ---------
         # Extracted so reports can reconstruct month-by-month market rent
         # (PropertyUnits.BaseRent × cumulative RentRate factor). Every
         # (Rung, Seed) may carry an identical path, but we extract
         # per-(Rung, Seed) for schema stability.
-        cur.execute(f"""
-            INSERT INTO v1.inflation_schedule
-              (Rung, Seed, MonthIndex, InflationDate,
-               GeneralRate, RentRate, OpExRate, PropertyRate,
-               ScenarioType, ScenarioPhase, Notes)
-            SELECT ?, ?, MonthIndex, InflationDate,
-                   GeneralRate, RentRate, OpExRate, PropertyRate,
-                   ScenarioType, ScenarioPhase, Notes
-            FROM [{worker_db}].simulation.InflationSchedule
-            WHERE RunID = ?
-        """, (rung_val, seed, run_id))
+        stream(
+            """INSERT INTO v1.inflation_schedule
+                 (Rung, Seed, MonthIndex, InflationDate,
+                  GeneralRate, RentRate, OpExRate, PropertyRate,
+                  ScenarioType, ScenarioPhase, Notes)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+            """SELECT MonthIndex, InflationDate,
+                      GeneralRate, RentRate, OpExRate, PropertyRate,
+                      ScenarioType, ScenarioPhase, Notes
+               FROM simulation.InflationSchedule WHERE RunID = ?""",
+            (run_id,))
 
         # ----- v1.event_summary (aggregated) -----------------------------
-        cur.execute(f"""
-            INSERT INTO v1.event_summary
-              (Rung, Seed, EventType, EntityType, ActionType, EventCount, TotalAmount)
-            SELECT ?, ?, EventType, EntityType, ActionType,
-                   COUNT(*), SUM(Amount)
-            FROM [{worker_db}].simulation.Event
-            WHERE RunID = ?
-            GROUP BY EventType, EntityType, ActionType
-        """, (rung_val, seed, run_id))
+        stream(
+            """INSERT INTO v1.event_summary
+                 (Rung, Seed, EventType, EntityType, ActionType, EventCount, TotalAmount)
+               VALUES (?,?,?,?,?,?,?)""",
+            """SELECT EventType, EntityType, ActionType,
+                      COUNT(*), SUM(Amount)
+               FROM simulation.Event WHERE RunID = ?
+               GROUP BY EventType, EntityType, ActionType""",
+            (run_id,))
 
         # ----- v1.compliance (per-work-item detail) ---------------------
         # Event summary aggregates cannot separate a compliance item's CASH cost
         # from its OCCUPANCY-DELAY cost (a unit is unrentable while work is open).
         # Lead abatement needs exactly that split, so each work item is recorded
         # individually rather than rolled up.
-        cur.execute(f"""
-            INSERT INTO v1.compliance
-              (Rung, Seed, WorkItemID, PropertyID, UnitID, WorkType, Status, Severity,
-               CostEstimate, ActualCost, DurationDays, StartDate, CompletedDate)
-            SELECT ?, ?, WorkItemID, PropertyID, UnitID, WorkType, Status, Severity,
-                   CostEstimate, ActualCost, DurationDays, StartDate, CompletedDate
-            FROM [{worker_db}].simulation.ComplianceWorkItem
-            WHERE RunID = ?
-        """, (rung_val, seed, run_id))
+        stream(
+            """INSERT INTO v1.compliance
+                 (Rung, Seed, WorkItemID, PropertyID, UnitID, WorkType, Status, Severity,
+                  CostEstimate, ActualCost, DurationDays, StartDate, CompletedDate)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            """SELECT WorkItemID, PropertyID, UnitID, WorkType, Status, Severity,
+                      CostEstimate, ActualCost, DurationDays, StartDate, CompletedDate
+               FROM simulation.ComplianceWorkItem WHERE RunID = ?""",
+            (run_id,))
 
         # ===== Reviewability extracts ====================================
 
@@ -354,94 +382,91 @@ def extract_to_central(central_db, worker_db, rung, funds_tag, seed, run_id,
         # row per purely-ON_TIME lease.
         #
         # Step 1: per-month rows for ever-distressed leases.
-        cur.execute(f"""
-            WITH ever_distressed AS (
-                SELECT DISTINCT LeaseID
-                FROM [{worker_db}].simulation.MonthlyPaymentStatus
-                WHERE RunID = ? AND (PaymentStatus <> 'ON_TIME' OR PaymentStatus IS NULL)
-            )
-            INSERT INTO v1.monthly_payment_status
-              (Rung, Seed, LeaseID, MonthIndex, PaymentStatus,
-               DaysLate, AmountOwed, AmountPaid, LateFeeAccrued, OnTimeMonthsCount)
-            -- Schema remap: the V0.3 MonthlyPaymentStatus schema replaced
-            -- MonthIndex/DaysLate/AmountOwed/AmountPaid/LateFeeAccrued with
-            -- BillingMonth/PaymentDueDate/ActualPaymentDate/AmountDue/
-            -- LateFeeAmount. Honest mapping: MonthIndex derived from the run
-            -- StartDate; DaysLate = actual-vs-due (NULL if never paid/on time);
-            -- AmountPaid not tracked per-month in V0.3 -> NULL.
-            SELECT ?, ?, mps.LeaseID,
-                   DATEDIFF(MONTH, r.StartDate, mps.BillingMonth) + 1,
-                   ISNULL(mps.PaymentStatus, 'UNRESOLVED'),
-                   CASE WHEN mps.ActualPaymentDate > mps.PaymentDueDate
-                        THEN DATEDIFF(DAY, mps.PaymentDueDate, mps.ActualPaymentDate) END,
-                   mps.AmountDue, NULL, mps.LateFeeAmount, NULL
-            FROM [{worker_db}].simulation.MonthlyPaymentStatus mps
-            CROSS JOIN (SELECT StartDate FROM [{worker_db}].simulation.Run WHERE RunID = ?) r
-            WHERE mps.RunID = ?
-              AND mps.LeaseID IN (SELECT LeaseID FROM ever_distressed)
-        """, (run_id, rung_val, seed, run_id, run_id))
+        stream(
+            """INSERT INTO v1.monthly_payment_status
+                 (Rung, Seed, LeaseID, MonthIndex, PaymentStatus,
+                  DaysLate, AmountOwed, AmountPaid, LateFeeAccrued, OnTimeMonthsCount)
+               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+            # Schema remap: the V0.3 MonthlyPaymentStatus schema replaced
+            # MonthIndex/DaysLate/AmountOwed/AmountPaid/LateFeeAccrued with
+            # BillingMonth/PaymentDueDate/ActualPaymentDate/AmountDue/
+            # LateFeeAmount. Honest mapping: MonthIndex derived from the run
+            # StartDate; DaysLate = actual-vs-due (NULL if never paid/on time);
+            # AmountPaid not tracked per-month in V0.3 -> NULL.
+            f"""WITH ever_distressed AS (
+                   SELECT DISTINCT LeaseID
+                   FROM simulation.MonthlyPaymentStatus
+                   WHERE RunID = ? AND (PaymentStatus <> 'ON_TIME' OR PaymentStatus IS NULL)
+               )
+               SELECT mps.LeaseID,
+                      {corpus_conn.month_diff_sql('r.StartDate', 'mps.BillingMonth')} + 1,
+                      COALESCE(mps.PaymentStatus, 'UNRESOLVED'),
+                      CASE WHEN mps.ActualPaymentDate > mps.PaymentDueDate
+                           THEN {corpus_conn.day_diff_sql('mps.PaymentDueDate', 'mps.ActualPaymentDate')} END,
+                      mps.AmountDue, NULL, mps.LateFeeAmount, NULL
+               FROM simulation.MonthlyPaymentStatus mps
+               CROSS JOIN (SELECT StartDate FROM simulation.Run WHERE RunID = ?) r
+               WHERE mps.RunID = ?
+                 AND mps.LeaseID IN (SELECT LeaseID FROM ever_distressed)""",
+            (run_id, run_id, run_id))
 
         # Step 2: sentinel summary row for purely-ON_TIME leases.
         # MonthIndex = -1 sentinel + PaymentStatus = 'ALL_ON_TIME' + OnTimeMonthsCount.
-        cur.execute(f"""
-            WITH ever_distressed AS (
-                SELECT DISTINCT LeaseID
-                FROM [{worker_db}].simulation.MonthlyPaymentStatus
-                WHERE RunID = ? AND (PaymentStatus <> 'ON_TIME' OR PaymentStatus IS NULL)
-            ),
-            on_time_only AS (
-                SELECT mps.LeaseID, COUNT(*) AS OnTimeMonthsCount
-                FROM [{worker_db}].simulation.MonthlyPaymentStatus mps
-                WHERE mps.RunID = ?
-                  AND mps.LeaseID NOT IN (SELECT LeaseID FROM ever_distressed)
-                GROUP BY mps.LeaseID
-            )
-            INSERT INTO v1.monthly_payment_status
-              (Rung, Seed, LeaseID, MonthIndex, PaymentStatus,
-               DaysLate, AmountOwed, AmountPaid, LateFeeAccrued, OnTimeMonthsCount)
-            SELECT ?, ?, ot.LeaseID, -1, 'ALL_ON_TIME',
-                   NULL, NULL, NULL, NULL, ot.OnTimeMonthsCount
-            FROM on_time_only ot
-        """, (run_id, run_id, rung_val, seed))
+        stream(
+            """INSERT INTO v1.monthly_payment_status
+                 (Rung, Seed, LeaseID, MonthIndex, PaymentStatus,
+                  DaysLate, AmountOwed, AmountPaid, LateFeeAccrued, OnTimeMonthsCount)
+               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+            """WITH ever_distressed AS (
+                   SELECT DISTINCT LeaseID
+                   FROM simulation.MonthlyPaymentStatus
+                   WHERE RunID = ? AND (PaymentStatus <> 'ON_TIME' OR PaymentStatus IS NULL)
+               ),
+               on_time_only AS (
+                   SELECT mps.LeaseID, COUNT(*) AS OnTimeMonthsCount
+                   FROM simulation.MonthlyPaymentStatus mps
+                   WHERE mps.RunID = ?
+                     AND mps.LeaseID NOT IN (SELECT LeaseID FROM ever_distressed)
+                   GROUP BY mps.LeaseID
+               )
+               SELECT ot.LeaseID, -1, 'ALL_ON_TIME',
+                      NULL, NULL, NULL, NULL, ot.OnTimeMonthsCount
+               FROM on_time_only ot""",
+            (run_id, run_id))
 
         # ----- v1.employees -----------------------------------------------
         # Verbatim per-employee with denormalized RoleName.
-        cur.execute(f"""
-            INSERT INTO v1.employees
-              (Rung, Seed, EmployeeID, RoleID, RoleName,
-               HiredDate, TerminatedDate, BaseSalary, BenefitsCost, IsActive)
-            SELECT ?, ?, e.EmployeeID, e.RoleID, er.Role,
-                   e.HiredDate, e.TerminatedDate, e.BaseSalary, e.BenefitsCost, e.IsActive
-            FROM [{worker_db}].simulation.Employees e
-            INNER JOIN [{worker_db}].reference.EmployeeRole er ON er.RoleID = e.RoleID
-            WHERE e.RunID = ?
-        """, (rung_val, seed, run_id))
+        stream(
+            """INSERT INTO v1.employees
+                 (Rung, Seed, EmployeeID, RoleID, RoleName,
+                  HiredDate, TerminatedDate, BaseSalary, BenefitsCost, IsActive)
+               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+            """SELECT e.EmployeeID, e.RoleID, er.Role,
+                      e.HiredDate, e.TerminatedDate, e.BaseSalary, e.BenefitsCost, e.IsActive
+               FROM simulation.Employees e
+               INNER JOIN reference.EmployeeRole er ON er.RoleID = e.RoleID
+               WHERE e.RunID = ?""",
+            (run_id,))
 
         # ----- v1.payroll -------------------------------------------------
         # Verbatim per-payroll-event.
-        cur.execute(f"""
-            INSERT INTO v1.payroll
-              (Rung, Seed, PayrollID, EmployeeID, PayrollDate,
-               GrossPay, BenefitsCost, TotalCost)
-            SELECT ?, ?, PayrollID, EmployeeID, PayrollDate,
-                   GrossPay, BenefitsCost, TotalCost
-            FROM [{worker_db}].simulation.Payroll
-            WHERE RunID = ?
-        """, (rung_val, seed, run_id))
+        stream(
+            """INSERT INTO v1.payroll
+                 (Rung, Seed, PayrollID, EmployeeID, PayrollDate,
+                  GrossPay, BenefitsCost, TotalCost)
+               VALUES (?,?,?,?,?,?,?,?)""",
+            """SELECT PayrollID, EmployeeID, PayrollDate,
+                      GrossPay, BenefitsCost, TotalCost
+               FROM simulation.Payroll WHERE RunID = ?""",
+            (run_id,))
 
         # ----- v1.run_summary (one row per sim) --------------------------
-        # Compute summary stats with subqueries against the worker DB.
-        cur.execute(f"""
-            INSERT INTO v1.run_summary
-              (Rung, Seed, ProjectionID, EngineVersion, EphemeralDBName,
-               StartedAtUtc, CompletedAtUtc,
-               FinalCash, FinalCSF, FinalEIP, Survived,
-               LeaseCount, PropertyCount, UnitCount, HouseholdCount, PersonCount,
-               EvictionCount, LNRCount, EarlyBreakCount, VolExitCount, RenewalCount,
-               TCSAccruedTotal, TCSRedeemedTotal, TCSForfeitedTotal)
+        # Computed WORKER-SIDE (same expressions as the old cross-DB form,
+        # minus the pass-through scalars, which Python supplies); inserted
+        # centrally. Must remain the LAST insert — it is the skip-already-done
+        # marker, so its presence must imply the whole extract committed.
+        summary_row = wcur.execute(f"""
             SELECT
-                ?, ?, ?, ?, ?,
-                ?, ?,
                 final_balances.CashBalance,
                 final_balances.CSFBalance,
                 final_balances.EIPBalance,
@@ -451,43 +476,53 @@ def extract_to_central(central_db, worker_db, rung, funds_tag, seed, run_id,
                 -- balance-only scoring would mislabel deaths as survivors
                 -- (observed on the low-funding extension rungs).
                 CASE WHEN final_balances.CashBalance + final_balances.CSFBalance > 0
-                          AND (SELECT DATEDIFF(MONTH, MIN(LedgerDate), MAX(LedgerDate))
-                               FROM [{worker_db}].simulation.FundLedger WHERE RunID = ?) >= ?
+                          AND (SELECT {corpus_conn.month_diff_sql('MIN(LedgerDate)', 'MAX(LedgerDate)')}
+                               FROM simulation.FundLedger WHERE RunID = ?) >= ?
                      THEN 1 ELSE 0 END,
-                (SELECT COUNT(*) FROM [{worker_db}].simulation.Lease WHERE RunID = ?),
-                (SELECT COUNT(*) FROM [{worker_db}].simulation.Properties WHERE RunID = ?),
-                (SELECT COUNT(*) FROM [{worker_db}].simulation.PropertyUnits WHERE RunID = ?),
-                (SELECT COUNT(*) FROM [{worker_db}].simulation.Household WHERE RunID = ?),
-                (SELECT ISNULL(SUM(AdultCount + ChildCount), 0)
-                   FROM [{worker_db}].simulation.Household WHERE RunID = ?),
-                (SELECT COUNT(*) FROM [{worker_db}].simulation.LeaseTerminationLedger
+                (SELECT COUNT(*) FROM simulation.Lease WHERE RunID = ?),
+                (SELECT COUNT(*) FROM simulation.Properties WHERE RunID = ?),
+                (SELECT COUNT(*) FROM simulation.PropertyUnits WHERE RunID = ?),
+                (SELECT COUNT(*) FROM simulation.Household WHERE RunID = ?),
+                (SELECT COALESCE(SUM(AdultCount + ChildCount), 0)
+                   FROM simulation.Household WHERE RunID = ?),
+                (SELECT COUNT(*) FROM simulation.LeaseTerminationLedger
                    WHERE RunID = ? AND TxnType = 'EVICTION_EXECUTED'),
-                (SELECT COUNT(*) FROM [{worker_db}].simulation.Lease
+                (SELECT COUNT(*) FROM simulation.Lease
                    WHERE RunID = ? AND RenewalDecision = 'LANDLORD_NONRENEWAL'),
-                (SELECT COUNT(*) FROM [{worker_db}].simulation.LeaseTermination
+                (SELECT COUNT(*) FROM simulation.LeaseTermination
                    WHERE RunID = ? AND TerminationReason LIKE '%early break%'),
-                (SELECT COUNT(*) FROM [{worker_db}].simulation.LeaseTermination
+                (SELECT COUNT(*) FROM simulation.LeaseTermination
                    WHERE RunID = ? AND TerminationReason LIKE '%voluntary exit at lease end%'),
-                (SELECT COUNT(*) FROM [{worker_db}].simulation.LeaseTerminationLedger
+                (SELECT COUNT(*) FROM simulation.LeaseTerminationLedger
                    WHERE RunID = ? AND TxnType = 'LEASE_RENEWED'),
-                (SELECT ISNULL(SUM(Amount), 0) FROM [{worker_db}].simulation.TenantCreditLedger
+                (SELECT COALESCE(SUM(Amount), 0) FROM simulation.TenantCreditLedger
                    WHERE RunID = ? AND TransactionType = 'ACCRUAL'),
-                (SELECT ISNULL(SUM(-Amount), 0) FROM [{worker_db}].simulation.TenantCreditLedger
+                (SELECT COALESCE(SUM(-Amount), 0) FROM simulation.TenantCreditLedger
                    WHERE RunID = ? AND TransactionType = 'REDEMPTION'),
-                (SELECT ISNULL(SUM(-Amount), 0) FROM [{worker_db}].simulation.TenantCreditLedger
+                (SELECT COALESCE(SUM(-Amount), 0) FROM simulation.TenantCreditLedger
                    WHERE RunID = ? AND TransactionType = 'FORFEITURE')
             FROM (
-                SELECT TOP 1 CashBalance, CSFBalance, EIPBalance
-                FROM [{worker_db}].simulation.FundLedger
+                SELECT CashBalance, CSFBalance, EIPBalance
+                FROM simulation.FundLedger
                 WHERE RunID = ?
                 ORDER BY LedgerDate DESC, EventID DESC
+                OFFSET 0 ROWS FETCH FIRST 1 ROWS ONLY
             ) AS final_balances
-        """, (rung_val, seed, rung, ENGINE_VERSION, worker_db,
-              started_utc, completed_utc,
-              run_id, months,
+        """, (run_id, months,
               run_id, run_id, run_id, run_id, run_id,
               run_id, run_id, run_id, run_id, run_id,
-              run_id, run_id, run_id, run_id))
+              run_id, run_id, run_id, run_id)).fetchone()
+        cur.execute(
+            """INSERT INTO v1.run_summary
+                 (Rung, Seed, ProjectionID, EngineVersion, EphemeralDBName,
+                  StartedAtUtc, CompletedAtUtc,
+                  FinalCash, FinalCSF, FinalEIP, Survived,
+                  LeaseCount, PropertyCount, UnitCount, HouseholdCount, PersonCount,
+                  EvictionCount, LNRCount, EarlyBreakCount, VolExitCount, RenewalCount,
+                  TCSAccruedTotal, TCSRedeemedTotal, TCSForfeitedTotal)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (rung_val, seed, rung, ENGINE_VERSION, worker_db,
+             started_utc, completed_utc) + tuple(summary_row))
 
         # All INSERTs succeeded — commit the entire extract atomically.
         central_conn.commit()
@@ -498,6 +533,7 @@ def extract_to_central(central_db, worker_db, rung, funds_tag, seed, run_id,
         raise
     finally:
         central_conn.close()
+        worker_conn.close()
 
 
 # ---------------------------------------------------------------------------
@@ -613,6 +649,8 @@ def main():
                    help="max system CPU%% to enter blast (with --throttle)")
     p.add_argument("--drip-gap", type=float, default=20.0,
                    help="inter-run gap while dripping (with --throttle)")
+    p.add_argument("--pg", action="store_true",
+                   help="corpus + workers on PostgreSQL (LB_CORPUS_BACKEND override)")
     p.add_argument("--checks", default=None,
                    help="comma-separated corpus checks to run during the sweep, or "
                         "'all' / 'none'. Overrides corpus_checks/checks.json. "
@@ -621,6 +659,8 @@ def main():
                    help="run enabled checks after every N completed runs "
                         "(default: the 'every' value in checks.json, else 250)")
     args = p.parse_args()
+    if args.pg:
+        corpus_conn.set_backend("psycopg")
 
     init_worker_pool(args.workers)
     central_db = args.corpus

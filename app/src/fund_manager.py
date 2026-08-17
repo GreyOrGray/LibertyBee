@@ -185,10 +185,11 @@ class FundManager:
             cursor = conn.cursor()
 
             cursor.execute("""
-                SELECT TOP 1 CashBalance, CSFBalance, EIPBalance, EscrowBalance
+                SELECT CashBalance, CSFBalance, EIPBalance, EscrowBalance
                 FROM simulation.FundLedger
                 WHERE RunID = ? AND LedgerDate <= ?
                 ORDER BY LedgerDate DESC, EventID DESC
+                OFFSET 0 ROWS FETCH FIRST 1 ROWS ONLY
             """, (run_id, as_of_date))
 
             result = cursor.fetchone()
@@ -776,10 +777,11 @@ class FundManager:
 
             # Get most recent balances (any date <= current date)
             cursor.execute("""
-                SELECT TOP 1 CashBalance, CSFBalance, EIPBalance, CashHoldBalance, EscrowBalance
+                SELECT CashBalance, CSFBalance, EIPBalance, CashHoldBalance, EscrowBalance
                 FROM simulation.FundLedger
                 WHERE RunID = ? AND LedgerDate <= ?
                 ORDER BY LedgerDate DESC, EventID DESC
+                OFFSET 0 ROWS FETCH FIRST 1 ROWS ONLY
             """, (run_id, ledger_date))
 
             prev_result = cursor.fetchone()

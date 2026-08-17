@@ -962,7 +962,7 @@ class LeaseRenewalManager:
             Next available LedgerID
         """
         query = """
-            SELECT ISNULL(MAX(LedgerID), 0) + 1
+            SELECT COALESCE(MAX(LedgerID), 0) + 1
             FROM simulation.LeaseTerminationLedger
             WHERE RunID = ?
         """

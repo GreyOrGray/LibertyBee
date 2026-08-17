@@ -137,6 +137,7 @@ class EmployeeManager:
                   AND e.HiredDate <= ?
                   AND (e.TerminatedDate IS NULL OR e.TerminatedDate > ?)
                   AND e.IsActive = 1
+                ORDER BY e.EmployeeID  -- deterministic processing order (KD-233)
             """, (run_id, as_of_date, as_of_date))
 
             employees = []
@@ -289,7 +290,7 @@ class EmployeeManager:
             # Get next employee ID for this run (run-specific numbering).
             # Fetched before salary assignment so it can seed the per-hire RNG.
             cursor.execute("""
-                SELECT ISNULL(MAX(EmployeeID), 0) + 1
+                SELECT COALESCE(MAX(EmployeeID), 0) + 1
                 FROM simulation.Employees
                 WHERE RunID = ?
             """, (run_id,))
@@ -412,7 +413,7 @@ class EmployeeManager:
 
                 # Get next payroll ID for this run (run-specific numbering)
                 cursor.execute("""
-                    SELECT ISNULL(MAX(PayrollID), 0) + 1
+                    SELECT COALESCE(MAX(PayrollID), 0) + 1
                     FROM simulation.Payroll
                     WHERE RunID = ?
                 """, (run_id,))

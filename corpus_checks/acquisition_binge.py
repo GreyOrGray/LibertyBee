@@ -17,11 +17,13 @@ DESCRIPTION = "fast deaths off the known KD-042 over-acquisition signature (HALT
 
 from signature_constants import FAST_MONTHS, SIG_PROPERTIES, SIG_EVICTIONS  # single source (see that module's dual-disposition note)
 
+import corpus_conn  # noqa: E402  (repo root is on sys.path when checks load)
+
 
 def check(cursor, ctx):
     rows = cursor.execute(f"""
         SELECT rs.Rung, rs.Seed, rs.PropertyCount, rs.EvictionCount,
-               (SELECT DATEDIFF(MONTH, MIN(fl.LedgerDate), MAX(fl.LedgerDate))
+               (SELECT {corpus_conn.month_diff_sql('MIN(fl.LedgerDate)', 'MAX(fl.LedgerDate)')}
                 FROM v1.fund_ledger fl
                 WHERE fl.Rung = rs.Rung AND fl.Seed = rs.Seed) AS Span
         FROM v1.run_summary rs

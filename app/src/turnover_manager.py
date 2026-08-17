@@ -315,7 +315,7 @@ class TurnoverManager:
         for work_order_id, lease_id, unit_id, work_item_type in completed_rows:
             self.db.execute_non_query(
                 "UPDATE simulation.TurnoverWorkOrder "
-                "SET Status=?, ActualEndDate=?, UpdatedAt=GETDATE() "
+                "SET Status=?, ActualEndDate=?, UpdatedAt=CURRENT_TIMESTAMP "
                 "WHERE RunID=? AND TurnoverWorkOrderID=?",
                 (WorkOrderStatus.COMPLETED, current_date, self.run_id, work_order_id),
             )
@@ -378,7 +378,7 @@ class TurnoverManager:
         for work_order_id, lease_id, unit_id, work_item_type in ready_to_start:
             self.db.execute_non_query(
                 "UPDATE simulation.TurnoverWorkOrder "
-                "SET Status=?, ActualStartDate=?, UpdatedAt=GETDATE() "
+                "SET Status=?, ActualStartDate=?, UpdatedAt=CURRENT_TIMESTAMP "
                 "WHERE RunID=? AND TurnoverWorkOrderID=?",
                 (WorkOrderStatus.IN_PROGRESS, current_date, self.run_id, work_order_id),
             )
@@ -480,8 +480,9 @@ class TurnoverManager:
 
     def _get_property_id_for_unit(self, unit_id: int) -> Optional[int]:
         rows = self.db.execute_query(
-            "SELECT TOP 1 PropertyID FROM simulation.PropertyUnits "
-            "WHERE RunID=? AND UnitID=?",
+            "SELECT PropertyID FROM simulation.PropertyUnits "
+            "WHERE RunID=? AND UnitID=? "
+            "ORDER BY PropertyID OFFSET 0 ROWS FETCH FIRST 1 ROWS ONLY",
             (self.run_id, unit_id),
         )
         return rows[0][0] if rows else None
@@ -515,7 +516,7 @@ class TurnoverManager:
         """
         # Allocate next ID
         result = self.db.execute_query(
-            "SELECT ISNULL(MAX(TurnoverWorkOrderID), 0) + 1 "
+            "SELECT COALESCE(MAX(TurnoverWorkOrderID), 0) + 1 "
             "FROM simulation.TurnoverWorkOrder WHERE RunID=?",
             (self.run_id,),
         )
@@ -572,7 +573,7 @@ class TurnoverManager:
         if event_id is not None:
             self.db.execute_non_query(
                 "UPDATE simulation.TurnoverWorkOrder "
-                "SET EventID=?, UpdatedAt=GETDATE() "
+                "SET EventID=?, UpdatedAt=CURRENT_TIMESTAMP "
                 "WHERE RunID=? AND TurnoverWorkOrderID=?",
                 (event_id, self.run_id, work_order_id),
             )

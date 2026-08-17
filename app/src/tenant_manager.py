@@ -217,6 +217,9 @@ class TenantManager:
         # regime schedule). Replaces the retired static reference.IncomeBand
         # draw — the frozen-income artifact.
         self.income_model = IncomeModel(self.db, self.registry, self.run_id)
+        # unit -> town map (V00077), loaded once lazily — reference data,
+        # static per run. Feeds the applicant pool's town-scoped income median.
+        self._town_by_unit = None
 
         # vacancy-duration distribution params (PROP.*, global)
         # — were the hardcoded expovariate(1/30) mean capped at 120 days in
@@ -252,16 +255,32 @@ class TenantManager:
         # market). Years draw lazily in chronological order => seed-stable.
         self.vacancy_rate_base = self.registry.get_float('PROP', 'VacancyRateBase')
         self.vacancy_fluctuation_band = self.registry.get_float('PROP', 'VacancyFluctuationBand')
-        if not (0 < self.vacancy_rate_base and
-                0 <= self.vacancy_fluctuation_band < self.vacancy_rate_base):
-            raise ValueError(
-                f"PROP.VacancyFluctuationBand ({self.vacancy_fluctuation_band}) must be "
-                f">= 0 and < PROP.VacancyRateBase ({self.vacancy_rate_base}) > 0 — a "
-                "band reaching the base would make the yearly rate (and the scaled "
-                "fill-duration mean) non-positive."
-            )
+        # Town-scoped vacancy LEVEL (V00077): per-town base where overridden,
+        # else region-wide. The yearly FLUCTUATION stays ONE region-wide draw
+        # per year (stream 30920 unchanged) and the regime VacancyDelta stays
+        # regional — town scopes the level those ride on, so a single-town /
+        # no-override region reproduces exactly.
+        _towns = [r[0] for r in self.db.execute_query(
+            "SELECT DISTINCT Town FROM reference.Properties WHERE Town IS NOT NULL")]
+        self.vacancy_rate_base_by_town = {
+            t: self.registry.get_float_for_town('PROP', 'VacancyRateBase', t)
+            for t in _towns}
+        # The band constraint must hold for EVERY town's base, not just the
+        # region-wide one — an overridden town with base <= band would make its
+        # yearly rate (and scaled fill-duration mean) non-positive.
+        for _t, _base in [(None, self.vacancy_rate_base)] + \
+                sorted(self.vacancy_rate_base_by_town.items()):
+            if not (0 < _base and
+                    0 <= self.vacancy_fluctuation_band < _base):
+                raise ValueError(
+                    f"PROP.VacancyFluctuationBand ({self.vacancy_fluctuation_band}) must be "
+                    f">= 0 and < PROP.VacancyRateBase ({_base}) > 0 "
+                    f"({'region-wide' if _t is None else f'town override: {_t}'}) — a "
+                    "band reaching the base would make the yearly rate (and the scaled "
+                    "fill-duration mean) non-positive."
+                )
         self.vacancy_fluct_rng = random.Random(run_seed + 30920)
-        self._vacancy_rate_by_year: dict = {}
+        self._vacancy_fluct_by_year: dict = {}
         # regime vacancy pressure — InflationSchedule.VacancyDelta (a
         # LEVEL delta on the yearly rate while a regime is active; downturns
         # +3-4pt, surges slightly negative). Lazy-loaded once (the schedule is
@@ -386,7 +405,9 @@ class TenantManager:
         # Pre-fix, the seed lacked a date component, so each daily retry
         # regenerated the identical slate and infinite-rejected the same
         # applicants.
-        candidate_slate = self._generate_candidate_slate(vacancy_record.vacancy_id, current_date)
+        candidate_slate = self._generate_candidate_slate(
+            vacancy_record.vacancy_id, current_date,
+            town=self._town_for_unit(vacancy_record.unit_id))
 
         # the qualification rent IS the signing rent —
         # computed ONCE per fill attempt at current_date (= the signing date;
@@ -493,12 +514,14 @@ class TenantManager:
         # (downturn +3-4pt pushes fill times out; the [1, max_days] clamp
         # bounds the scaling; the 0.0001 floor is a numerical guard on the
         # expovariate mean, not a market knob).
+        town = self._town_for_unit(unit_id)  # V00077: the unit's town's vacancy level
         effective_rate = max(
             0.0001,
-            self._vacancy_rate_for_year(current_date.year)
+            self._vacancy_rate_for_year(current_date.year, town)
             + self._current_vacancy_delta(current_date),
         )
-        effective_mean_days = self.vacancy_mean_days * (effective_rate / self.vacancy_rate_base)
+        effective_mean_days = self.vacancy_mean_days * \
+            (effective_rate / self._vacancy_base_for_town(town))
         vacancy_days = max(1, min(int(self.vacancy_rng.expovariate(1.0 / effective_mean_days)), self.vacancy_max_days))
         target_fill_date = current_date + timedelta(days=vacancy_days)
 
@@ -531,16 +554,22 @@ class TenantManager:
 
         return vacancy_id
 
-    def _vacancy_rate_for_year(self, year: int) -> float:
-        """this calendar year's vacancy rate — Base + U(-band, +band),
-        drawn once per year from the dedicated 30920 stream and cached. The
-        sim advances chronologically, so years are first seen in order and
-        the draw sequence is seed-reproducible (invariant #8)."""
-        if year not in self._vacancy_rate_by_year:
-            self._vacancy_rate_by_year[year] = self.vacancy_rate_base + \
+    def _vacancy_base_for_town(self, town) -> float:
+        """The unit's town's vacancy base (V00077), else region-wide."""
+        return self.vacancy_rate_base_by_town.get(town, self.vacancy_rate_base)
+
+    def _vacancy_rate_for_year(self, year: int, town=None) -> float:
+        """this calendar year's vacancy rate — town Base + U(-band, +band).
+        The FLUCTUATION is drawn once per year from the dedicated 30920 stream
+        and cached (one draw per year regardless of towns — the stream is
+        town-independent). The sim advances chronologically, so years are
+        first seen in order and the draw sequence is seed-reproducible
+        (invariant #8)."""
+        if year not in self._vacancy_fluct_by_year:
+            self._vacancy_fluct_by_year[year] = \
                 self.vacancy_fluct_rng.uniform(-self.vacancy_fluctuation_band,
                                                self.vacancy_fluctuation_band)
-        return self._vacancy_rate_by_year[year]
+        return self._vacancy_base_for_town(town) + self._vacancy_fluct_by_year[year]
 
     def _current_vacancy_delta(self, current_date: date) -> float:
         """the active regime's vacancy LEVEL delta — the latest
@@ -615,7 +644,16 @@ class TenantManager:
         result = self.db.execute_scalar(query, (self.run_id,))
         return result if result is not None else 0
 
-    def _generate_candidate_slate(self, vacancy_id: int, current_date: date) -> List[ApplicantCandidate]:
+    def _town_for_unit(self, unit_id: int):
+        """The unit's town (or None) — one query per run, then a dict hit."""
+        if self._town_by_unit is None:
+            self._town_by_unit = {u: t for u, t in self.db.execute_query(
+                "SELECT u.UnitID, p.Town FROM reference.Units u "
+                "JOIN reference.Properties p ON p.PropertyID = u.PropertyID")}
+        return self._town_by_unit.get(unit_id)
+
+    def _generate_candidate_slate(self, vacancy_id: int, current_date: date,
+                                  town=None) -> List[ApplicantCandidate]:
         """
         Generate candidate slate for vacancy using deterministic RNG
 
@@ -640,12 +678,13 @@ class TenantManager:
         candidates = []
 
         for applicant_index in range(slate_size):
-            candidate = self._generate_applicant(vacancy_id, applicant_index, current_date)
+            candidate = self._generate_applicant(vacancy_id, applicant_index, current_date, town)
             candidates.append(candidate)
 
         return candidates
 
-    def _generate_applicant(self, vacancy_id: int, applicant_index: int, current_date: date) -> ApplicantCandidate:
+    def _generate_applicant(self, vacancy_id: int, applicant_index: int, current_date: date,
+                            town=None) -> ApplicantCandidate:
         """
         Generate single applicant with deterministic attributes
 
@@ -708,6 +747,7 @@ class TenantManager:
             adult_count=composition['adults'],
             rng=applicant_rng,
             target_date=current_date,
+            town=town,  # V00077: the unit's town scopes the median LEVEL only
         )
 
         return ApplicantCandidate(

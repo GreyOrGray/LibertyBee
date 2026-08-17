@@ -83,6 +83,11 @@ class ActionType(Enum):
 class EventLogger:
     """Centralized event logging to simulation.Event table"""
 
+    # run_id -> next EventID. Class-level: two instances share a run's
+    # sequence (see log_event). One process = one live run; the dict also
+    # tolerates sequential runs in one process (master_test_runner).
+    _next_event_ids: dict = {}
+
     def __init__(self, db_manager: DatabaseManager):
         self.db = db_manager
         self.logger = logging.getLogger(__name__)
@@ -136,11 +141,19 @@ class EventLogger:
             if month_index is None:
                 month_index = self.calculate_month_index(effective_date)
 
-            # Get next EventID for this specific RunID (per-run EventID)
-            next_event_id = self.db.execute_scalar(
-                "SELECT ISNULL(MAX(EventID), 0) + 1 FROM simulation.Event WHERE RunID = ?",
-                (self.current_run_id,)
-            )
+            # Next EventID for this RunID — an in-memory counter (step 0.5).
+            # Was a MAX(EventID)+1 round-trip PER EVENT (33.9k/run, measured).
+            # Seeded from the DB once per run; class-level because TWO
+            # EventLogger instances share a run (simulation + inflation_engine)
+            # and must draw from one sequence. Single writer per run
+            # (single-threaded per process — asserted at the DB layer), so the
+            # sequence is identical to the old per-call MAX+1 by construction.
+            next_event_id = EventLogger._next_event_ids.get(self.current_run_id)
+            if next_event_id is None:
+                next_event_id = self.db.execute_scalar(
+                    "SELECT COALESCE(MAX(EventID), 0) + 1 FROM simulation.Event WHERE RunID = ?",
+                    (self.current_run_id,)
+                )
 
             query = """
             INSERT INTO simulation.Event (
@@ -169,6 +182,9 @@ class EventLogger:
             affected_rows = self.db.execute_non_query(query, params)
 
             if affected_rows > 0:
+                # advance the counter only on a SUCCESSFUL insert — a failed
+                # insert leaves it unchanged, exactly like the old MAX+1 re-read
+                EventLogger._next_event_ids[self.current_run_id] = next_event_id + 1
                 self.logger.debug(f"Logged event {next_event_id}: {event_type.value} - {metadata}")
                 return next_event_id
             else:

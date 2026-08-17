@@ -128,7 +128,7 @@ class RunManager:
                 )
 
             # Get next RunID manually (RunID is no longer IDENTITY)
-            next_run_id_query = "SELECT ISNULL(MAX(RunID), 0) + 1 FROM simulation.Run"
+            next_run_id_query = "SELECT COALESCE(MAX(RunID), 0) + 1 FROM simulation.Run"
             next_run_id = self.db.execute_scalar(next_run_id_query)
 
             if self.event_logger:

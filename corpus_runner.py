@@ -54,12 +54,13 @@ import pyodbc
 # live_store.ENGINE_VERSION mirrors this for the farm's stamp; keep them in step.
 ENGINE_VERSION = "0.6.0"
 
-# Connection template. Server and driver are overridable via the environment so
-# the tool is portable across machines. CONN_TMPL keeps a single `{}` slot for
-# the database name, filled per-connection via CONN_TMPL.format(db_name).
-SQL_SERVER = os.environ.get("LB_SQL_SERVER", "localhost")
-SQL_DRIVER = os.environ.get("LB_SQL_DRIVER", "ODBC Driver 17 for SQL Server")
-CONN_TMPL = "DRIVER={{" + SQL_DRIVER + "}};SERVER=" + SQL_SERVER + ";Trusted_Connection=yes;DATABASE={}"
+# Connections come from the shared backend-selected layer (D3,
+# pg_corpus_harness_design.md): corpus_conn.connect() serves pyodbc or
+# qmark-wrapped psycopg per LB_CORPUS_BACKEND / --pg. The names below are
+# re-exported so existing `from corpus_runner import CONN_TMPL, conn`
+# importers keep working.
+from corpus_conn import (CONN_TMPL, SQL_SERVER, SQL_DRIVER,  # noqa: F401
+                         connect as _cc_connect)
 
 # Run-state (target corpus DB, the rung->funds map, scenario, inflation leg) is NOT
 # module-global: it lives on the Store (see CorpusStore), so the generic runner
@@ -94,8 +95,15 @@ import queue as _queue
 WORKER_NAME_POOL = _queue.Queue()
 
 def init_worker_pool(n):
+    import corpus_conn as _cc
+    # PG slots are 'pgcw', not a lowercase 'cw': Windows' case-insensitive
+    # filesystem makes environments/libertybee_test_cw00 the SAME folder as
+    # environments/LibertyBee_Test_cw00, so case-only distinction let a PG
+    # worker config shadow the SQL Server one (caught by verify_worker_config
+    # fail-loud on the first dual-engine day).
+    prefix = "libertybee_test_pgcw" if _cc.is_pg() else "LibertyBee_Test_cw"
     for i in range(n):
-        WORKER_NAME_POOL.put(f"LibertyBee_Test_cw{i:02d}")
+        WORKER_NAME_POOL.put(f"{prefix}{i:02d}")
 
 
 # ---------------------------------------------------------------------------
@@ -103,7 +111,7 @@ def init_worker_pool(n):
 # ---------------------------------------------------------------------------
 
 def conn(db_name):
-    return pyodbc.connect(CONN_TMPL.format(db_name), timeout=30, autocommit=True)
+    return _cc_connect(db_name, timeout=30, autocommit=True)
 
 
 # A corpus of record is generated from a PROMOTED checkout, never from the
@@ -141,6 +149,11 @@ def load_checks(names=None):
             return []
     if names == ["all"]:
         names = available
+
+    # checks may import siblings (e.g. signature_constants) — the file-location
+    # loader gives them no package context, so the checks dir must be on sys.path
+    if CHECKS_DIR not in sys.path:
+        sys.path.insert(0, CHECKS_DIR)
 
     loaded = []
     for name in names:
@@ -246,9 +259,15 @@ def build_worker_db():
     Gold+migrations via migration_manager --envname (subprocess: its logging
     setup clashes with threaded stdout). Returns the DB name. On failure the
     slot name is NOT returned to the pool (retained for inspection)."""
+    import corpus_conn as _cc
     name = WORKER_NAME_POOL.get(timeout=3600)
+    cmd = [sys.executable, "environmentscripts/migration_manager.py", "--envname", name]
+    if _cc.is_pg():
+        # named template reset (the sweep's template rides LB_PG_TEMPLATE —
+        # for the supersede that is the A2 salem bake, not the engine gold)
+        cmd.insert(2, "--pg")
     proc = subprocess.run(
-        [sys.executable, "environmentscripts/migration_manager.py", "--envname", name],
+        cmd,
         capture_output=True, text=True, cwd=REPO, timeout=900,
     )
     if proc.returncode != 0:
@@ -270,14 +289,20 @@ def verify_worker_config(db_name):
     was only caught by the missing Run row). The farm path always had this guard;
     the corpus path only ever ran on the default instance, where the stale config
     was accidentally correct. Fail loud on any mismatch."""
+    import corpus_conn as _cc
     cfg_path = os.path.join(REPO, "environments", db_name, "db_config.json")
     with open(cfg_path, encoding="utf-8") as fh:
         cfg = json.load(fh)
-    if cfg.get("server", "").upper() != SQL_SERVER.upper():
+    expected_server = _cc.PG_HOST if _cc.is_pg() else SQL_SERVER
+    if cfg.get("server", "").upper() != expected_server.upper():
         raise RuntimeError(
             f"{cfg_path} points at server '{cfg.get('server')}', expected "
-            f"'{SQL_SERVER}'. Stale config from an earlier run on a different "
+            f"'{expected_server}'. Stale config from an earlier run on a different "
             f"instance — delete the environment folder and retry.")
+    if _cc.is_pg() and cfg.get("backend") != "psycopg":
+        raise RuntimeError(
+            f"{cfg_path} backend is '{cfg.get('backend')}', expected 'psycopg' — "
+            f"a stale SQL Server config would point the sim at the wrong engine.")
     if cfg.get("database") != db_name:
         raise RuntimeError(
             f"{cfg_path} database is '{cfg.get('database')}', expected '{db_name}'")
@@ -298,19 +323,27 @@ def tune_worker_db(db_name):
     Best-effort: a worker that will not take the tune still runs correctly, just
     noisier on disk, so a failure here must not abort the sweep.
     """
-    if not db_name.startswith("LibertyBee_Test_"):
+    import corpus_conn as _cc
+    if not db_name.lower().startswith("libertybee_test_"):
         raise RuntimeError(
             f"refusing to apply throwaway tuning to '{db_name}' — not an ephemeral "
             f"LibertyBee_Test_* database")
     try:
-        with conn("master") as c:
-            cur = c.cursor()
-            cur.execute(f"ALTER DATABASE [{db_name}] SET RECOVERY SIMPLE")
-            # Worker durability is irrelevant: if the box dies mid-sim the run is
-            # rerun from scratch anyway, and the corpus (a different database) is
-            # untouched. Trading fsyncs for speed here costs nothing recoverable.
-            cur.execute(f"ALTER DATABASE [{db_name}] SET DELAYED_DURABILITY = FORCED")
-    except pyodbc.Error as e:
+        if _cc.is_pg():
+            # the PG analogue of DELAYED_DURABILITY: async commit for
+            # throwaway workers — a crash reruns the sim; the corpus (a
+            # different database, untouched here) keeps full durability
+            with _cc.connect("postgres") as c:
+                c.execute(f"ALTER DATABASE {db_name} SET synchronous_commit = off")
+        else:
+            with conn("master") as c:
+                cur = c.cursor()
+                cur.execute(f"ALTER DATABASE [{db_name}] SET RECOVERY SIMPLE")
+                # Worker durability is irrelevant: if the box dies mid-sim the run is
+                # rerun from scratch anyway, and the corpus (a different database) is
+                # untouched. Trading fsyncs for speed here costs nothing recoverable.
+                cur.execute(f"ALTER DATABASE [{db_name}] SET DELAYED_DURABILITY = FORCED")
+    except _cc.db_errors() as e:
         print(f"  [warn] tune_worker_db({db_name}) failed, continuing: {e}", flush=True)
 
 
@@ -321,12 +354,17 @@ def release_worker_db(db_name):
 
 
 def drop_worker_db(db_name):
-    """Drop an ephemeral worker DB. master connection required."""
+    """Drop an ephemeral worker DB."""
+    import corpus_conn as _cc
     try:
-        with conn("master") as c:
-            cur = c.cursor()
-            cur.execute(f"ALTER DATABASE [{db_name}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE")
-            cur.execute(f"DROP DATABASE [{db_name}]")
+        if _cc.is_pg():
+            with _cc.connect("postgres") as c:
+                c.execute(f"DROP DATABASE IF EXISTS {db_name}")
+        else:
+            with conn("master") as c:
+                cur = c.cursor()
+                cur.execute(f"ALTER DATABASE [{db_name}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE")
+                cur.execute(f"DROP DATABASE [{db_name}]")
     except Exception as e:
         print(f"  [warn] drop_worker_db({db_name}) failed: {e}", flush=True)
 

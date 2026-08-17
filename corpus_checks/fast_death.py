@@ -13,6 +13,8 @@ DESCRIPTION = "death count and how many died within 12 months"
 
 FAST_MONTHS = 12
 
+import corpus_conn  # noqa: E402  (repo root is on sys.path when checks load)
+
 
 def check(cursor, ctx):
     total = cursor.execute("SELECT COUNT(*) FROM v1.run_summary").fetchone()[0]
@@ -27,7 +29,7 @@ def check(cursor, ctx):
     fast = cursor.execute(f"""
         SELECT COUNT(*) FROM v1.run_summary rs
         WHERE rs.Survived = 0
-          AND (SELECT DATEDIFF(MONTH, MIN(fl.LedgerDate), MAX(fl.LedgerDate))
+          AND (SELECT {corpus_conn.month_diff_sql('MIN(fl.LedgerDate)', 'MAX(fl.LedgerDate)')}
                FROM v1.fund_ledger fl
                WHERE fl.Rung = rs.Rung AND fl.Seed = rs.Seed) <= {FAST_MONTHS}
     """).fetchone()[0]
