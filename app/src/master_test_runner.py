@@ -245,7 +245,7 @@ class MasterTestRunner:
             # Complete event audit trail (only Simulation runs, not ComponentTest)
             print("Analyzing event audit trail (Simulation runs only)...")
             events_query = """
-            SELECT EventType + '/' + ISNULL(ActionType, 'N/A') as EventAction,
+            SELECT EventType + '/' + COALESCE(ActionType, 'N/A') as EventAction,
                    CausalTag, LEFT(Metadata, 50) as MetadataPreview, LoggedAt, e.RunID
             FROM simulation.Event e
             INNER JOIN simulation.Run r ON e.RunID = r.RunID

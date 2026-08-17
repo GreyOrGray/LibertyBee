@@ -14,17 +14,18 @@ Usage:
   python reproduction_gate.py --corpus <your_restored_corpus_db> --cells 206:1,206:50,203:1
 """
 import argparse, os, re, subprocess, sys
-import pyodbc
+
+import corpus_conn
 
 REPO = os.path.dirname(os.path.abspath(__file__))   # this script ships at the repo root
-DRV  = os.environ.get("LB_SQL_DRIVER", "ODBC Driver 17 for SQL Server")
-SERVER = os.environ.get("LB_SQL_SERVER", "localhost")
 def conn(db):
-    return pyodbc.connect(f"DRIVER={{{DRV}}};SERVER={SERVER};DATABASE={db};Trusted_Connection=yes")
+    return corpus_conn.connect(db, autocommit=True)
 
 def fresh_env(label):
-    p = subprocess.run([sys.executable, "environmentscripts/migration_manager.py", "--label", label],
-                       cwd=REPO, capture_output=True, text=True, timeout=900)
+    cmd = [sys.executable, "environmentscripts/migration_manager.py", "--label", label]
+    if corpus_conn.is_pg():
+        cmd.insert(2, "--pg")  # template-minted PG env (the D5 worker path)
+    p = subprocess.run(cmd, cwd=REPO, capture_output=True, text=True, timeout=900)
     m = re.search(r"Test environment ready:\s*(\S+)", p.stdout)
     return m.group(1) if m else None
 
@@ -57,8 +58,8 @@ def corpus_expect(cc, proj, seed):
         # KD-046: a cell whose only payment-status rows are the -1 sentinels (a run
         # can die before any realized payment month). Fall back to the ledger span,
         # the same measure the fast-death checks use.
-        cc.execute("SELECT DATEDIFF(MONTH, MIN(LedgerDate), MAX(LedgerDate)) + 1 "
-                   "FROM v1.fund_ledger WHERE Rung=? AND Seed=?", r[2], seed)
+        cc.execute(f"SELECT {corpus_conn.month_diff_sql('MIN(LedgerDate)', 'MAX(LedgerDate)')} + 1 "
+                   f"FROM v1.fund_ledger WHERE Rung=? AND Seed=?", r[2], seed)
         dm = cc.fetchone()[0]
     return ("halted", str(dm))
 
@@ -85,7 +86,7 @@ def provenance_check(cc, strict=False):
     try:
         cc.execute("SELECT DISTINCT ProjectionID FROM v1.projection_parameters")
         rungs_documented = {r[0] for r in cc.fetchall()}
-    except pyodbc.Error:
+    except corpus_conn.db_errors():
         rungs_documented = set()
     undocumented = sorted(rungs_present - rungs_documented)
     if undocumented:
@@ -99,7 +100,7 @@ def provenance_check(cc, strict=False):
     try:
         cc.execute("SELECT Scenario, HarnessCommit, HarnessDirty FROM v1.corpus_meta")
         meta = cc.fetchall()
-    except pyodbc.Error:
+    except corpus_conn.db_errors():
         meta = None
 
     if not meta:
@@ -148,12 +149,16 @@ def main():
     ap.add_argument("--strict-provenance", action="store_true",
                     help="treat a missing v1.corpus_meta as failure (use for any corpus "
                          "generated after provenance stamping existed)")
+    ap.add_argument("--pg", action="store_true",
+                    help="the corpus (and the rebuild envs) live on PostgreSQL")
     ap.add_argument("--provenance-only", action="store_true",
                     help="run only the provenance checks and skip cell re-runs (fast)")
     args = ap.parse_args()
+    if args.pg:
+        corpus_conn.set_backend("psycopg")
 
     cc = conn(args.corpus).cursor()
-    print(f"Reproduction gate: corpus={args.corpus}")
+    print(f"Reproduction gate: corpus={args.corpus} [{corpus_conn.backend()}]")
     prov_failures = provenance_check(cc, strict=args.strict_provenance)
     if prov_failures:
         print("\nGATE FAILED (provenance):")

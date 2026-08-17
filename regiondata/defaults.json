@@ -1,0 +1,87 @@
+{
+  "_meta": {
+    "purpose": "Generic US-national defaults for region-scoped parameters (Phase 1.12.2b). A region bundle that OMITS a bucket-2 parameter inherits the value here and the importer WARNS. These are honest national placeholders, NOT a substitute for local data — replace them with your market's figures. The MA reference (regions/salem_reference_v2) supplies its own values explicitly and does not use these.",
+    "tiers": "cited = a stable, dated national statistic; reasoned-proxy = a defensible national stand-in where no direct statistic for the exact concept exists.",
+    "fred_window": "Seasonality + DaysOnMarket_Mean computed from FRED national series over 2023-01..2025-12 (36 monthly obs, post the Oct-2022 Realtor.com methodology break), month-average / overall-average — the same method as the Salem/Essex calibration.",
+    "generated": "2026-08-07"
+  },
+  "required": {
+    "_note": "Bucket 1 — no honest national generic. The importer REFUSES a bundle that omits any of these.",
+    "INC.EarnerMedianAnnual": { "means": "median individual-earner annual income for the local renter pool", "source_hint": "US Census ACS table B25119 (renter-occupied) for your area" },
+    "OPEX.PropertyTaxPerUnit": { "means": "annual property tax per unit", "source_hint": "your municipality's residential rate x per-unit assessed value" },
+    "OPEX.InsurancePerUnit": { "means": "annual building insurance per unit", "source_hint": "a local small-building (BOP) insurance quote" }
+  },
+  "national_defaults_scalar": {
+    "_note": "Bucket 2 — applied with a warning if the bundle omits them.",
+    "MARKET.DaysOnMarket_Mean": {
+      "value": 56.1, "tier": "cited",
+      "source": "FRED MEDDAYONMARUS (Median Days on Market, US), 2023-2025 average",
+      "as_of": "2023-01..2025-12",
+      "means": "mean days a listing sits before it sells or is withdrawn",
+      "direction": "higher = slower market-wide resolution = slower acquisition throughput / capital deployment"
+    },
+    "PROP.VacancyRateBase": {
+      "value": 0.05, "tier": "reasoned-proxy",
+      "source": "RealPage / NMHC professionally-managed multifamily occupancy ~94.3-95.4% (2024-Q3 2025); vacancy ~5%. No direct national statistic for a well-run operator's OWN vacancy; this proxies it and sits below the ~7% market aggregate as the concept requires.",
+      "as_of": "2024-2025",
+      "means": "the operator's OWN steady-state vacancy (below market because units are desirable)",
+      "direction": "higher = less rent collected at any time = more conservative revenue"
+    },
+    "RET.VacancyRefPct": {
+      "value": 0.07, "tier": "cited",
+      "source": "US rental vacancy rate, Census Housing Vacancy Survey (FRED RRVRUSQ156N), ~7.0% (Q2 2025; 7.3% Q2 2026)",
+      "as_of": "2025-Q2",
+      "means": "the balanced-market rental vacancy used to normalize scarcity (availability = regional_vacancy / this)",
+      "direction": "higher = any given regional vacancy reads as less available = more scarcity = higher retention via the scarcity channel"
+    },
+    "RET.MoverRegionalVacancyPct": {
+      "value": 0.07, "tier": "reasoned",
+      "source": "No national analog to a local tightening story; defaulted equal to the national balanced-market rate (RET.VacancyRefPct). Census HVS Q2 2026 alt: principal-cities 8.0% / suburbs 6.9% if an urban/suburban lean is wanted.",
+      "as_of": "2025-Q2",
+      "means": "the wider-metro rental vacancy a LEAVING tenant faces when searching",
+      "direction": "higher = more alternatives for a leaver = weaker scarcity lock-in = more turnover"
+    },
+    "INF.Surge_PropertyMean": {
+      "value": 0.12, "tier": "cited",
+      "source": "S&P CoreLogic Case-Shiller US National HPI, calendar-year gains 2020 +10.4% / 2021 +18.8% / 2022 +5.8%, CAGR ~11.5% -> 0.12",
+      "as_of": "2020-2022",
+      "means": "annual property-value growth during a 'surge' inflation regime",
+      "direction": "higher = acquisitions cost more in surge years (faster appreciation of owned stock too)"
+    },
+    "INF.Surge_OpExMean": {
+      "value": 0.07, "tier": "cited",
+      "source": "S&P Global Market Intelligence homeowners/property insurance, +46.8% cumulative 2020-2025 (CAGR ~8%); 0.07 as the conservative blended-OpEx figure (insurance is the fastest line; tax/R&M lag)",
+      "as_of": "2020-2025",
+      "means": "annual operating-expense growth during a 'surge' regime (insurance-anchored blend)",
+      "direction": "higher = OpEx erodes margin faster in surge years = more cash/CSF stress"
+    }
+  },
+  "national_defaults_monthly": {
+    "_note": "Bucket 2 — 12-month seasonal indices (mean ~1.0). Each expands to <base>_Jan .. <base>_Dec registry rows. Cited: FRED national series, 2023-2025, month-avg/overall-avg (Salem method).",
+    "MARKET.SeasonalMultiplier": {
+      "tier": "cited",
+      "source": "FRED ACTLISCOUUS (Active Listing Count, US), 2023-2025 seasonal index",
+      "means": "monthly index of new-listing / active-inventory volume",
+      "direction": "higher month = more acquisition opportunities appear that month",
+      "months": { "Jan": 0.852, "Feb": 0.844, "Mar": 0.867, "Apr": 0.911, "May": 0.971, "Jun": 1.024, "Jul": 1.063, "Aug": 1.08, "Sep": 1.106, "Oct": 1.127, "Nov": 1.122, "Dec": 1.034 }
+    },
+    "MARKET.DaysOnMarket_SeasonalMultiplier": {
+      "tier": "cited",
+      "source": "FRED MEDDAYONMARUS (Median Days on Market, US), 2023-2025 seasonal index",
+      "means": "monthly index of how long listings sit",
+      "direction": "higher month = listings around then take longer to resolve",
+      "months": { "Jan": 1.272, "Feb": 1.141, "Mar": 0.921, "Apr": 0.85, "May": 0.826, "Jun": 0.862, "Jul": 0.915, "Aug": 0.945, "Sep": 0.987, "Oct": 1.016, "Nov": 1.052, "Dec": 1.212 }
+    },
+    "MARKET.PriceMultiplier": {
+      "tier": "cited",
+      "source": "FRED MEDLISPRIUS (Median Listing Price, US), 2023-2025 seasonal index",
+      "means": "monthly index of listing price",
+      "direction": "higher month = properties acquired then cost more",
+      "months": { "Jan": 0.952, "Feb": 0.974, "Mar": 0.999, "Apr": 1.013, "May": 1.036, "Jun": 1.04, "Jul": 1.033, "Aug": 1.016, "Sep": 1.004, "Oct": 0.998, "Nov": 0.982, "Dec": 0.951 }
+    }
+  },
+  "universal_shipped": {
+    "_note": "Bucket 3 — universal modeling assumptions that ship with the engine; NOT region-specific, not in a bundle. Listed for transparency.",
+    "params": ["MARKET.SaleSuccessRate", "MARKET.DaysOnMarket_StdDev", "MARKET.DaysOnMarketMinDays", "MARKET.DaysOnMarketMaxDays", "MARKET.HoldLT2YrCumPct", "MARKET.HoldLT5YrCumPct", "MARKET.HoldLT10YrCumPct", "MARKET.HoldTailMeanYears", "MARKET.Hold2YrDays", "MARKET.Hold5YrDays", "MARKET.Hold10YrDays", "MARKET.HoldCapDays", "MARKET.HoldFlipMinDays", "MARKET.InitListedPctMid", "MARKET.InitListedPctJitter", "MARKET.InitListedPctMin", "MARKET.InitListedPctMax", "MARKET.InitAvailablePctMid", "MARKET.InitAvailablePctJitter", "MARKET.InitAvailablePctMin", "MARKET.InitAvailablePctMax", "MARKET.DailyListingBasePct", "MARKET.DailyListingWindowDays"]
+  }
+}

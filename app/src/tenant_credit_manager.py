@@ -45,6 +45,8 @@ Out of Scope (deferred):
 import random
 from dataclasses import dataclass
 from datetime import date
+
+from dateutil.relativedelta import relativedelta
 from decimal import Decimal
 from typing import Optional, Any
 
@@ -223,7 +225,7 @@ class TenantCreditManager:
         # New TCS balance rows default to ExpiryStatus = 'ACTIVE'
         # so the lifecycle state machine has a defined starting point.
         merge_query = """
-            MERGE simulation.TenantCreditBalance AS target
+            MERGE INTO simulation.TenantCreditBalance AS target
             USING (SELECT ? AS RunID, ? AS HouseholdID) AS source
                 ON target.RunID = source.RunID AND target.HouseholdID = source.HouseholdID
             WHEN NOT MATCHED THEN
@@ -594,17 +596,21 @@ class TenantCreditManager:
         Idempotent: if already EXITED, this is a no-op overwrite with the
         same data. Terminal states (EXPIRED, FORFEITED) are NOT overwritten.
         """
+        # expiry computed in Python (was SQL DATEADD(MONTH,...) — pass-1
+        # dialect neutralization; relativedelta clamps to month-end exactly
+        # like T-SQL DATEADD, so the stored date is identical)
+        credit_expiry = exit_date + relativedelta(months=self.portability_months)
         self.db.execute_non_query(
             """
             UPDATE simulation.TenantCreditBalance
                 SET SystemExitDate = ?,
                     ExpiryStatus = 'EXITED',
-                    CreditExpiryDate = DATEADD(MONTH, ?, ?)
+                    CreditExpiryDate = ?
             WHERE RunID = ?
               AND HouseholdID = ?
               AND ExpiryStatus IN ('ACTIVE', 'EXITED')
             """,
-            (exit_date, self.portability_months, exit_date, self.run_id, household_id),
+            (exit_date, credit_expiry, self.run_id, household_id),
         )
 
     def mark_household_reentered(self, household_id: int, reentry_date: date) -> None:
@@ -736,6 +742,7 @@ class TenantCreditManager:
             WHERE RunID = ?
               AND ExpiryStatus = 'EXITED'
               AND CreditExpiryDate <= ?
+            ORDER BY HouseholdID  -- deterministic processing order (KD-233)
             """,
             (self.run_id, sweep_date),
         )
@@ -951,7 +958,7 @@ class TenantCreditManager:
         """Insert a TenantCreditLedger row and return the new CreditTransactionID."""
         # Reseed counter from DB (survives manager re-instantiation)
         result = self.db.execute_query(
-            "SELECT ISNULL(MAX(CreditTransactionID), 0) + 1 "
+            "SELECT COALESCE(MAX(CreditTransactionID), 0) + 1 "
             "FROM simulation.TenantCreditLedger WHERE RunID = ?",
             (self.run_id,),
         )
@@ -1004,7 +1011,7 @@ class TenantCreditManager:
         # ('EXPIRED', 'FORFEITED') are intentionally preserved — those
         # credits are already gone and the audit signal stays.
         merge_query = """
-            MERGE simulation.TenantCreditBalance AS target
+            MERGE INTO simulation.TenantCreditBalance AS target
             USING (SELECT ? AS RunID, ? AS HouseholdID) AS source
                 ON target.RunID = source.RunID AND target.HouseholdID = source.HouseholdID
             WHEN MATCHED THEN

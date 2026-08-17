@@ -28,6 +28,7 @@ module, the only engine module that did). All regime params are registry
 rows (declared decisions, swept — see V00050).
 """
 
+import bisect
 import logging
 import math
 import random
@@ -90,6 +91,9 @@ class InflationEngine:
         self.config_loader = config_loader
         self.logger = logging.getLogger(__name__)
         self.event_logger = EventLogger(db_manager)
+        # run_id -> (dates, prefix OpEx factors); static post-generation,
+        # invalidated by _save_schedule_to_db (step 0.5)
+        self._opex_factor_cache: dict = {}
 
 
     def generate_schedule(self, run_id: int, projection_id: int, random_seed: int) -> Optional[InflationSchedule]:
@@ -209,20 +213,33 @@ class InflationEngine:
         Centralizes the per-month compounding so
         the OpEx charge, CSF target, and Cash floor all see the same factor.
         Mirrors the rent-side pattern in tenant_manager._compute_inflation_adjusted_rent.
+
+        Step 0.5: the schedule is static once _save_schedule_to_db has written
+        it (pre-simulation), yet this factor re-queried it 14.9k times per
+        240-month run (measured). The rows and their sequential prefix
+        products are cached per run and bisected by date — the prefix
+        accumulation is the SAME left-to-right Decimal multiplication as the
+        old per-call loop, so every returned factor is bit-identical. The
+        cache is invalidated whenever the schedule is (re)written.
         """
-        rate_rows = self.db.execute_query(
-            """
-            SELECT OpExRate
-            FROM simulation.InflationSchedule
-            WHERE RunID = ? AND InflationDate <= ?
-            ORDER BY InflationDate
-            """,
-            (run_id, target_date),
-        )
-        factor = Decimal('1.0')
-        for row in rate_rows:
-            factor *= (Decimal('1.0') + Decimal(str(row[0])))
-        return factor
+        cache = self._opex_factor_cache.get(run_id)
+        if cache is None:
+            rows = self.db.execute_query(
+                "SELECT InflationDate, OpExRate FROM simulation.InflationSchedule "
+                "WHERE RunID = ? ORDER BY InflationDate",
+                (run_id,),
+            )
+            dates, prefix = [], []
+            factor = Decimal('1.0')
+            for d, rate in rows:
+                factor *= (Decimal('1.0') + Decimal(str(rate)))
+                dates.append(d)
+                prefix.append(factor)
+            cache = (dates, prefix)
+            self._opex_factor_cache[run_id] = cache
+        dates, prefix = cache
+        idx = bisect.bisect_right(dates, target_date) - 1
+        return prefix[idx] if idx >= 0 else Decimal('1.0')
 
     def _calculate_total_months(self, start_date: date, end_date: date) -> int:
         """Calculate total months between start and end dates"""
@@ -383,6 +400,8 @@ class InflationEngine:
 
     def _save_schedule_to_db(self, schedule: InflationSchedule) -> bool:
         """Save inflation schedule to database (pre-simulation, month 0)"""
+        # the schedule for this run is about to change — drop the factor cache
+        self._opex_factor_cache.pop(schedule.run_id, None)
         try:
             # Get start date from first rate record
             start_date = schedule.monthly_rates[0].inflation_date if schedule.monthly_rates else date.today()

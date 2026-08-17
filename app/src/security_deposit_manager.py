@@ -250,7 +250,7 @@ class SecurityDepositManager:
             SET DepositEscrowedAmount = ?,
                 DepositFundedDate = ?,
                 InstallmentsPaidCount = 1,
-                UpdatedAt = GETDATE()
+                UpdatedAt = CURRENT_TIMESTAMP
             WHERE RunID = ? AND LeaseID = ?
         """
         self.db.execute_non_query(
@@ -351,7 +351,7 @@ class SecurityDepositManager:
             SET DepositEscrowedAmount = ?,
                 InstallmentsPaidCount = ?,
                 DepositFundedDate = ?,
-                UpdatedAt = GETDATE()
+                UpdatedAt = CURRENT_TIMESTAMP
             WHERE RunID = ? AND LeaseID = ?
         """
         self.db.execute_non_query(
@@ -464,7 +464,7 @@ class SecurityDepositManager:
                 SettlementDueDate = ?,
                 DamageAmount = ?,
                 SettlementOutcome = ?,
-                UpdatedAt = GETDATE()
+                UpdatedAt = CURRENT_TIMESTAMP
             WHERE RunID = ? AND LeaseID = ?
         """
         self.db.execute_non_query(
@@ -513,6 +513,7 @@ class SecurityDepositManager:
                    SettlementOutcome, DamageAmount
             FROM simulation.LeaseDeposit
             WHERE RunID = ? AND SettlementStatus = 'PENDING' AND SettlementDueDate <= ?
+            ORDER BY LeaseID  -- deterministic processing order (KD-233)
         """
         rows = self.db.execute_query(query, (self.run_id, current_date))
 
@@ -661,7 +662,7 @@ class SecurityDepositManager:
         self.db.execute_non_query(
             """
             UPDATE simulation.LeaseDeposit
-            SET SettlementStatus = 'COMPLETED', Status = ?, UpdatedAt = GETDATE()
+            SET SettlementStatus = 'COMPLETED', Status = ?, UpdatedAt = CURRENT_TIMESTAMP
             WHERE RunID = ? AND LeaseID = ?
             """,
             (DepositStatus.FORFEITED.value, self.run_id, lease_id)
@@ -715,7 +716,7 @@ class SecurityDepositManager:
         self.db.execute_non_query(
             """
             UPDATE simulation.LeaseDeposit
-            SET SettlementStatus = 'COMPLETED', Status = ?, UpdatedAt = GETDATE()
+            SET SettlementStatus = 'COMPLETED', Status = ?, UpdatedAt = CURRENT_TIMESTAMP
             WHERE RunID = ? AND LeaseID = ?
             """,
             (DepositStatus.REFUNDED.value, self.run_id, lease_id)
@@ -797,7 +798,7 @@ class SecurityDepositManager:
         self.db.execute_non_query(
             """
             UPDATE simulation.LeaseDeposit
-            SET SettlementStatus = 'COMPLETED', Status = ?, UpdatedAt = GETDATE()
+            SET SettlementStatus = 'COMPLETED', Status = ?, UpdatedAt = CURRENT_TIMESTAMP
             WHERE RunID = ? AND LeaseID = ?
             """,
             (DepositStatus.APPLIED_TO_DAMAGES.value, self.run_id, lease_id)
@@ -828,7 +829,7 @@ class SecurityDepositManager:
         """Create deposit ledger entry. Returns LedgerID."""
         # Always query MAX from DB so the counter survives manager re-instantiation
         result = self.db.execute_query(
-            "SELECT ISNULL(MAX(LedgerID), 0) + 1 FROM simulation.LeaseDepositLedger WHERE RunID=?",
+            "SELECT COALESCE(MAX(LedgerID), 0) + 1 FROM simulation.LeaseDepositLedger WHERE RunID=?",
             (self.run_id,)
         )
         ledger_id = result[0][0] if result else 1

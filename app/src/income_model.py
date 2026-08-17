@@ -61,6 +61,14 @@ class IncomeModel:
         # --- INC params: read-once, fail-loud (no .get() fallbacks) -----------
         reg = self.registry
         self.earner_median_annual = reg.get_decimal('INC', 'EarnerMedianAnnual')
+        # Town-scoped income LEVEL (V00077): per-town median where a
+        # TownParameterOverride exists, else the region-wide value. Town scopes
+        # the LEVEL only — wage GROWTH stays regional (the shared regime
+        # schedule), so one market's dynamics never fork by town.
+        _towns = [r[0] for r in self.db.execute_query(
+            "SELECT DISTINCT Town FROM reference.Properties WHERE Town IS NOT NULL")]
+        self.earner_median_by_town = {
+            t: reg.get_decimal_for_town('INC', 'EarnerMedianAnnual', t) for t in _towns}
         floor_pct = reg.get_decimal('INC', 'BandFloorPct')
         cutoffs = [reg.get_decimal('INC', f'BandCutoffPct_{i}') for i in (1, 2, 3, 4)]
         cap = reg.get_decimal('INC', 'TailCapMultiple')
@@ -141,7 +149,14 @@ class IncomeModel:
     def _draw_band(self, rng: random.Random, weights: List[float]) -> str:
         return rng.choices(BAND_LABELS, weights=weights)[0]
 
-    def _draw_earner_annual(self, rng: random.Random, band: str, target_date: date) -> Decimal:
+    def _median_base(self, town) -> Decimal:
+        """The applicant pool's median: the town's override if one exists, else
+        region-wide. A pure multiplier on the banded draw — RNG stream
+        positions are town-independent by construction."""
+        return self.earner_median_by_town.get(town, self.earner_median_annual)
+
+    def _draw_earner_annual(self, rng: random.Random, band: str, target_date: date,
+                            town=None) -> Decimal:
         """One earner's annual income: banded draw × time-varying median.
 
         B1–B4: uniform within [lo, hi) × median. B5 (the career tail): LOG-
@@ -149,7 +164,7 @@ class IncomeModel:
         (ratified D5: ~4x cap per BLS chief-exec median, never CEO-ratio wide).
         """
         lo_frac, hi_frac = self.band_bounds[band]
-        median_now = self.earner_median_annual * self.cumulative_wage_factor(target_date, band)
+        median_now = self._median_base(town) * self.cumulative_wage_factor(target_date, band)
         if band == 'B5':
             lo, hi = math.log(float(lo_frac)), math.log(float(hi_frac))
             frac = Decimal(str(math.exp(rng.uniform(lo, hi))))
@@ -157,11 +172,12 @@ class IncomeModel:
             frac = Decimal(str(rng.uniform(float(lo_frac), float(hi_frac))))
         return (median_now * frac)
 
-    def _draw_residual_annual(self, rng: random.Random, target_date: date) -> Decimal:
+    def _draw_residual_annual(self, rng: random.Random, target_date: date,
+                              town=None) -> Decimal:
         """Non-earning 2nd adult: small residual income (part-time/gig/benefits),
         uniform(0, NoEarnerResidualMaxPct × median). Never hard zero (
         a hard zero puts a discontinuity in the household distribution)."""
-        median_now = self.earner_median_annual * self.cumulative_wage_factor(target_date, 'B3')
+        median_now = self._median_base(town) * self.cumulative_wage_factor(target_date, 'B3')
         max_residual = float(self.no_earner_residual_max_pct * median_now)
         return Decimal(str(rng.uniform(0.0, max_residual)))
 
@@ -175,12 +191,16 @@ class IncomeModel:
         adult_count: int,
         rng: random.Random,
         target_date: date,
+        town=None,
     ) -> Tuple[Decimal, str]:
         """Household monthly income (pooled — D6) + the primary earner's band label.
 
         Draw pattern is FIXED per household type + adult count (invariant):
         the same seeded RNG always consumes the same number of draws for the
-        same inputs, so slates stay deterministic.
+        same inputs, so slates stay deterministic. ``town`` (V00077) selects
+        the applicant pool's median LEVEL — the unit's town when town-scoped,
+        None → region-wide; it multiplies draws, never redirects them, so the
+        stream is town-independent and a single-town region reproduces exactly.
         """
         if household_type == 'SINGLE':
             # Fixed draw pattern: state + band + value, consumed on every path.
@@ -189,18 +209,18 @@ class IncomeModel:
             if is_fixed_income:
                 # Non-earner single (retiree/SSI/disability): uniform within the
                 # fixed-income range × median; band label reports B1 (bottom tier).
-                median_now = self.earner_median_annual * self.cumulative_wage_factor(target_date, 'B1')
+                median_now = self._median_base(town) * self.cumulative_wage_factor(target_date, 'B1')
                 lo = float(self.fixed_income_min_pct * median_now)
                 hi = float(self.fixed_income_max_pct * median_now)
                 rng.uniform(0, 1)  # consume the earner-value slot (fixed pattern)
                 total = Decimal(str(rng.uniform(lo, hi)))
                 band = 'B1'
             else:
-                total = self._draw_earner_annual(rng, band, target_date)
+                total = self._draw_earner_annual(rng, band, target_date, town)
 
         elif household_type in ('COUPLE', 'FAMILY'):
             band = self._draw_band(rng, self.band_weights)
-            total = self._draw_earner_annual(rng, band, target_date)
+            total = self._draw_earner_annual(rng, band, target_date, town)
             # Second adult: earner (Bernoulli) → same-band-biased draw (the
             # couple correlation, calibrated to realized r≈0.20–0.25); else a
             # small residual. All three draws consumed on every path (fixed
@@ -209,20 +229,20 @@ class IncomeModel:
             same_band = rng.random() < self.couple_same_band_prob
             band2 = band if same_band else self._draw_band(rng, self.band_weights)
             if is_earner:
-                total += self._draw_earner_annual(rng, band2, target_date)
+                total += self._draw_earner_annual(rng, band2, target_date, town)
             else:
                 # consume the earner-value draw slot via the residual draw
-                total += self._draw_residual_annual(rng, target_date)
+                total += self._draw_residual_annual(rng, target_date, town)
 
         elif household_type == 'ROOMMATES':
             # N independent adult draws, top-band-dampened weights (the
             # selection effect — roommate formation skews lower-income).
             # Inter-roommate correlation r=0: FLAGGED ASSUMPTION (no data).
             band = self._draw_band(rng, self.roommate_weights)
-            total = self._draw_earner_annual(rng, band, target_date)
+            total = self._draw_earner_annual(rng, band, target_date, town)
             for _ in range(adult_count - 1):
                 b = self._draw_band(rng, self.roommate_weights)
-                total += self._draw_earner_annual(rng, b, target_date)
+                total += self._draw_earner_annual(rng, b, target_date, town)
 
         else:
             raise ValueError(f"Unknown household type: {household_type}")

@@ -47,6 +47,8 @@ class ProjectionConfig:
     # the retired AnnualStaticOpEx + AnnualOpExPerUnit aggregate.
     property_tax_per_unit: Decimal
     insurance_per_unit: Decimal
+    property_tax_per_unit_by_town: dict  # town -> Decimal (region-wide under key None); V00077 town-scoping
+    insurance_per_unit_by_town: dict
     utilities_owner_per_unit: Decimal
 
     # CSF reserve curve (V00049): reserve_months(properties) =
@@ -126,6 +128,7 @@ class ProjectionConfig:
     # the fill-duration fluctuation reads it via TenantManager's globals load.
     acquisition_pct: float
     vacancy_rate_base: float
+    vacancy_rate_base_by_town: dict  # town -> float (region-wide under key None); V00077 town-scoping
     below_market_rent_pct: float
 
     # CSF Recurring Top-Up parameters. The CASH
@@ -162,6 +165,7 @@ class ProjectionConfig:
     ret_vacancy_ref_pct: float                # vac_ref — balanced-market vacancy normalizer
     ret_mover_regional_vacancy_pct: float     # regional (North Shore) vacancy a mover faces — NOT LB's Salem-local rate
     ret_burden_ceiling_pct: float             # burden_ceiling — unaffordable-rent line
+    ret_burden_floor_pct: float               # burden_floor — fully-affordable line (KD-223; was a 0.30 literal)
     ret_form_is_logistic: int                 # 0=linear (default), 1=logistic (validation sweep)
 
 
@@ -209,6 +213,24 @@ class ConfigurationLoader:
 
             # No COALESCE, no positional row indices: every value is fetched by
             # (category, name) and coerced; a missing required param raises.
+            #
+            # Town-scoped OpEx (V00077): per-town rate maps for the local params, with the
+            # region-wide value under key None (used for pro-forma extras / untowned properties).
+            # A single-town region or one with no TownParameterOverride rows resolves every town to
+            # the region-wide value -> identical to today (reproduction-preserving).
+            _towns = [r[0] for r in self.db.execute_query(
+                "SELECT DISTINCT Town FROM reference.Properties WHERE Town IS NOT NULL")]
+
+            def _rate_by_town(cat, name):
+                d = {t: reg.get_decimal_for_town(cat, name, t) for t in _towns}
+                d[None] = reg.get_decimal(cat, name)
+                return d
+
+            def _float_by_town(cat, name):
+                d = {t: reg.get_float_for_town(cat, name, t) for t in _towns}
+                d[None] = reg.get_float(cat, name)
+                return d
+
             config = ProjectionConfig(
                 projection_id=projection_id,
                 # From the entity, not a parameter row — the name now lives in
@@ -220,6 +242,8 @@ class ConfigurationLoader:
                 property_type=reg.get_str('PROP', 'PropertyType'),
                 property_tax_per_unit=reg.get_decimal('OPEX', 'PropertyTaxPerUnit'),
                 insurance_per_unit=reg.get_decimal('OPEX', 'InsurancePerUnit'),
+                property_tax_per_unit_by_town=_rate_by_town('OPEX', 'PropertyTaxPerUnit'),
+                insurance_per_unit_by_town=_rate_by_town('OPEX', 'InsurancePerUnit'),
                 utilities_owner_per_unit=reg.get_decimal('OPEX', 'UtilitiesOwnerPerUnit'),
                 csf_reserve_months_peak=reg.get_int('CSF', 'ReserveMonthsPeak'),
                 csf_reserve_months_floor=reg.get_int('CSF', 'ReserveMonthsFloor'),
@@ -261,6 +285,7 @@ class ConfigurationLoader:
                 snapshot_cadence=reg.get_str('SIM', 'SnapshotCadence'),
                 acquisition_pct=reg.get_float('PROP', 'AcquisitionPct'),
                 vacancy_rate_base=reg.get_float('PROP', 'VacancyRateBase'),
+                vacancy_rate_base_by_town=_float_by_town('PROP', 'VacancyRateBase'),
                 below_market_rent_pct=reg.get_float('PROP', 'BelowMarketRentPct'),
                 csf_topup_fraction_per_month=reg.get_decimal('CSF', 'TopupFractionPerMonth'),
                 cash_floor_months=reg.get_int('FIN', 'CashFloorMonths'),
@@ -282,6 +307,7 @@ class ConfigurationLoader:
                 ret_vacancy_ref_pct=reg.get_float('RET', 'VacancyRefPct'),
                 ret_mover_regional_vacancy_pct=reg.get_float('RET', 'MoverRegionalVacancyPct'),
                 ret_burden_ceiling_pct=reg.get_float('RET', 'BurdenCeilingPct'),
+                ret_burden_floor_pct=reg.get_float('RET', 'BurdenFloorPct'),
                 ret_form_is_logistic=reg.get_int('RET', 'FormIsLogistic'),
             )
 

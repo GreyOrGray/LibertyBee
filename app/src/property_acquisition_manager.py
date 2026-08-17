@@ -145,6 +145,39 @@ class AcquisitionParameters:
     negotiation_delay_days_max: int
 
 
+class PortfolioCounts:
+    """Owned-portfolio counts cache (step 0.5). simulation.PropertyUnits has
+    exactly ONE insert site (add_property_to_portfolio below) and no deletes;
+    status UPDATEs don't change row counts. The writer invalidates after each
+    closing; readers get in-memory hits instead of the ~43k per-run
+    COUNT / GROUP BY round-trips (measured). A month-end fail-loud verify in
+    simulation.py guards the single-writer assumption against future write
+    sites — a stale cache dies within one sim-month, loudly."""
+
+    def __init__(self, db: DatabaseManager):
+        self.db = db
+        self._counts = None  # (run_id, owned_units, owned_properties, owned_by_town)
+
+    def get(self, run_id: int):
+        """-> (owned_units, owned_properties, owned_by_town rows)"""
+        if self._counts is None or self._counts[0] != run_id:
+            row = self.db.execute_query(
+                "SELECT COUNT(*), COUNT(DISTINCT PropertyID) "
+                "FROM simulation.PropertyUnits WHERE RunID = ?", (run_id,))
+            by_town = self.db.execute_query(
+                "SELECT p.Town, COUNT(*) FROM simulation.PropertyUnits pu "
+                "JOIN reference.Properties p ON p.PropertyID = pu.PropertyID "
+                "WHERE pu.RunID = ? GROUP BY p.Town", (run_id,))
+            self._counts = (run_id,
+                            int(row[0][0]) if row else 0,
+                            int(row[0][1]) if row else 0,
+                            [(t, int(n)) for t, n in by_town])
+        return self._counts[1], self._counts[2], self._counts[3]
+
+    def invalidate(self):
+        self._counts = None
+
+
 class PropertyAcquisitionManager:
     """Manage property acquisition with economic optimization, pre-acquisition pipeline, and CSF protection"""
 
@@ -152,10 +185,12 @@ class PropertyAcquisitionManager:
     SEED_OFFSET = 1000
 
     def __init__(self, db_manager: DatabaseManager, config_loader: ConfigurationLoader,
-                 fund_manager: FundManager, event_logger: EventLogger, random_seed: int = 12345):
+                 fund_manager: FundManager, event_logger: EventLogger, random_seed: int = 12345,
+                 portfolio_counts: 'PortfolioCounts' = None):
         self.db = db_manager
         self.config_loader = config_loader
         self.fund_manager = fund_manager
+        self.portfolio_counts = portfolio_counts or PortfolioCounts(db_manager)
         self.random_seed = random_seed
         self.rng = random.Random(random_seed + self.SEED_OFFSET)
         self.logger = logging.getLogger(__name__)
@@ -257,7 +292,7 @@ class PropertyAcquisitionManager:
     def load_acquisition_parameters(self) -> AcquisitionParameters:
         """Load acquisition pipeline parameters from database"""
         query = """
-        SELECT TOP 1
+        SELECT
             OfferStrategyBelowAskPct, OfferStrategyAtAskPct, OfferStrategyPremiumPct,
             OfferStrategyBelowAskWeight, OfferStrategyAtAskWeight, OfferStrategyPremiumWeight,
             SellerAcceptanceProbability, SellerCounterProbability, SellerRejectionProbability,
@@ -276,6 +311,7 @@ class PropertyAcquisitionManager:
             NegotiationDelayDaysMin, NegotiationDelayDaysMax
         FROM reference.AcquisitionParameters
         ORDER BY ParameterID DESC
+        OFFSET 0 ROWS FETCH FIRST 1 ROWS ONLY
         """
 
         result = self.db.execute_query(query)
@@ -446,10 +482,11 @@ class PropertyAcquisitionManager:
             True if property still Listed or UnderContractLB, False otherwise
         """
         query = """
-        SELECT TOP 1 MarketStatus
+        SELECT MarketStatus
         FROM simulation.PropertyMarket
         WHERE RunID = ? AND PropertyID = ? AND EffectiveDate <= ?
         ORDER BY EffectiveDate DESC
+        OFFSET 0 ROWS FETCH FIRST 1 ROWS ONLY
         """
 
         result = self.db.execute_query(query, (self.run_id, property_id, current_date))
@@ -497,7 +534,7 @@ class PropertyAcquisitionManager:
 
             # Get next PropertyMarketID for this run (run-specific numbering)
             id_query = """
-            SELECT ISNULL(MAX(PropertyMarketID), 0) + 1
+            SELECT COALESCE(MAX(PropertyMarketID), 0) + 1
             FROM simulation.PropertyMarket
             WHERE RunID = ?
             """
@@ -561,7 +598,7 @@ class PropertyAcquisitionManager:
 
             # Get next PropertyMarketID for this run (run-specific numbering)
             id_query = """
-            SELECT ISNULL(MAX(PropertyMarketID), 0) + 1
+            SELECT COALESCE(MAX(PropertyMarketID), 0) + 1
             FROM simulation.PropertyMarket
             WHERE RunID = ?
             """
@@ -626,7 +663,7 @@ class PropertyAcquisitionManager:
 
             # Get next PropertyMarketID for this run (run-specific numbering)
             id_query = """
-            SELECT ISNULL(MAX(PropertyMarketID), 0) + 1
+            SELECT COALESCE(MAX(PropertyMarketID), 0) + 1
             FROM simulation.PropertyMarket
             WHERE RunID = ?
             """
@@ -685,7 +722,7 @@ class PropertyAcquisitionManager:
 
         # Get next PropertyID for this run (run-specific numbering)
         property_id_query = """
-            SELECT ISNULL(MAX(PropertyID), 0) + 1
+            SELECT COALESCE(MAX(PropertyID), 0) + 1
             FROM simulation.Properties
             WHERE RunID = ?
         """
@@ -744,7 +781,7 @@ class PropertyAcquisitionManager:
 
                 # Get next UnitID for this run (run-specific numbering)
                 unit_id_query = """
-                    SELECT ISNULL(MAX(UnitID), 0) + 1
+                    SELECT COALESCE(MAX(UnitID), 0) + 1
                     FROM simulation.PropertyUnits
                     WHERE RunID = ?
                 """
@@ -768,6 +805,8 @@ class PropertyAcquisitionManager:
                     adjusted_rent,
                 ))
 
+            # portfolio changed — the ONLY PropertyUnits insert site (step 0.5)
+            self.portfolio_counts.invalidate()
             self.logger.info(f"Added property {property_id} with {len(units_result)} units to portfolio")
         else:
             self.logger.warning(f"No units found for property {property_id}")
@@ -890,10 +929,11 @@ class PropertyAcquisitionManager:
 
             # Check if property was under contract and unlock if so
             check_query = """
-            SELECT TOP 1 MarketStatus
+            SELECT MarketStatus
             FROM simulation.PropertyMarket
             WHERE RunID = ? AND PropertyID = ? AND EffectiveDate <= ?
             ORDER BY EffectiveDate DESC
+            OFFSET 0 ROWS FETCH FIRST 1 ROWS ONLY
             """
             status_result = self.db.execute_query(check_query, (self.run_id, property_id, current_date))
             if status_result and status_result[0][0] == 'UnderContractLB':
@@ -944,13 +984,10 @@ class PropertyAcquisitionManager:
         if month_index <= self.csf_grace_period_months:
             return Decimal('0')
         # Months come from the taper curve on the property count — same
-        # source table as the OpEx breakdown (simulation.PropertyUnits), so the
-        # earmark and the month-end top-up see identical curve inputs.
-        row = self.db.execute_query(
-            "SELECT COUNT(DISTINCT PropertyID) FROM simulation.PropertyUnits WHERE RunID = ?",
-            (self.run_id,),
-        )
-        owned_properties = int(row[0][0]) if row else 0
+        # source (the PortfolioCounts cache over simulation.PropertyUnits) as
+        # the OpEx breakdown, so the earmark and the month-end top-up see
+        # identical curve inputs.
+        _, owned_properties, _ = self.portfolio_counts.get(self.run_id)
         reserve_months = self.fund_manager.get_reserve_months(
             owned_properties,
             self.config.csf_reserve_months_peak,
@@ -1144,7 +1181,12 @@ class PropertyAcquisitionManager:
             Income-to-price ratio (higher is better)
         """
         annual_rent = property_data['total_adjusted_rent'] * 12
-        vacancy_factor = Decimal('1.0') - Decimal(str(config.vacancy_rate_base))
+        # KD-229 family (V00077): underwrite at the CANDIDATE's town's vacancy,
+        # not the region-wide base — a high-vacancy town's property must not be
+        # priced at the region's average emptiness.
+        vacancy_base = config.vacancy_rate_base_by_town.get(
+            property_data.get('town'), config.vacancy_rate_base)
+        vacancy_factor = Decimal('1.0') - Decimal(str(vacancy_base))
         below_market_factor = Decimal('1.0') - Decimal(str(config.below_market_rent_pct))
 
         effective_annual_income = annual_rent * vacancy_factor * below_market_factor
@@ -1176,7 +1218,8 @@ class PropertyAcquisitionManager:
             (SELECT COUNT(*) FROM reference.Units u WHERE u.PropertyID = rp.PropertyID) as UnitCount,
             (SELECT SUM(CAST(AdjustedRent AS DECIMAL(10,2)))
              FROM reference.Units u
-             WHERE u.PropertyID = rp.PropertyID) as TotalAdjustedRent
+             WHERE u.PropertyID = rp.PropertyID) as TotalAdjustedRent,
+            rp.Town
         FROM simulation.PropertyMarket pm
         JOIN reference.Properties rp ON pm.PropertyID = rp.PropertyID
         LEFT JOIN simulation.PropertyAcquisitionAttempt paa
@@ -1217,12 +1260,15 @@ class PropertyAcquisitionManager:
                     'list_price': row[2],
                     'property_type': row[3],
                     'unit_count': row[4],
-                    'total_adjusted_rent': row[5]
+                    'total_adjusted_rent': row[5],
+                    'town': row[6],  # V00077: underwrite at the candidate's town's vacancy
                 }
 
                 ratio = self.calculate_income_to_price_ratio(property_data, config)
 
-                vacancy_factor = Decimal('1.0') - Decimal(str(config.vacancy_rate_base))
+                vacancy_base = config.vacancy_rate_base_by_town.get(
+                    property_data['town'], config.vacancy_rate_base)
+                vacancy_factor = Decimal('1.0') - Decimal(str(vacancy_base))
                 below_market_factor = Decimal('1.0') - Decimal(str(config.below_market_rent_pct))
                 vacancy_adjusted_rent = property_data['total_adjusted_rent'] * vacancy_factor * below_market_factor
 
@@ -1288,7 +1334,7 @@ class PropertyAcquisitionManager:
             PipelineStage, IsActive, StageEnteredDate, NextActionDate,
             StageTimeoutDate, AcquisitionSucceeded, CreatedAt, LastUpdatedDate
         )
-        VALUES (?, ?, ?, ?, ?, NULL, NULL, 'MakingOffer', 1, ?, ?, NULL, 0, GETDATE(), GETDATE())
+        VALUES (?, ?, ?, ?, ?, NULL, NULL, 'MakingOffer', 1, ?, ?, NULL, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         """
 
         self.db.execute_non_query(insert_query, (
@@ -1301,7 +1347,7 @@ class PropertyAcquisitionManager:
     def _get_next_attempt_id(self) -> int:
         """Get next AttemptID for this run (manual assignment, resets to 1 per run)"""
         query = """
-        SELECT ISNULL(MAX(AttemptID), 0) + 1
+        SELECT COALESCE(MAX(AttemptID), 0) + 1
         FROM simulation.PropertyAcquisitionAttempt
         WHERE RunID = ?
         """
@@ -1345,7 +1391,7 @@ class PropertyAcquisitionManager:
 
         # Get next StepID for this attempt (manual assignment, resets to 1 per attempt)
         step_id_query = """
-        SELECT ISNULL(MAX(StepID), 0) + 1
+        SELECT COALESCE(MAX(StepID), 0) + 1
         FROM simulation.PropertyAcquisitionStep
         WHERE RunID = ? AND AttemptID = ?
         """

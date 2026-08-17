@@ -397,7 +397,7 @@ class ComplianceManager:
             Next available AttemptID for this run
         """
         query = """
-            SELECT ISNULL(MAX(AttemptID), 0) + 1 AS NextAttemptID
+            SELECT COALESCE(MAX(AttemptID), 0) + 1 AS NextAttemptID
             FROM simulation.ComplianceAttempt
             WHERE RunID = ?
         """
@@ -412,7 +412,7 @@ class ComplianceManager:
             Next available WorkItemID for this run
         """
         query = """
-            SELECT ISNULL(MAX(WorkItemID), 0) + 1 AS NextWorkItemID
+            SELECT COALESCE(MAX(WorkItemID), 0) + 1 AS NextWorkItemID
             FROM simulation.ComplianceWorkItem
             WHERE RunID = ?
         """
@@ -427,7 +427,7 @@ class ComplianceManager:
             Next available StepID for this run
         """
         query = """
-            SELECT ISNULL(MAX(StepID), 0) + 1 AS NextStepID
+            SELECT COALESCE(MAX(StepID), 0) + 1 AS NextStepID
             FROM simulation.ComplianceStep
             WHERE RunID = ?
         """
@@ -1805,6 +1805,7 @@ class ComplianceManager:
             WHERE RunID = ?
                 AND PropertyID = ?
                 AND UnitID IS NULL
+            ORDER BY AttemptID  -- deterministic [0]-pick, oldest attempt wins (KD-233)
         """
         result = self.db.execute_query(query, (self.run_id, property_id))
 
@@ -1889,6 +1890,7 @@ class ComplianceManager:
             WHERE RunID = ?
                 AND PropertyID = ?
                 AND UnitID = ?
+            ORDER BY AttemptID  -- deterministic [0]-pick, oldest attempt wins (KD-233)
         """
         result = self.db.execute_query(query, (self.run_id, property_id, unit_id))
 
@@ -1934,19 +1936,27 @@ class ComplianceManager:
         # but simulation.PropertyUnits uses simulation-local UnitID. Bridge via
         # simulation.Properties.AddressID (= reference PropertyID) and the
         # PropertyUnits.Unit string (= reference UnitNumber).
+        # Common-subset form (PG port pass 1 addendum): T-SQL's aliased
+        # UPDATE..FROM..JOIN has no PG equivalent — the same target-row set
+        # selected via a subquery runs on both engines. CAST target VARCHAR
+        # (NVARCHAR is T-SQL-only; same string compare both engines).
         unit_status_query = """
-            UPDATE u
-            SET u.UnitStatus = 'Available'
-            FROM simulation.PropertyUnits u
-            JOIN simulation.Properties p
-              ON u.RunID = p.RunID AND u.PropertyID = p.PropertyID
-            JOIN reference.Units ru
-              ON ru.PropertyID = p.AddressID
-             AND CAST(ru.UnitNumber AS NVARCHAR(50)) = u.Unit
-            WHERE u.RunID = ?
-              AND ru.UnitID = ?
+            UPDATE simulation.PropertyUnits
+            SET UnitStatus = 'Available'
+            WHERE RunID = ?
+              AND UnitID IN (
+                  SELECT u.UnitID
+                  FROM simulation.PropertyUnits u
+                  JOIN simulation.Properties p
+                    ON u.RunID = p.RunID AND u.PropertyID = p.PropertyID
+                  JOIN reference.Units ru
+                    ON ru.PropertyID = p.AddressID
+                   AND CAST(ru.UnitNumber AS VARCHAR(50)) = u.Unit
+                  WHERE u.RunID = ?
+                    AND ru.UnitID = ?
+              )
         """
-        self.db.execute_non_query(unit_status_query, (self.run_id, unit_id))
+        self.db.execute_non_query(unit_status_query, (self.run_id, self.run_id, unit_id))
 
         # Log ComplianceStep
         step_id = self._get_next_step_id()
@@ -2013,6 +2023,7 @@ class ComplianceManager:
             WHERE RunID = ?
                 AND PropertyID = ?
                 AND UnitID IS NULL
+            ORDER BY AttemptID  -- deterministic [0]-pick, oldest attempt wins (KD-233)
         """
         building_result = self.db.execute_query(building_query, (self.run_id, property_id))
 
@@ -2099,6 +2110,7 @@ class ComplianceManager:
             WHERE RunID = ?
                 AND PropertyID = ?
                 AND UnitID IS NOT NULL
+            ORDER BY UnitID  -- deterministic emission order (KD-233)
         """
         units = self.db.execute_query(query, (self.run_id, property_id))
 

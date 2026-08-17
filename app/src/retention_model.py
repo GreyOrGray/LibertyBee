@@ -18,7 +18,7 @@ docs/reference/evidence_base.md §10.
       at the BaseRent column (that re-splits the basis this fix killed).
   external_scarcity  = 1 - availability * (1 - affordability_gap)  (regional)
       availability      = clamp(regional_vacancy / vac_ref, 0, 1)
-      affordability_gap = clamp((market_rent/income - 0.30)/(burden_ceiling - 0.30), 0, 1)
+      affordability_gap = clamp((market_rent/income - burden_floor)/(burden_ceiling - burden_floor), 0, 1)
       regional_vacancy  = VacancyRateBase + regime VacancyDelta(t)   (evidence §4a + §7)
       income(t)         = SigningMonthlyIncome * wage_factor(t)/wage_factor(onboarding)  (§9)
 
@@ -79,7 +79,7 @@ class RetentionModel:
 
     def __init__(self, db, *, base_exit: float, beta: float, gamma: float,
                  floor_exit: float, vac_ref: float, burden_ceiling: float,
-                 regional_vacancy_rate: float, form_is_logistic: int = 0,
+                 burden_floor: float, regional_vacancy_rate: float, form_is_logistic: int = 0,
                  logger: Optional[logging.Logger] = None):
         self.db = db
         self.base_exit = float(base_exit)
@@ -88,16 +88,18 @@ class RetentionModel:
         self.floor_exit = float(floor_exit)
         self.vac_ref = float(vac_ref)
         self.burden_ceiling = float(burden_ceiling)
+        self.burden_floor = float(burden_floor)
         # The vacancy a LEAVING tenant faces = the wider REGIONAL market they'd search
         # (North Shore/metro), NOT LB's Salem-local occupancy (PROP.VacancyRateBase).
         # A mover is not confined to one tight town (Gray 2026-07-08).
         self.regional_vacancy_rate = float(regional_vacancy_rate)
         self.form_is_logistic = int(form_is_logistic)
         self.logger = logger or logging.getLogger(__name__)
-        if self.vac_ref <= 0.0 or self.burden_ceiling <= 0.30:
+        if self.vac_ref <= 0.0 or self.burden_ceiling <= self.burden_floor:
             raise ValueError(
-                f"RetentionModel: vac_ref must be > 0 and burden_ceiling > 0.30 "
-                f"(got vac_ref={self.vac_ref}, burden_ceiling={self.burden_ceiling})")
+                f"RetentionModel: vac_ref must be > 0 and burden_ceiling > burden_floor "
+                f"(got vac_ref={self.vac_ref}, burden_ceiling={self.burden_ceiling}, "
+                f"burden_floor={self.burden_floor})")
 
     # ------------------------------------------------------------------
     def build_date_context(self, run_id: int, current_date: date) -> _DateContext:
@@ -159,7 +161,8 @@ class RetentionModel:
             else:
                 burden = market_rent / income_t
                 affordability_gap = _clamp(
-                    (burden - 0.30) / (self.burden_ceiling - 0.30), 0.0, 1.0)
+                    (burden - self.burden_floor) / (self.burden_ceiling - self.burden_floor),
+                    0.0, 1.0)
 
         # --- availability + external_scarcity (regional) ---
         availability = _clamp(ctx.regional_vacancy / self.vac_ref, 0.0, 1.0)

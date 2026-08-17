@@ -162,6 +162,7 @@ class EvictionManager:
                             AND lt.LeaseID = l.LeaseID
                     )
                     AND ? >= l.LeaseStartDate
+                ORDER BY l.LeaseID  -- deterministic processing order (KD-233)
             """
 
             cursor.execute(query, (run_id, self.consecutive_missed_threshold, current_date))
@@ -225,7 +226,7 @@ class EvictionManager:
 
             # Get next LedgerID for LeaseTerminationLedger
             cursor.execute("""
-                SELECT ISNULL(MAX(LedgerID), 0) + 1
+                SELECT COALESCE(MAX(LedgerID), 0) + 1
                 FROM simulation.LeaseTerminationLedger
                 WHERE RunID = ?
             """, (run_id,))
@@ -422,7 +423,7 @@ class EvictionManager:
 
             # Get next LedgerID for LeaseTerminationLedger entries
             cursor.execute("""
-                SELECT ISNULL(MAX(LedgerID), 0) + 1
+                SELECT COALESCE(MAX(LedgerID), 0) + 1
                 FROM simulation.LeaseTerminationLedger
                 WHERE RunID = ?
             """, (run_id,))

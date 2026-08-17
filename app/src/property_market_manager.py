@@ -263,8 +263,10 @@ class PropertyMarketManager:
         # Property-specific RNG
         rng = Random(seed + property_id)
 
-        # Sample days on market (using January since it's month 1)
-        days_on_market = self._sample_days_on_market(rng, 1)
+        # Sample days on market at the start-date's month (KD-222: was a literal 1,
+        # which silently applied January's seasonal multiplier to the zero-day cohort
+        # regardless of SIM.StartDate; the daily path already uses the true month).
+        days_on_market = self._sample_days_on_market(rng, zero_day.month)
 
         # Schedule sale or withdrawal
         expected_return_date = zero_day + timedelta(days=days_on_market)
@@ -278,7 +280,7 @@ class PropertyMarketManager:
 
             # Get next PropertyMarketID for this run (run-specific numbering)
             cursor.execute("""
-                SELECT ISNULL(MAX(PropertyMarketID), 0) + 1
+                SELECT COALESCE(MAX(PropertyMarketID), 0) + 1
                 FROM simulation.PropertyMarket
                 WHERE RunID = ?
             """, (run_id,))
@@ -302,7 +304,7 @@ class PropertyMarketManager:
 
             # Get next PropertyMarketID for this run (run-specific numbering)
             cursor.execute("""
-                SELECT ISNULL(MAX(PropertyMarketID), 0) + 1
+                SELECT COALESCE(MAX(PropertyMarketID), 0) + 1
                 FROM simulation.PropertyMarket
                 WHERE RunID = ?
             """, (run_id,))
@@ -335,7 +337,7 @@ class PropertyMarketManager:
 
             # Get next PropertyMarketID for this run (run-specific numbering)
             cursor.execute("""
-                SELECT ISNULL(MAX(PropertyMarketID), 0) + 1
+                SELECT COALESCE(MAX(PropertyMarketID), 0) + 1
                 FROM simulation.PropertyMarket
                 WHERE RunID = ?
             """, (run_id,))
@@ -458,6 +460,11 @@ class PropertyMarketManager:
                   AND MarketStatus = 'OtherBuyerOwned'
                   AND ExpectedReturnDate = ?
                   AND ExpirationDate IS NULL
+                -- KD-233: PropertyMarketID (SCD sequence), consistent with this
+                -- module's other market loops — this loop feeds RNG-consuming
+                -- state, so the key must pin the produced order, not re-sort it
+                -- (verified: reproduces the V2 stream exactly; PropertyID does not).
+                ORDER BY PropertyMarketID
             """, run_id, current_date)
 
             returning_properties = cursor.fetchall()
@@ -475,7 +482,7 @@ class PropertyMarketManager:
 
                 # Get next PropertyMarketID for this run (run-specific numbering)
                 cursor.execute("""
-                    SELECT ISNULL(MAX(PropertyMarketID), 0) + 1
+                    SELECT COALESCE(MAX(PropertyMarketID), 0) + 1
                     FROM simulation.PropertyMarket
                     WHERE RunID = ?
                 """, (run_id,))
@@ -556,7 +563,7 @@ class PropertyMarketManager:
 
                     # Get next PropertyMarketID for this run (run-specific numbering)
                     cursor.execute("""
-                        SELECT ISNULL(MAX(PropertyMarketID), 0) + 1
+                        SELECT COALESCE(MAX(PropertyMarketID), 0) + 1
                         FROM simulation.PropertyMarket
                         WHERE RunID = ?
                     """, (run_id,))
@@ -630,7 +637,7 @@ class PropertyMarketManager:
 
                     # Get next PropertyMarketID for this run (run-specific numbering)
                     cursor.execute("""
-                        SELECT ISNULL(MAX(PropertyMarketID), 0) + 1
+                        SELECT COALESCE(MAX(PropertyMarketID), 0) + 1
                         FROM simulation.PropertyMarket
                         WHERE RunID = ?
                     """, (run_id,))
@@ -657,7 +664,7 @@ class PropertyMarketManager:
 
                     # Get next PropertyMarketID for this run (run-specific numbering)
                     cursor.execute("""
-                        SELECT ISNULL(MAX(PropertyMarketID), 0) + 1
+                        SELECT COALESCE(MAX(PropertyMarketID), 0) + 1
                         FROM simulation.PropertyMarket
                         WHERE RunID = ?
                     """, (run_id,))

@@ -133,7 +133,9 @@ class Simulation:
         self.inflation_engine = InflationEngine(self.db, self.config_loader)
         self.employee_manager = EmployeeManager(self.db, self.fund_manager, self.event_logger)
         self.property_market_manager = PropertyMarketManager(self.db, self.event_logger, {})
-        self.property_acquisition_manager = PropertyAcquisitionManager(self.db, self.config_loader, self.fund_manager, self.event_logger, random_seed)
+        from property_acquisition_manager import PortfolioCounts
+        self.portfolio_counts = PortfolioCounts(self.db)  # shared cache (step 0.5)
+        self.property_acquisition_manager = PropertyAcquisitionManager(self.db, self.config_loader, self.fund_manager, self.event_logger, random_seed, portfolio_counts=self.portfolio_counts)
         self.compliance_manager = None  # Initialized after run_id is set
         self.tenant_manager = None  # Initialized after run_id is set
         self.rent_collection_manager = None  # Initialized after run_id is set
@@ -151,7 +153,8 @@ class Simulation:
 
     def compute_monthly_opex_breakdown(self, current_day: date,
                                        extra_units: int = 0,
-                                       extra_properties: int = 0) -> MonthlyOpExBreakdown:
+                                       extra_properties: int = 0,
+                                       extra_units_by_town: dict = None) -> MonthlyOpExBreakdown:
         """Single source of truth for monthly_opex (expected basis).
 
         Composes payroll (from EmployeeManager) + itemized per-unit buckets
@@ -172,21 +175,33 @@ class Simulation:
         compute_acquisition_gate_bases. The ``owned_units`` /
         ``owned_properties`` fields always report OWNED counts, whatever
         extras were passed.
+
+        KD-229: ``extra_units_by_town`` (town -> units, None town = untowned)
+        splits the SAME extras for the two town-scoped buckets (tax/insurance),
+        so a pipeline candidate prices at ITS town's rate rather than the
+        region-wide default — the conservative direction the gate requires.
+        When omitted, extras price region-wide (identical to pre-KD-229).
+        Must sum to ``extra_units`` — fail-loud, never silently split.
         """
         employees = self.employee_manager.get_active_employees(self.run_id, current_day)
         payroll = sum((emp.base_salary + emp.benefits_cost) / 12 for emp in employees)
         payroll_q = Decimal(str(payroll)).quantize(Decimal('0.01'))
         maint_techs = self.employee_manager.count_employees_by_role(employees, "Maintenance Crew")
 
-        counts_row = self.db.execute_query(
-            "SELECT COUNT(*), COUNT(DISTINCT PropertyID) "
-            "FROM simulation.PropertyUnits WHERE RunID = ?",
-            (self.run_id,),
-        )
-        owned_units = int(counts_row[0][0]) if counts_row else 0
-        owned_properties = int(counts_row[0][1]) if counts_row else 0
+        # step 0.5: cached — was 2 COUNT queries + a GROUP BY per call, ~62
+        # calls/month (this function serves the monthly charge AND every
+        # acquisition-gate evaluation); the cache invalidates on the single
+        # PropertyUnits insert site and is fail-loud verified at month-end.
+        owned_units, owned_properties, owned_by_town = \
+            self.portfolio_counts.get(self.run_id)
         basis_units = owned_units + extra_units
         basis_properties = owned_properties + extra_properties
+
+        if extra_units_by_town is not None and \
+                sum(extra_units_by_town.values()) != extra_units:
+            raise ValueError(
+                f"extra_units_by_town sums to {sum(extra_units_by_town.values())} "
+                f"but extra_units={extra_units} — pipeline town split inconsistent (KD-229)")
 
         inflation_factor = self.inflation_engine.get_cumulative_opex_factor(
             self.run_id, current_day
@@ -196,8 +211,29 @@ class Simulation:
             return ((annual * Decimal(basis_units) / Decimal(12))
                     * inflation_factor).quantize(Decimal('0.01'))
 
-        property_tax = monthly_per_unit(self.config.property_tax_per_unit)
-        insurance = monthly_per_unit(self.config.insurance_per_unit)
+        # Town-scoped OpEx (V00077): tax/insurance sum each town's rate x its owned units, plus the
+        # pro-forma extras at their towns' rates (KD-229). Owned-by-town comes from the
+        # PortfolioCounts cache above (was its own GROUP BY per call — 14.9k/run, measured).
+        # A NULL town resolves via the None key = region-wide; single-town / no override reduces
+        # to rate x basis_units, i.e. monthly_per_unit — so the corpus reproduces exactly.
+
+        def monthly_local_per_unit(rate_by_town: dict) -> Decimal:
+            region_wide = rate_by_town[None]
+            annual = sum((rate_by_town.get(t, region_wide) * Decimal(int(n))
+                          for t, n in owned_by_town), Decimal(0))
+            if extra_units_by_town is None:
+                annual += region_wide * Decimal(extra_units)   # untowned extras: region-wide rate
+            else:
+                # KD-229: each pro-forma candidate prices at its OWN town's rate
+                # (None town -> region-wide). Equal rates reduce exactly to
+                # region_wide x extra_units (Decimal x int is exact), so the
+                # no-override corpus reproduces to the penny.
+                annual += sum((rate_by_town.get(t, region_wide) * Decimal(int(n))
+                               for t, n in extra_units_by_town.items()), Decimal(0))
+            return ((annual / Decimal(12)) * inflation_factor).quantize(Decimal('0.01'))
+
+        property_tax = monthly_local_per_unit(self.config.property_tax_per_unit_by_town)
+        insurance = monthly_local_per_unit(self.config.insurance_per_unit_by_town)
         utilities = monthly_per_unit(self.config.utilities_owner_per_unit)
         exterior = ((self.config.exterior_per_property * Decimal(basis_properties)
                      / Decimal(12)) * inflation_factor).quantize(Decimal('0.01'))
@@ -300,7 +336,7 @@ class Simulation:
                       paa.EstimatedRepairCost, rp.YearBuilt,
                       (SELECT COUNT(*) FROM reference.Units u
                        WHERE u.PropertyID = paa.PropertyID) AS UnitCount,
-                      paa.AssessedLeadCost, paa.LeadAssessed
+                      paa.AssessedLeadCost, paa.LeadAssessed, rp.Town
                FROM simulation.PropertyAcquisitionAttempt paa
                JOIN reference.Properties rp ON rp.PropertyID = paa.PropertyID
                WHERE paa.RunID = ? AND paa.IsActive = 1""",
@@ -322,19 +358,21 @@ class Simulation:
                 'units': int(r[7]), 'price': price, 'repair': repair,
                 'year_built': int(r[6]) if r[6] is not None else None,
                 'known_lead': known_lead,
+                'town': r[10],  # KD-229: the candidate prices at ITS town's rates
             })
 
         if candidate is not None:
-            yb_row = self.db.execute_query(
-                "SELECT YearBuilt FROM reference.Properties WHERE PropertyID = ?",
+            cand_row = self.db.execute_query(
+                "SELECT YearBuilt, Town FROM reference.Properties WHERE PropertyID = ?",
                 (candidate.property_id,))
-            year_built = int(yb_row[0][0]) if yb_row and yb_row[0][0] is not None else None
+            year_built = int(cand_row[0][0]) if cand_row and cand_row[0][0] is not None else None
             pipeline.append({
                 'units': int(candidate.unit_count),
                 'price': Decimal(str(candidate.list_price)),
                 'repair': expected_dd_repair,
                 'year_built': year_built,
                 'known_lead': None,  # candidate not yet assessed → E[lead]
+                'town': cand_row[0][1] if cand_row else None,
             })
 
         pipeline_units = sum(p['units'] for p in pipeline)
@@ -346,9 +384,15 @@ class Simulation:
                 onboarding_lump=Decimal('0.00'), pipeline_count=0,
                 pipeline_units=0, pipeline_properties=0)
 
+        extra_units_by_town = {}
+        for p in pipeline:
+            extra_units_by_town[p['town']] = \
+                extra_units_by_town.get(p['town'], 0) + p['units']
+
         pro_forma = self.compute_monthly_opex_breakdown(
             current_day, extra_units=pipeline_units,
-            extra_properties=pipeline_properties)
+            extra_properties=pipeline_properties,
+            extra_units_by_town=extra_units_by_town)
 
         # Expected staffing step: the SAME formula at combined vs owned counts
         # (never vs current headcount — pending owned-driven hires belong to
@@ -615,6 +659,7 @@ class Simulation:
                 floor_exit=self.config.ret_floor_exit_annual,
                 vac_ref=self.config.ret_vacancy_ref_pct,
                 burden_ceiling=self.config.ret_burden_ceiling_pct,
+                burden_floor=self.config.ret_burden_floor_pct,
                 regional_vacancy_rate=self.config.ret_mover_regional_vacancy_pct,
                 form_is_logistic=self.config.ret_form_is_logistic,
                 logger=getattr(self, 'logger', None),
@@ -938,6 +983,26 @@ class Simulation:
                         # Process bi-monthly payroll (employee_manager now uses
                         # process_expense_protected — CSF backstops Cash if needed)
                         actual_payroll = self.employee_manager.process_bi_monthly_payroll(self.run_id, current_day)
+
+                    # Month-end portfolio-cache verify (step 0.5): the
+                    # PortfolioCounts cache assumes ONE PropertyUnits insert
+                    # site and no deletes; a future write site that forgets to
+                    # invalidate would silently mis-price OpEx. This re-counts
+                    # from the DB once per month and fails LOUD on drift —
+                    # cheap (2 queries/month vs the 43k/run it replaced).
+                    if current_day.day == 1 or current_day == month_end:
+                        _cu, _cp, _ = self.portfolio_counts.get(self.run_id)
+                        _real = self.db.execute_query(
+                            "SELECT COUNT(*), COUNT(DISTINCT PropertyID) "
+                            "FROM simulation.PropertyUnits WHERE RunID = ?",
+                            (self.run_id,))
+                        if _real and (int(_real[0][0]) != _cu or int(_real[0][1]) != _cp):
+                            raise RuntimeError(
+                                f"PortfolioCounts cache drift: cached "
+                                f"units={_cu}/props={_cp} vs DB "
+                                f"{int(_real[0][0])}/{int(_real[0][1])} — a "
+                                f"PropertyUnits write site is missing "
+                                f"invalidate() (step 0.5 single-writer guard)")
 
                     # Month-end non-payroll OpEx charge.
                     # Fires AFTER bi-monthly payroll and BEFORE the CSF top-up.

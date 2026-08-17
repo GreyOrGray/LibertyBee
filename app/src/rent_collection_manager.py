@@ -103,7 +103,7 @@ class RentCollectionManager:
 
         # Initialize CollectionID counter by querying max CollectionID for this run
         query = """
-            SELECT ISNULL(MAX(CollectionID), 0) + 1 AS NextCollectionID
+            SELECT COALESCE(MAX(CollectionID), 0) + 1 AS NextCollectionID
             FROM simulation.RentCollection
             WHERE RunID = ?
         """
@@ -296,6 +296,7 @@ class RentCollectionManager:
               AND mps.BillingMonth = ?  -- Current month only
               AND mps.CanPayThisMonth = 1  -- Tenant CAN pay this month
               AND mps.ActualPaymentDate IS NULL  -- Not yet paid
+            ORDER BY mps.LeaseID  -- deterministic processing order (KD-233)
         """
 
         unpaid_leases = self.db.execute_query(query, (self.run_id, billing_month))
@@ -492,6 +493,7 @@ class RentCollectionManager:
             WHERE RunID = ?
               AND BillingMonth = ?
               AND ActualPaymentDate IS NULL  -- Not paid
+            ORDER BY LeaseID  -- deterministic processing order (KD-233)
         """
         unpaid_leases = self.db.execute_query(query, (self.run_id, billing_month))
 
@@ -637,7 +639,7 @@ class RentCollectionManager:
         billing_month = self._first_of_month(current_date)
 
         query = """
-            SELECT ISNULL(SUM(AmountDue), 0) AS TotalArrears
+            SELECT COALESCE(SUM(AmountDue), 0) AS TotalArrears
             FROM simulation.MonthlyPaymentStatus
             WHERE RunID = ?
               AND LeaseID = ?

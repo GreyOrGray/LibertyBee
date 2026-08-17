@@ -1021,6 +1021,227 @@ def create_and_prepare_test_env(use_scratch: bool = False, label: str = "") -> s
 
 
 # -------------------------------------------------------
+# PostgreSQL path (PG-port; phases/phase_1_12/pg_port_design.md)
+#
+# The PG lifecycle is structurally simpler than the SQL Server restore
+# path: `CREATE DATABASE ... TEMPLATE libertybee_gold` IS the Gold restore
+# (the baseline is built/rebuilt by environmentscripts/pg_schema_cut.py,
+# never here). Pending migrations (post-cut, common-subset by design) apply
+# from the SAME sql/migrations/ chain via psycopg — GO lines split batches
+# on both engines. Drops route through THIS tool only (the guard ruling:
+# raw DROP DATABASE in a shell is blocked by bash_guard, deliberately).
+# -------------------------------------------------------
+
+PG_TEST_PREFIX = "libertybee_test"
+PG_GOLD_DB = "libertybee_gold"
+# The template envs mint from. Overridable so sweep workers can reset to a
+# corpus-base template (e.g. libertybee_salem_gold, the supersede's A2 bake)
+# instead of the engine gold.
+PG_TEMPLATE = os.getenv("LB_PG_TEMPLATE", PG_GOLD_DB)
+PG_HOST = os.getenv("LB_PG_HOST", "localhost")
+PG_PORT = int(os.getenv("LB_PG_PORT", "5432"))
+PG_USER = os.getenv("LB_PG_USER", "libertybee")  # password via pgpass.conf ONLY
+
+
+def _pg_connect(dbname: str = "postgres", autocommit: bool = True):
+    import psycopg
+    return psycopg.connect(host=PG_HOST, port=PG_PORT, user=PG_USER,
+                           dbname=dbname, autocommit=autocommit)
+
+
+def _pg_next_test_seq() -> int:
+    import re as _re
+    pat = _re.compile(_re.escape(PG_TEST_PREFIX) + r"_(\d{1,4})(?:_|$)")
+    mx = 0
+    with _pg_connect() as conn:
+        rows = conn.execute(
+            "SELECT datname FROM pg_database WHERE datname LIKE %s",
+            (PG_TEST_PREFIX + r"\_%",)).fetchall()
+    for (name,) in rows:
+        m = pat.match(name)
+        if m:
+            mx = max(mx, int(m.group(1)))
+    return mx + 1
+
+
+def _pg_ensure_environment_folder(envname: str) -> Path:
+    env_path = ENV_ROOT / envname
+    env_path.mkdir(parents=True, exist_ok=True)
+    config_path = env_path / "db_config.json"
+    if not config_path.exists():
+        config_path.write_text(json.dumps({
+            "backend": "psycopg",
+            "server": PG_HOST,
+            "port": PG_PORT,
+            "database": envname,
+            "username": PG_USER,
+            # no password field, ever — auth rides pgpass.conf (the
+            # 2026-08-13 credential ruling; DatabaseManager REFUSES a
+            # password on the psycopg backend)
+        }, indent=2), encoding="utf-8")
+        print(f"Created db_config.json for [{envname}]")
+    return env_path
+
+
+def _pg_apply_pending_migrations(db_name: str) -> int:
+    """Apply sql/migrations/ files not yet in the env's SchemaVersion.
+    Post-cut migrations are common-subset by design (pg_port_design.md) —
+    a T-SQL-only construct here fails LOUD, which is correct."""
+    applied_n = 0
+    with _pg_connect(db_name, autocommit=False) as conn:
+        applied = {r[0] for r in conn.execute(
+            "SELECT Version FROM dbo.SchemaVersion").fetchall()}
+        for path in list_migration_files():
+            version = path.name.split("__", 1)[0]
+            if version in applied:
+                continue
+            sql_text = path.read_text(encoding="utf-8")
+            for batch in split_sql_batches(sql_text):
+                if batch.strip():
+                    conn.execute(batch)
+            conn.execute(
+                "INSERT INTO dbo.SchemaVersion (Version, Description, ScriptPath) "
+                "VALUES (%s, %s, %s)",
+                (version, path.stem.split("__", 1)[-1].replace("_", " "), str(path)))
+            conn.commit()
+            applied_n += 1
+            print(f"Applied migration {version} to [{db_name}]")
+    return applied_n
+
+
+def _pg_stamp_provenance(db_name: str, label: str = "") -> None:
+    branch, commit = _git_info()
+    with _pg_connect(db_name) as conn:
+        conn.execute("DELETE FROM dbo._provenance")
+        conn.execute(
+            "INSERT INTO dbo._provenance "
+            "(Label, CreatedBy, SourceBranch, SourceCommit, MigrationsScratch, Note) "
+            "VALUES (%s, CURRENT_USER, %s, %s, 0, %s)",
+            (label or "(unlabeled)", branch, commit,
+             f"minted from TEMPLATE {PG_GOLD_DB}"))
+    print(f"Provenance stamped on [{db_name}]: label={label or '(unlabeled)'}, "
+          f"{branch}@{commit}")
+
+
+def pg_reset_named_env(db_name: str) -> str:
+    """DESTRUCTIVE named reset to the template — the PG analogue of the
+    SQL Server --envname restore path, for fixed worker-pool slots. The same
+    hard allow-list applies: ephemeral names only, no override flag."""
+    if not db_name.startswith(PG_TEST_PREFIX + "_"):
+        raise SystemExit(
+            f"Refusing to reset [{db_name}] — --pg --envname resets only "
+            f"{PG_TEST_PREFIX}_* ephemeral envs (F-05 guard, PG form).")
+    with _pg_connect() as conn:
+        if not conn.execute("SELECT 1 FROM pg_database WHERE datname = %s",
+                            (PG_TEMPLATE,)).fetchone():
+            raise SystemExit(f"template {PG_TEMPLATE} not found")
+        conn.execute(f"DROP DATABASE IF EXISTS {db_name}")
+        conn.execute(f"CREATE DATABASE {db_name} TEMPLATE {PG_TEMPLATE}")
+    print(f"Reset [{db_name}] from TEMPLATE {PG_TEMPLATE}")
+    n = _pg_apply_pending_migrations(db_name)
+    print(f"Pending migrations applied: {n}")
+    _pg_ensure_environment_folder(db_name)
+    _pg_stamp_provenance(db_name, label="worker-reset")
+    print(f"Test environment ready: {db_name}")
+    return db_name
+
+
+def pg_promote_template(src_env: str, template_name: str) -> None:
+    """Designate an imported env as a named corpus-base template (Track A2:
+    region_importer --pg output -> libertybee_salem_gold). A plain rename —
+    any PG database can serve as a TEMPLATE source. Refuses to overwrite."""
+    if not src_env.startswith(PG_TEST_PREFIX + "_"):
+        raise SystemExit(f"--promote-template source must be a {PG_TEST_PREFIX}_* env")
+    with _pg_connect() as conn:
+        if conn.execute("SELECT 1 FROM pg_database WHERE datname = %s",
+                        (template_name,)).fetchone():
+            raise SystemExit(
+                f"{template_name} already exists — drop it via tooling first "
+                f"(refusing to overwrite a baseline silently)")
+        conn.execute(f"ALTER DATABASE {src_env} RENAME TO {template_name}")
+    env_path = ENV_ROOT / src_env
+    if env_path.exists():
+        import shutil
+        shutil.rmtree(env_path)
+    print(f"Promoted [{src_env}] -> template [{template_name}] "
+          f"(env folder removed — templates are not run targets)")
+
+
+def pg_create_and_prepare_test_env(label: str = "") -> str:
+    """Mint a PG test env from the template; apply pending migrations;
+    stamp provenance. Name = libertybee_test_<NNNN>[_<label>] (lowercase —
+    PG folds unquoted identifiers)."""
+    with _pg_connect() as conn:
+        if not conn.execute("SELECT 1 FROM pg_database WHERE datname = %s",
+                            (PG_TEMPLATE,)).fetchone():
+            raise SystemExit(
+                f"{PG_TEMPLATE} not found — build the gold first: "
+                f"python environmentscripts/pg_schema_cut.py --env <sqlserver_env> --build-gold")
+        seq = f"{_pg_next_test_seq():04d}"
+        db_name = f"{PG_TEST_PREFIX}_{seq}"
+        if label:
+            db_name += f"_{_sanitize_label(label).lower()}"
+        conn.execute(f"CREATE DATABASE {db_name} TEMPLATE {PG_TEMPLATE}")
+    print(f"Minted [{db_name}] from TEMPLATE {PG_TEMPLATE}")
+    n = _pg_apply_pending_migrations(db_name)
+    print(f"Pending migrations applied: {n}")
+    _pg_ensure_environment_folder(db_name)
+    _pg_stamp_provenance(db_name, label=label)
+    print(f"Test environment ready: {db_name}")
+    return db_name
+
+
+def pg_list_ephemeral() -> None:
+    with _pg_connect() as conn:
+        names = [r[0] for r in conn.execute(
+            "SELECT datname FROM pg_database WHERE datname LIKE %s "
+            "ORDER BY datname", (PG_TEST_PREFIX + r"\_%",)).fetchall()]
+    if not names:
+        print(f"No {PG_TEST_PREFIX}_* databases on {PG_HOST}:{PG_PORT}.")
+        return
+    print(f"PG ephemeral test databases ({PG_HOST}:{PG_PORT}):")
+    for name in names:
+        note = ""
+        try:
+            with _pg_connect(name) as c:
+                row = c.execute(
+                    "SELECT Label, CreatedUtc, SourceBranch, SourceCommit "
+                    "FROM dbo._provenance "
+                    "ORDER BY CreatedUtc DESC OFFSET 0 ROWS FETCH FIRST 1 ROWS ONLY"
+                ).fetchone()
+            if row:
+                note = f"  — {row[0]} ({row[2]}@{row[3]}, {row[1]:%Y-%m-%d})"
+        except Exception:
+            note = "  — (no provenance)"
+        print(f"  {name}{note}")
+
+
+def pg_drop_ephemeral(db_name: str, assume_yes: bool = False) -> None:
+    """Drop a PG ephemeral env. Refuses anything outside the test prefix —
+    libertybee_gold and every non-ephemeral name are untouchable here."""
+    if not db_name.startswith(PG_TEST_PREFIX + "_"):
+        raise SystemExit(
+            f"Refusing to drop [{db_name}] — only {PG_TEST_PREFIX}_* ephemeral "
+            f"envs are droppable via this tool.")
+    if not assume_yes:
+        print(f"DRY RUN: would drop [{db_name}] and its environments/ folder. "
+              f"Re-run with --yes to execute.")
+        return
+    with _pg_connect() as conn:
+        cur = conn.execute("SELECT 1 FROM pg_database WHERE datname = %s", (db_name,))
+        if cur.fetchone():
+            conn.execute(f"DROP DATABASE {db_name}")
+            print(f"Dropped [{db_name}]")
+        else:
+            print(f"Database [{db_name}] not found (already dropped).")
+    env_path = ENV_ROOT / db_name
+    if env_path.exists():
+        import shutil
+        shutil.rmtree(env_path)
+        print(f"Removed {env_path}")
+
+
+# -------------------------------------------------------
 # CLI entry point
 # -------------------------------------------------------
 
@@ -1067,6 +1288,15 @@ def main() -> str:
                         help="Drop ONE LibertyBee_Test_* database + its env folder (dry-run unless --yes).")
     parser.add_argument("--yes", action="store_true",
                         help="Confirm a --drop (without it, --drop only previews).")
+    parser.add_argument("--pg", action="store_true",
+                        help=("PostgreSQL mode: mint (TEMPLATE + pending migrations), "
+                              "--envname (destructive named reset, ephemeral-only), --list, "
+                              "--drop, or --promote-template. Template = LB_PG_TEMPLATE "
+                              "(default libertybee_gold; the gold itself is built by "
+                              "pg_schema_cut.py, never here)."))
+    parser.add_argument("--promote-template", type=str, default="",
+                        help=("with --pg --envname <src>: rename an imported env to a named "
+                              "corpus-base template (e.g. libertybee_salem_gold — Track A2)."))
 
     args = parser.parse_args()
 
@@ -1077,6 +1307,27 @@ def main() -> str:
         _baseline_dir_override = args.baseline
 
         print(f"Baseline source: {args.baseline}")
+
+    if args.pg:
+        if args.scratch or args.baseline:
+            raise SystemExit("--pg does not combine with --scratch/--baseline "
+                             "(PG envs mint from templates only)")
+        if args.list:
+            pg_list_ephemeral()
+            return ""
+        if args.drop:
+            pg_drop_ephemeral(args.drop, assume_yes=args.yes)
+            return ""
+        if args.promote_template:
+            if not args.envname:
+                raise SystemExit("--promote-template needs --envname <source env>")
+            pg_promote_template(args.envname, args.promote_template)
+            return ""
+        if args.envname:
+            return pg_reset_named_env(args.envname)
+        return pg_create_and_prepare_test_env(
+            label=args.label or (f"issue-{args.issue}" if args.issue else "")
+            or (f"pr-{args.pr}" if args.pr else ""))
 
     if args.list:
         list_ephemeral()

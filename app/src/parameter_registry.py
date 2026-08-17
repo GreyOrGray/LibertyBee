@@ -43,6 +43,7 @@ class ParameterRegistry:
         self.db = db_manager
         self.logger = logging.getLogger(__name__)
         self._resolved = {}        # (category, name) -> (value_str, datatype)
+        self._town_overrides = {}  # (town, category, name) -> value_str  (V00077, Scope='local')
         self._projection_id = None
         self._projection = None    # the reference.Projection row, or None if absent
 
@@ -91,6 +92,7 @@ class ParameterRegistry:
             resolved[key] = slots.get("override") or slots["default"]
         self._resolved = resolved
         self._projection_id = projection_id
+        self._load_town_overrides()
         self.logger.info(
             f"ParameterRegistry: loaded {len(resolved)} resolved parameters for projection {projection_id}"
         )
@@ -115,8 +117,62 @@ class ParameterRegistry:
         self._resolved = {(c, n): (v, dt) for c, n, v, dt in rows}
         self._projection_id = None
         self._projection = None
+        self._load_town_overrides()
         self.logger.info(f"ParameterRegistry: loaded {len(self._resolved)} default parameters")
         return self
+
+    # The params the engine actually resolves per-town today. EXTEND THIS SET
+    # in the same commit that wires a new consumer through get_for_town — an
+    # override for anything outside it is loaded but never read per-town, and
+    # the adopter is warned by name below (lb-ba 2026-08-12 finding #5: a
+    # silent no-op knob is dishonest; prose disclosure decays, a mechanism
+    # doesn't).
+    TOWN_RESOLVED = {
+        ('OPEX', 'PropertyTaxPerUnit'),   # OpEx + acquisition gate (KD-229)
+        ('OPEX', 'InsurancePerUnit'),     # OpEx + acquisition gate (KD-229)
+        ('INC', 'EarnerMedianAnnual'),    # applicant pool median level
+        ('PROP', 'VacancyRateBase'),      # fill durations + underwriting
+    }
+
+    def _load_town_overrides(self):
+        """Load per-town overrides for Scope='local' params (V00077 reference.TownParameterOverride).
+        Absent table or no rows -> empty map, so get_for_town() falls back to the region-wide value
+        (a single-town region or one with no overrides resolves exactly as today).
+
+        Integrity (lb-ba 2026-08-12 #5/#6): an override for a non-'local' or
+        unregistered param RAISES — 'model' mechanics (rent-reduction tiers,
+        TCS, eviction thresholds) must never vary by town, and that guarantee
+        is a fail-loud mechanism here, not a convention. An override for a
+        local param the engine does not yet resolve per-town WARNS by name —
+        stored, honest, inert until its consumer is wired."""
+        self._town_overrides = {}
+        has_table = self.db.execute_query(
+            "SELECT 1 FROM information_schema.tables "
+            "WHERE LOWER(table_schema) = 'reference' "
+            "AND LOWER(table_name) = 'townparameteroverride'"
+        )
+        if has_table:
+            rows = self.db.execute_query(
+                "SELECT o.Town, o.Category, o.Name, o.Value, d.Scope "
+                "FROM reference.TownParameterOverride o "
+                "LEFT JOIN reference.ParameterRegistryDefault d "
+                "ON d.Category = o.Category AND d.Name = o.Name"
+            )
+            bad = [(t, c, n, s) for t, c, n, _v, s in rows if s != 'local']
+            if bad:
+                detail = "; ".join(
+                    f"{t} {c}.{n} ({'unregistered param' if s is None else f'Scope={s}'})"
+                    for t, c, n, s in bad)
+                raise ValueError(
+                    f"TownParameterOverride contains non-town-scopable rows — "
+                    f"model mechanics never vary by town: {detail}")
+            for t, c, n, _v, _s in rows:
+                if (c, n) not in self.TOWN_RESOLVED:
+                    self.logger.warning(
+                        f"TownParameterOverride {t} {c}.{n} is not yet town-resolved "
+                        f"by the engine — the region-wide value will be used until "
+                        f"its consumer is wired (stored, not lost)")
+            self._town_overrides = {(t, c, n): v for t, c, n, v, _s in rows}
 
     # --- projection identity -------------------------------------------------
     # Identity comes from the entity, never from a parameter value. A projection
@@ -169,6 +225,27 @@ class ParameterRegistry:
     def get_date(self, category, name) -> date:
         v = self.get(category, name)
         return v if isinstance(v, date) else date.fromisoformat(str(v))
+
+    # --- town-scoped access (Scope='local' params; V00077) -------------------
+    # The ONLY town-aware read. Model-mechanics params keep get(); only local-market-context
+    # params are consulted per-town, and only where a consumer opts in by passing a town.
+    def get_for_town(self, category, name, town):
+        """A local param resolved for a specific TOWN: the town override if one exists, else the
+        region-wide value. `town` None/blank -> region-wide. Coerced by the base param's DataType,
+        so a single-town region (or no override for that town) resolves EXACTLY as get()."""
+        if town:
+            key = (town, category, name)
+            if key in self._town_overrides:
+                base = self._resolved.get((category, name))
+                dt = base[1] if base else "decimal"
+                return self._coerce(self._town_overrides[key], dt, category, name)
+        return self.get(category, name)
+
+    def get_decimal_for_town(self, category, name, town) -> Decimal:
+        return Decimal(str(self.get_for_town(category, name, town)))
+
+    def get_float_for_town(self, category, name, town) -> float:
+        return float(self.get_for_town(category, name, town))
 
     def get_category(self, category: str) -> dict:
         """All resolved (name -> coerced value) for a category. Used for

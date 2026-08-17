@@ -1,0 +1,303 @@
+{
+  "region": {
+    "name": "North Shore MA (MassGIS) \u2014 Peabody",
+    "description": "Built from MassGIS statewide standardized assessor parcels (FY2026): address/year-built/unit-count/living-area observed; base_price = a DOR ratio-study market estimate (assessed / local assessed-to-sale ratio from recent sales); per-unit bedrooms assigned by quantile-mapping living-area/unit onto the ACS bedroom marginal (2019-23 5yr PUMS, Essex Co, 2-4 unit renters) so the region bedroom mix equals ACS; rents median-by-bedroom. Government + Census sourced, reproducible, redistributable; no scraped data.",
+    "locale": {
+      "country": "US",
+      "state": "MA",
+      "primary_market": "Peabody"
+    },
+    "currency": "USD",
+    "start_date": "2025-01-01",
+    "prices_as_of": "FY2026 assessor roll",
+    "provenance": "MassGIS Massachusetts_Property_Tax_Parcels FeatureServer + ACS 2019-23 5yr PUMS (bedroom marginal, sqft-quantile assignment); params held constant vs regions/salem_reference_v2"
+  },
+  "counts": {
+    "buildings": 1280,
+    "units": 3131,
+    "price_town_calibrated_ratio": 1280,
+    "price_pooled_ratio": 0
+  },
+  "assessment_ratios": {
+    "PEABODY": {
+      "ratio": 0.911,
+      "n": 61,
+      "sales_since": "2024"
+    },
+    "_pooled_recent": 0.911
+  },
+  "parameters": {
+    "INC.EarnerMedianAnnual": {
+      "value": 58100,
+      "source": "Renter median household income $61,984 (ACS 2019-2023 5yr B25119_003E, Peabody MA) x Salem earner/household calibration 0.938."
+    },
+    "OPEX.PropertyTaxPerUnit": {
+      "value": 3066,
+      "source": "FY2025 residential rate $9.26/$1000 (MA DOR DLS Tax Rates by Class) x median per-unit assessed $331,150 (MassGIS FY2026 roll). Current basis."
+    },
+    "OPEX.InsurancePerUnit": {
+      "value": 1400,
+      "source": "MA small-building BOP proxy $1,400/unit (same basis as Salem; not town-differentiated)."
+    },
+    "PROP.VacancyRateBase": {
+      "value": 0.019,
+      "source": "Steady-state vacancy rate \u2014 Salem ~1.9% (ACS all-units, evidence_base SS4a; managed-stock survey unavailable \u2014 recorded limitation). Feeds acquisition income scoring + anchors the fill-duration fluctu"
+    },
+    "RET.VacancyRefPct": {
+      "value": 0.07,
+      "source": "vac_ref: balanced-market rental vacancy; availability = clamp(regional_vacancy/vac_ref,0,1). DECLARED, \u00a74a-anchored (healthy rental vacancy 6-8%: salem.gov ~6%, LocalHousingSolutions 7-8%; Salem itsel"
+    },
+    "RET.MoverRegionalVacancyPct": {
+      "value": 0.03,
+      "source": "Regional vacancy a LEAVING tenant faces (wider North Shore search); retention availability=clamp((this+regime VacancyDelta)/VacancyRefPct,0,1). SEPARATE from PROP.VacancyRateBase (1.9% Salem-LOCAL = L"
+    },
+    "INF.Surge_PropertyMean": {
+      "value": 0.1,
+      "source": "Surge regime: annual property mean (Salem +34.8% 2020-25)."
+    },
+    "INF.Surge_OpExMean": {
+      "value": 0.07,
+      "source": "Surge regime: annual OpEx mean (lags rent 6-12mo; runs hot \u2014 MA insurance +15-30%/yr)."
+    },
+    "MARKET.DailyListingBasePct": {
+      "value": 0.015,
+      "source": "Steady-state listed share used to derive the daily listing probability (BasePct / WindowDays, then seasonal multiplier). Was hardcoded 0.015 \u2014 independent of InitListedPctMid despite the shared value."
+    },
+    "MARKET.DailyListingWindowDays": {
+      "value": 30,
+      "source": "Divisor turning DailyListingBasePct into a per-day probability. Was hardcoded 30."
+    },
+    "MARKET.DaysOnMarket_Mean": {
+      "value": 26.4,
+      "source": "Mean days-on-market for a listing. Essex County MLS calibration. Was ProjectionConstants.DaysOnMarket_Mean."
+    },
+    "MARKET.DaysOnMarket_SeasonalMultiplier_Apr": {
+      "value": 0.52,
+      "source": "Days-on-market seasonal multiplier, Apr."
+    },
+    "MARKET.DaysOnMarket_SeasonalMultiplier_Aug": {
+      "value": 1.08,
+      "source": "Days-on-market seasonal multiplier, Aug."
+    },
+    "MARKET.DaysOnMarket_SeasonalMultiplier_Dec": {
+      "value": 1.8,
+      "source": "Days-on-market seasonal multiplier, Dec."
+    },
+    "MARKET.DaysOnMarket_SeasonalMultiplier_Feb": {
+      "value": 0.93,
+      "source": "Days-on-market seasonal multiplier, Feb."
+    },
+    "MARKET.DaysOnMarket_SeasonalMultiplier_Jan": {
+      "value": 1.67,
+      "source": "Days-on-market seasonal multiplier, Jan (winter listings sit longer)."
+    },
+    "MARKET.DaysOnMarket_SeasonalMultiplier_Jul": {
+      "value": 0.98,
+      "source": "Days-on-market seasonal multiplier, Jul."
+    },
+    "MARKET.DaysOnMarket_SeasonalMultiplier_Jun": {
+      "value": 0.63,
+      "source": "Days-on-market seasonal multiplier, Jun."
+    },
+    "MARKET.DaysOnMarket_SeasonalMultiplier_Mar": {
+      "value": 0.61,
+      "source": "Days-on-market seasonal multiplier, Mar."
+    },
+    "MARKET.DaysOnMarket_SeasonalMultiplier_May": {
+      "value": 0.52,
+      "source": "Days-on-market seasonal multiplier, May."
+    },
+    "MARKET.DaysOnMarket_SeasonalMultiplier_Nov": {
+      "value": 1.27,
+      "source": "Days-on-market seasonal multiplier, Nov."
+    },
+    "MARKET.DaysOnMarket_SeasonalMultiplier_Oct": {
+      "value": 1.0,
+      "source": "Days-on-market seasonal multiplier, Oct."
+    },
+    "MARKET.DaysOnMarket_SeasonalMultiplier_Sep": {
+      "value": 0.97,
+      "source": "Days-on-market seasonal multiplier, Sep."
+    },
+    "MARKET.DaysOnMarket_StdDev": {
+      "value": 20.0,
+      "source": "Std-dev of days-on-market. Was ProjectionConstants.DaysOnMarket_StdDev."
+    },
+    "MARKET.DaysOnMarketMaxDays": {
+      "value": 365,
+      "source": "Clamp ceiling for sampled days-on-market. Was hardcoded 365."
+    },
+    "MARKET.DaysOnMarketMinDays": {
+      "value": 3,
+      "source": "Clamp floor for sampled days-on-market. Was hardcoded 3."
+    },
+    "MARKET.Hold10YrDays": {
+      "value": 3650,
+      "source": "10-year bucket boundary / long-tail base (days). Was hardcoded 3650."
+    },
+    "MARKET.Hold2YrDays": {
+      "value": 730,
+      "source": "2-year bucket boundary (days). Was hardcoded 730."
+    },
+    "MARKET.Hold5YrDays": {
+      "value": 1825,
+      "source": "5-year bucket boundary (days). Was hardcoded 1825."
+    },
+    "MARKET.HoldCapDays": {
+      "value": 10950,
+      "source": "Hold-period cap (30 years, days). Was hardcoded 10950."
+    },
+    "MARKET.HoldFlipMinDays": {
+      "value": 90,
+      "source": "Minimum hold for the flip bucket (days). Was hardcoded 90."
+    },
+    "MARKET.HoldLT10YrCumPct": {
+      "value": 0.29,
+      "source": "Hold-period cum threshold: P(hold < 10yr) = 29% (+9% 5-10yr); remainder 71% holds 10yr+. Was hardcoded 0.29."
+    },
+    "MARKET.HoldLT2YrCumPct": {
+      "value": 0.06,
+      "source": "Hold-period cum threshold: P(hold < 2yr) = 6% (flips). 40k+ multi-family owner survey. Was hardcoded 0.06 (dup of retired HoldPeriod_LessThan2Yr_Pct)."
+    },
+    "MARKET.HoldLT5YrCumPct": {
+      "value": 0.2,
+      "source": "Hold-period cum threshold: P(hold < 5yr) = 20% (6% flip + 14% 2-5yr). Was hardcoded 0.20."
+    },
+    "MARKET.HoldTailMeanYears": {
+      "value": 8,
+      "source": "Mean additional years past 10 in the exponential long tail. Was hardcoded 8."
+    },
+    "MARKET.InitAvailablePctJitter": {
+      "value": 0.01,
+      "source": "Seed-based uniform jitter half-width applied to InitAvailablePctMid. Was hardcoded 0.01."
+    },
+    "MARKET.InitAvailablePctMax": {
+      "value": 0.05,
+      "source": "Clamp ceiling for the zero-day Available share. Was hardcoded 0.05."
+    },
+    "MARKET.InitAvailablePctMid": {
+      "value": 0.04,
+      "source": "Zero-day % of properties Available (not listed, not held), midpoint. Was hardcoded 0.04."
+    },
+    "MARKET.InitAvailablePctMin": {
+      "value": 0.03,
+      "source": "Clamp floor for the zero-day Available share. Was hardcoded 0.03."
+    },
+    "MARKET.InitListedPctJitter": {
+      "value": 0.005,
+      "source": "Seed-based uniform jitter half-width applied to InitListedPctMid. Was hardcoded 0.005."
+    },
+    "MARKET.InitListedPctMax": {
+      "value": 0.02,
+      "source": "Clamp ceiling for the zero-day Listed share. Was hardcoded 0.02."
+    },
+    "MARKET.InitListedPctMid": {
+      "value": 0.015,
+      "source": "Zero-day % of properties in Listed state, midpoint (synthetic steady-state, Q&A Option B). Jittered \u00b1InitListedPctJitter then clamped. Was hardcoded 0.015."
+    },
+    "MARKET.InitListedPctMin": {
+      "value": 0.01,
+      "source": "Clamp floor for the zero-day Listed share. Was hardcoded 0.01."
+    },
+    "MARKET.PriceMultiplier_Apr": {
+      "value": 1.01,
+      "source": "Listing-price seasonal multiplier, Apr."
+    },
+    "MARKET.PriceMultiplier_Aug": {
+      "value": 1.03,
+      "source": "Listing-price seasonal multiplier, Aug."
+    },
+    "MARKET.PriceMultiplier_Dec": {
+      "value": 0.93,
+      "source": "Listing-price seasonal multiplier, Dec."
+    },
+    "MARKET.PriceMultiplier_Feb": {
+      "value": 0.97,
+      "source": "Listing-price seasonal multiplier, Feb."
+    },
+    "MARKET.PriceMultiplier_Jan": {
+      "value": 0.94,
+      "source": "Listing-price seasonal multiplier, Jan."
+    },
+    "MARKET.PriceMultiplier_Jul": {
+      "value": 1.06,
+      "source": "Listing-price seasonal multiplier, Jul."
+    },
+    "MARKET.PriceMultiplier_Jun": {
+      "value": 1.06,
+      "source": "Listing-price seasonal multiplier, Jun."
+    },
+    "MARKET.PriceMultiplier_Mar": {
+      "value": 0.99,
+      "source": "Listing-price seasonal multiplier, Mar."
+    },
+    "MARKET.PriceMultiplier_May": {
+      "value": 1.08,
+      "source": "Listing-price seasonal multiplier, May."
+    },
+    "MARKET.PriceMultiplier_Nov": {
+      "value": 0.93,
+      "source": "Listing-price seasonal multiplier, Nov."
+    },
+    "MARKET.PriceMultiplier_Oct": {
+      "value": 0.98,
+      "source": "Listing-price seasonal multiplier, Oct."
+    },
+    "MARKET.PriceMultiplier_Sep": {
+      "value": 1.02,
+      "source": "Listing-price seasonal multiplier, Sep."
+    },
+    "MARKET.SaleSuccessRate": {
+      "value": 0.9,
+      "source": "P(listing resolves as SOLD) vs withdrawn, rolled at expected-sale date. F-03 fix: code read key 'SaleSuccessRate' while the row was seeded 'SalePercentage' \u2014 the 0.90 fallback always won (equal value,"
+    },
+    "MARKET.SeasonalMultiplier_Apr": {
+      "value": 0.85,
+      "source": "Listing-volume seasonal multiplier, Apr."
+    },
+    "MARKET.SeasonalMultiplier_Aug": {
+      "value": 1.15,
+      "source": "Listing-volume seasonal multiplier, Aug."
+    },
+    "MARKET.SeasonalMultiplier_Dec": {
+      "value": 0.88,
+      "source": "Listing-volume seasonal multiplier, Dec."
+    },
+    "MARKET.SeasonalMultiplier_Feb": {
+      "value": 0.68,
+      "source": "Listing-volume seasonal multiplier, Feb."
+    },
+    "MARKET.SeasonalMultiplier_Jan": {
+      "value": 0.72,
+      "source": "Listing-volume seasonal multiplier, Jan (FRED new-listings seasonality). Was ProjectionConstants."
+    },
+    "MARKET.SeasonalMultiplier_Jul": {
+      "value": 1.16,
+      "source": "Listing-volume seasonal multiplier, Jul."
+    },
+    "MARKET.SeasonalMultiplier_Jun": {
+      "value": 1.14,
+      "source": "Listing-volume seasonal multiplier, Jun."
+    },
+    "MARKET.SeasonalMultiplier_Mar": {
+      "value": 0.74,
+      "source": "Listing-volume seasonal multiplier, Mar."
+    },
+    "MARKET.SeasonalMultiplier_May": {
+      "value": 0.98,
+      "source": "Listing-volume seasonal multiplier, May."
+    },
+    "MARKET.SeasonalMultiplier_Nov": {
+      "value": 1.15,
+      "source": "Listing-volume seasonal multiplier, Nov."
+    },
+    "MARKET.SeasonalMultiplier_Oct": {
+      "value": 1.31,
+      "source": "Listing-volume seasonal multiplier, Oct."
+    },
+    "MARKET.SeasonalMultiplier_Sep": {
+      "value": 1.23,
+      "source": "Listing-volume seasonal multiplier, Sep."
+    }
+  }
+}
