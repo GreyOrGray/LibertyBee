@@ -361,7 +361,7 @@
   cite a superseded baseline (Gray's V2 ruling: nothing stale ships).
 ============================================================================= -->
 <!-- MODEL-DATA v2 2026-08-06 · banner: engine 0.6.0, 13,200 runs (frozen, cited) + living-count span filled from live.json at render · src: V04R1 corpora + farm pipeline -->
-<div class="wip sans"><b>Liberty Bee V2.</b> The numbers and charts are real, from the frozen V2 corpus of record (engine 0.6.0 — 13,200 runs, zero failures, generated from the public repo with zero overrides) — the code and the full dataset are public, and every run reproduces from a seed. Everything's sourced in <a href="#sources">the ledger</a>. And the model hasn't stopped: a living series keeps running on fresh seeds<span id="lvBannerN"></span> — <a href="#live">updated daily below</a>.</div>
+<div class="wip sans"><b>Liberty Bee V2.</b> The numbers and charts are real, from the frozen V2 corpus of record (engine 0.6.0 — 13,200 runs, zero failures, generated from the public repo with zero overrides) — the code and the full dataset are public, and every run reproduces from a seed. Everything's sourced in <a href="#sources">the ledger</a>. The living series<span id="lvBannerN"></span> is <a href="#live">paused</a> while the next baseline — the same model rebuilt on fully public government data — is prepared.</div>
 
 <!-- ============ 01 · INTRO ============ -->
 <div class="hero wrap">
@@ -820,7 +820,7 @@
 
   function render(d){
     var bn=document.getElementById('lvBannerN');
-    if(bn) bn.innerHTML=': <b>'+d.living.total_runs.toLocaleString()+'</b> runs and counting';
+    if(bn) bn.innerHTML=' (<b>'+d.living.total_runs.toLocaleString()+'</b> runs)';
     var segs={}; d.living.segments.forEach(function(s){segs[s.scenario]=s;});
     var std=segs['standard']||{runs:0,deaths:0,rungs:[]};
     var flv=segs['deep-discount-25']||{runs:0,deaths:0,rungs:[]};
