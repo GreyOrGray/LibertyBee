@@ -3,7 +3,7 @@
 Consolidates the three drifting connection-string copies (create_corpus,
 corpus_runner, reproduction_gate) behind one backend-selected `connect()`:
 
-    LB_CORPUS_BACKEND = pyodbc (default) | psycopg
+    LB_CORPUS_BACKEND = psycopg (default) | pyodbc
     (or programmatically: corpus_conn.set_backend("psycopg") — the CLIs'
     --pg flags call this, overriding the environment)
 
@@ -29,7 +29,7 @@ PG_HOST = os.environ.get("LB_PG_HOST", "localhost")
 PG_PORT = int(os.environ.get("LB_PG_PORT", "5432"))
 PG_USER = os.environ.get("LB_PG_USER", "libertybee")
 
-_backend = os.environ.get("LB_CORPUS_BACKEND", "pyodbc")
+_backend = os.environ.get("LB_CORPUS_BACKEND", "psycopg")
 
 
 def set_backend(name: str) -> None:

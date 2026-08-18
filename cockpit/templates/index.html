@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block body %}
+<p>Configure and run the model locally. Pick an environment (a LibertyBee PostgreSQL database):</p>
+{% if regions %}
+<table>
+  <tr><th>Environment</th><th>Configure</th><th></th></tr>
+  {% for r in regions %}
+  <tr>
+    <td><b>{{ r }}</b></td>
+    <td><a href="{{ url_for('town_knobs', env=r) }}">town knobs</a> &middot;
+        <a href="{{ url_for('projections', env=r) }}">parameter sets</a></td>
+    <td><a href="{{ url_for('run_page', env=r) }}">run &rarr;</a></td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<div class="note">No environments found under <code>environments/</code>. Mint one below, or import
+  a region: <code>python region_importer.py --bundle regiondata/bundles/massachusetts/salem --label mytown</code></div>
+{% endif %}
+
+<form method="post" action="{{ url_for('mint') }}" style="margin:1rem 0">
+  <input type="text" name="label" placeholder="label (e.g. mytest)">
+  <button type="submit">Mint a fresh environment</button>
+  <span class="hint">~1 second — a disposable copy of the seed database</span>
+</form>
+
+{% if runs %}
+<h2>Recent runs</h2>
+<table>
+  <tr><th>When</th><th>Env</th><th>Projection</th><th>Seed</th><th>State</th><th></th></tr>
+  {% for r in runs %}
+  <tr>
+    <td>{{ r.started }}</td><td>{{ r.env }}</td><td>{{ r.projection }}</td><td>{{ r.seed }}</td>
+    <td>{{ r.state }}</td>
+    <td>{% if r.kind == 'batch' %}<a href="{{ url_for('batch_status', batch_id=r.id) }}">batch</a>
+      {% else %}<a href="{{ url_for('run_status', run_id=r.id) }}">status</a>
+      {% if r.state == 'completed' %}&middot; <a href="{{ url_for('results', run_id=r.id) }}">results</a>{% endif %}{% endif %}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+{% endblock %}

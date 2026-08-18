@@ -1,9 +1,9 @@
 # Region data — model your own market
 
-Liberty Bee ships calibrated to Salem/Essex County, Massachusetts. To run it on **your**
-market, you supply a **Region bundle** — a small folder of your data — and the importer builds
-a fresh database from it. This guide is the how-to; the exact field list is in
-[`../docs/.../ingest_contract_spec.md`](../docs/v_0_3/phases/phase_1_12/ingest_contract_spec.md).
+Liberty Bee ships calibrated to Salem, Massachusetts. To run it on **your** market, you supply
+a **Region bundle** — a small folder of your data — and the importer builds a fresh database
+from it. This guide is the how-to; [`bundles/massachusetts/salem/`](bundles/massachusetts/salem/)
+is a complete worked example.
 
 ## This tree
 
@@ -11,46 +11,37 @@ a fresh database from it. This guide is the how-to; the exact field list is in
 regiondata/
   README.md          ← this guide
   defaults.json      ← sourced US-national defaults (what you inherit when you omit a value)
-  bundles/           ← clean-provenance bundles: government-sourced, citeable, shippable
+  bundles/
     massachusetts/
-      salem/         ← the reference bundle (MassGIS + ACS; the corpus-of-record source)
+      salem/         ← the reference bundle (MassGIS + ACS; the source of the published corpus)
       beverly/ danvers/ lynn/ marblehead/ peabody/ swampscott/
-  fixtures/          ← frozen reproduction fixtures — dev-only, NEVER shipped publicly
-    salem_reference_v2/
 ```
 
-The `bundles/<state>/<town>/` nesting is **our shipping convention, not a requirement** — the
-importer takes any path (`--bundle <dir>`) and cares only that the folder contains
-`region.json`, `buildings.csv`, `units.csv`. Organize your own data however you like.
+The `bundles/<state>/<town>/` nesting is **a convention, not a requirement** — the importer
+takes any path (`--bundle <dir>`) and cares only that the folder contains `region.json`,
+`buildings.csv`, `units.csv`. Organize your own data however you like.
 
-### bundles/ — provenance notes
+### Provenance of the shipped bundles
 
 Everything under `bundles/` is built from government/public data: **MassGIS**
-`Massachusetts_Property_Tax_Parcels` (building shells, LOC_ID-anonymized — bundles carry the
-GIS parcel id, never a street address) + **ACS** (bedroom marginals, per-town renter income).
-Built 2026-08-09; MassGIS revises parcels continuously, so these are frozen snapshots — the
-committed bundle, not a rebuild, is the reproduction source. Per-town honesty caveats:
+`Massachusetts_Property_Tax_Parcels` (building shells, identified by the GIS parcel id —
+never a street address) + **US Census ACS** (bedroom distributions, per-town renter income).
+Snapshot: August 2026. MassGIS revises parcels continuously, so these are frozen snapshots —
+the committed bundle, not a fresh pull, is what the published corpus was built from.
 
-- **Thin-sales ratio windows** — Marblehead (n=22/2022), Danvers (n=20/2023), Swampscott
-  (n=21/2023) use widened sale-year windows for their assessed-to-market ratios; mild upward-
-  ratio / price-deflation bias possible. Salem/Lynn/Beverly/Peabody use robust 2024 windows.
-- **Insurance** is a $1,400/unit MA small-building proxy on the six non-Salem towns.
-- Per the 2026-08-09 supersede ruling: the **Salem** bundle feeds the full corpus of record;
-  the other towns feed limited extended-scope runs.
+Honest caveats, per town:
+- **Thin-sales ratio windows** — Marblehead (n=22, 2022), Danvers (n=20, 2023), Swampscott
+  (n=21, 2023) use widened sale-year windows for their assessed-to-market ratios; a mild
+  price bias is possible. Salem, Lynn, Beverly, and Peabody use robust 2024 windows.
+- **Insurance** is a $1,400/unit Massachusetts small-building proxy on the six non-Salem towns.
+- The **Salem** bundle is the source of the published corpus; the other towns ship as
+  importable examples with sourced per-town economics.
 
-### fixtures/ — dev-only, never shipped
-
-`fixtures/` holds frozen reproduction artifacts, kept so historical records stay reproducible.
-**Excluded from all public release bundles** (address-privacy ruling: fixture CSVs predate
-LOC_ID anonymization; provenance superseded). `salem_reference_v2` retires to `archive/` at
-corpus cutover.
-
-> **One region per database.** A "region" is whatever market(s) you load. You *can* put multiple
-> markets in one region — the engine treats them as a single blended market unless per-town
-> parameter overrides are supplied, and today the ingest contract carries only region-wide
-> parameters (**per-town overrides in bundles are tracked as #234**; the engine itself already
-> supports town-scoped levels). To keep markets fully distinct, build one bundle per market and
-> import each into its own database.
+> **One region per database.** A "region" is whatever market(s) you load. You *can* put
+> multiple markets in one region — the engine has no geography, so it treats them as a single
+> blended market: one income / tax / rent parameter set applies to the whole universe
+> (per-town parameter overrides inside a bundle are not yet supported). To keep markets
+> distinct, build one bundle per market and import each into its own database.
 
 ## What a bundle contains
 
@@ -64,8 +55,8 @@ my-region/
 ### buildings.csv (required columns)
 `property_id` (unique integer), `year_built` (integer, blank if unknown), `base_price`
 (the building's value at simulation start, > 0). Optional: `address` (may be a street address,
-a parcel id, or blank — a human/provenance label the engine never reads), `town`, `state`,
-`property_style`, `total_units`, and reserved ownership columns (a later feature).
+a parcel id, or blank — a human label the engine never reads), `town`, `state`,
+`property_style`, `total_units`.
 
 ### units.csv (required columns)
 `property_id` (→ a building), `unit_number` (the unit's real label, **any format** — "Apt A1",
@@ -128,10 +119,13 @@ the engine unchanged.
 ## Running it
 
 ```
-python region_importer.py --bundle regiondata/bundles/massachusetts/salem --label my-run --pg
-python app/src/master_test_runner.py --env <the-created-db> --regression   # sanity check
-python app/src/simulation.py --env <db> --projection-id 200 --months 240 --seed 12345
+python region_importer.py --bundle regiondata/bundles/massachusetts/salem --label my-run
+python app/src/simulation.py --env <the-created-db> --projection-id 200 --months 240 --seed 12345
 ```
 
-Validate before importing with `--validate-only`. The importer provenance-stamps each ingest so a
-database always knows which region it came from.
+Validate before importing with `--validate-only`. The importer provenance-stamps each ingest so
+a database always knows which region it came from.
+
+Bundles are also the **durable knob path**: copy a shipped bundle and add *any* registry
+parameter to its `region.json` — not just the market set — to build a named variant of the
+model under your own assumptions (REPRODUCE.md §6).

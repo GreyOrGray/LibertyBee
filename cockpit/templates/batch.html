@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block body %}
+{% if b.state == 'running' %}<meta http-equiv="refresh" content="5">{% endif %}
+<p><a href="{{ url_for('run_page') }}">&larr; runs</a></p>
+<h2>Batch {{ b.id }} <span class="hint">{{ b.env }} &middot; projection {{ b.projection }} &middot;
+  seeds {{ b.seed }} &middot; {{ b.months }} months each</span></h2>
+
+<p><b>State: {{ b.state }}</b> — {{ b.done }} of {{ b.total }} runs done
+  {% if b.state == 'running' %}<span class="hint">(one at a time, on purpose — refreshes every 5s)</span>{% endif %}</p>
+
+{% if finished %}
+<div class="note"><b>{{ survived }} of {{ finished }} finished runs survived.</b>
+  Flat counts, deliberately — {{ finished }} seeds is a reading, not a statistic. The published
+  record uses 500 seeds per rung; the corpus tooling is the path to that scale.</div>
+{% endif %}
+
+<table style="max-width:34rem">
+  <tr><th>Seed</th><th>Outcome</th><th></th></tr>
+  {% for seed, outcome, ok, _x, rid in results %}
+  <tr><td>{{ seed }}</td><td>{{ outcome }}</td>
+      <td><a href="{{ url_for('run_status', run_id=rid) }}">log</a>{% if ok %} &middot;
+        <a href="{{ url_for('results', run_id=rid) }}">results</a>{% endif %}</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}

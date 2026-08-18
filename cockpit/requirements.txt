@@ -1,0 +1,2 @@
+flask>=3.0
+# The cockpit also uses the engine's own deps (psycopg) via app/src/database_manager.py.

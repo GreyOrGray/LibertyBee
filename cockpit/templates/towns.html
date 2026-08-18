@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block body %}
+<p><a href="{{ url_for('index') }}">&larr; regions</a></p>
+<h2>Town knobs &middot; {{ env }}</h2>
+{% if saved %}<div class="saved">Saved. All four columns take effect in the engine — each property
+  resolves by its town (blank inherits region-wide).</div>{% endif %}
+<div class="note">Your market's <b>local</b> values, per town. Leave a cell blank (or equal to the
+  region-wide default shown as the placeholder) to inherit the region-wide value. All four columns
+  are engine-live: tax &amp; insurance (OpEx + acquisition gate), income (applicant median level),
+  vacancy (fill durations + acquisition underwriting).</div>
+<div class="note"><b>The anti-flattery rule (read this before tuning anything):</b> calibrate to
+  your market's honest numbers, never to the numbers that make the model survive. If Detroit's
+  vacancy is 22%, put in 22. Say where your numbers come from — your model should be as
+  auditable as ours.</div>
+{% if not towns %}
+<div class="note"><b>This environment's universe carries no town labels</b> — town knobs apply
+  to imported region bundles (each property resolves by its town). Import a bundle
+  (<code>python region_importer.py --bundle regiondata/bundles/massachusetts/salem --label mytown</code>)
+  and open that environment instead. Region-wide knobs still apply here via parameter sets.</div>
+{% endif %}
+<form method="post">
+  <table>
+    <tr>
+      <th>Town</th>
+      {% for cat, name, label, unit, desc in knobs %}
+      <th>{{ label }}
+        <div class="hint desc">{{ desc }}</div>
+        <div class="hint">{{ cat }}.{{ name }} ({{ unit }}) &middot; region-wide: <b>{{ defaults[(cat, name)] }}</b></div></th>
+      {% endfor %}
+      <th>Your source<div class="hint desc">Where these numbers come from — stored with the
+        overrides so your model stays auditable.</div></th>
+    </tr>
+    {% for town in towns %}
+    <tr>
+      <td>{{ town }}<input type="hidden" name="town" value="{{ town }}"></td>
+      {% for cat, name, label, unit, desc in knobs %}
+      <td><input type="text" name="{{ town }}::{{ cat }}.{{ name }}"
+                 value="{{ overrides.get((town, cat, name), '') }}"
+                 placeholder="{{ defaults[(cat, name)] }}"></td>
+      {% endfor %}
+      <td><input type="text" name="src::{{ town }}" value="{{ sources.get(town, '') }}"
+                 placeholder="e.g. ACS B25119 2024" style="width:11rem"></td>
+    </tr>
+    {% endfor %}
+  </table>
+  <button type="submit">Save town knobs</button>
+</form>
+{% endblock %}

@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block body %}
+<p><a href="{{ url_for('index') }}">&larr; environments</a></p>
+<h2>{{ title }}</h2>
+<pre style="background:#faf7f0;padding:0.8rem;overflow-x:auto;font-size:0.78rem">{{ detail }}</pre>
+{% endblock %}

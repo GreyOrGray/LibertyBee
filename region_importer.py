@@ -196,13 +196,13 @@ def validate_bundle(path, required):
 TOWNS = ("Salem", "Beverly", "Peabody", "Marblehead", "Lynn", "Danvers")
 
 
-def create_base_db(label, pg=False):
+def create_base_db(label, pg=True):
     """Fresh base env; returns (db_name, conn_info).
-    SQL Server: Gold restore + migrations, conn_info = pyodbc string.
-    PG (--pg): template mint via migration_manager --pg, conn_info = dict."""
+    PG (default): template mint via migration_manager, conn_info = dict.
+    SQL Server (--mssql): Gold restore + migrations, conn_info = pyodbc string."""
     cmd = [sys.executable, MIGRATION_MANAGER, "--label", label]
-    if pg:
-        cmd.insert(2, "--pg")
+    if not pg:
+        cmd.insert(2, "--mssql")
     out = subprocess.run(cmd, capture_output=True, text=True)
     print(out.stdout[-600:])
     if out.returncode != 0:
@@ -360,8 +360,11 @@ def main():
     ap.add_argument("--label", default="region", help="ephemeral-DB label (default: region)")
     ap.add_argument("--validate-only", action="store_true", help="validate the bundle and stop")
     ap.add_argument("--pg", action="store_true",
-                    help="load into a PostgreSQL env (minted from the libertybee_gold template)")
+                    help="deprecated no-op: PostgreSQL is the default")
+    ap.add_argument("--mssql", action="store_true",
+                    help="load into a SQL Server env (pre-cutover legacy path)")
     args = ap.parse_args()
+    use_pg = not args.mssql
 
     defaults = load_defaults()
     print(f"Validating bundle: {args.bundle}")
@@ -374,11 +377,11 @@ def main():
     if args.validate_only:
         return
 
-    db, conn = create_base_db(args.label, pg=args.pg)
+    db, conn = create_base_db(args.label, pg=use_pg)
     print(f"Loading region into {db} …")
     applied, unknown, national_used = load_region(
         conn, buildings, units, manifest, os.path.basename(args.bundle.rstrip("/\\")), defaults,
-        pg=args.pg)
+        pg=use_pg)
     print(f"OK — universe replaced ({len(buildings)}/{len(units)}); {applied} parameters applied")
     if national_used:
         print(f"  WARNING: {len(national_used)} region parameter(s) absent from the bundle were filled")

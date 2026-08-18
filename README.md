@@ -11,33 +11,37 @@ run reproduces exactly from a seed.
 
 ## What's here
 
-- **`app/src/`** — the simulation engine (Python 3.12 + SQL Server): event-driven, seeded, deterministic
+- **`SETUP.md`** — start here: PostgreSQL + Python, restore the seed databases, run your first
+  simulation. Written to be executed top to bottom as a test.
+- **`cockpit/`** — the same model in your browser: tune documented knobs (sources shown,
+  canonical sets read-only — clone to experiment), run, watch, read results. Local only.
+- **`app/src/`** — the simulation engine (Python 3.12 + PostgreSQL): event-driven, seeded, deterministic
 - **`docs/`** — the public site (served at libertybee.org)
 - **`reference/`** — the model documented in full: the philosophy, the business rules, a plain-language user's
   guide, the engine internals, the architecture map, a **data dictionary** and **parameter reference** (for the
   shipped database + every knob), the failure modes, the cited **evidence base**, and a glossary
-- **`REPRODUCE.md`** — restore the released database and verify / re-run / change any result yourself
-- **Reproduction tools** (all take `--corpus <your_restored_db>`, so they run against any name you restore to):
-  - `site_metrics.py` — recompute **every figure on the site** from a restored corpus, vs its published value
-  - `reproduction_gate.py` — prove a restored corpus reproduces from the current engine, to the penny
-  - `scarcity_remeasure.py` — the retention scarcity-share decomposition
-  - `create_corpus.py` + `regenerate_corpus.py` — build an empty corpus database, then regenerate the result
-    corpus (the sweep) from the seed database; every swept projection is seeded data
-  - `runs_manifest.csv` — every run's settings, expected outcome, and exact command
-- **`environmentscripts/migration_manager.py`** — restores the seed database from a Release asset
-- **`sql/migrations/`** — empty: the seed database ships fully built. It's also the hook for *your own* changes
-  (drop a numbered `.sql` file to alter assumptions — see REPRODUCE.md → "Customize it")
+- **`REPRODUCE.md`** — restore the released corpus and verify / re-run / regenerate any result yourself
+- **The corpus machinery** (the same code that generated the published record):
+  - `reproduction_gate.py` — prove a restored corpus reproduces from the published engine, to the penny
+  - `create_corpus.py` + `regenerate_corpus.py` — build an empty corpus database, then sweep it;
+    provenance-stamped, refuses to masquerade as a record from a modified tree
+  - `corpus_checks/` — the in-flight honesty checks that run *during* a sweep, documented and extendable
+- **`regiondata/`** — the shipped region bundles (government-sourced: MassGIS + Census ACS) and the
+  how-to for building a bundle from **your own** market's data
+- **`region_importer.py`** — load any region bundle into a fresh database and run the model on it
+- **`environmentscripts/migration_manager.py`** — mint/list/drop ephemeral databases from the seed
+  template (~1 second each; every run gets a fresh one)
 
 ## Reproduce it
 
-Don't trust it — check it. The seed database and the frozen result corpus ship as **Release** assets on this
-repo. [`REPRODUCE.md`](REPRODUCE.md) walks through three levels: **verify** the published numbers against the
-frozen corpus, **regenerate** them from the seed database and the engine, and **change** the assumptions and
-re-run against your own city. Every figure on the site recomputes with `python site_metrics.py --corpus <db>`.
+Don't trust it — check it. The seed databases and the frozen result corpus ship as **Release** assets on this
+repo, as plain `pg_dump` files with published checksums. [`REPRODUCE.md`](REPRODUCE.md) walks through the
+levels: **restore** the corpus and query every run, **verify** its provenance and re-run sampled cells with
+the gate, **re-run** any single cell from its seed, and **regenerate** at any scale — or import your own
+city's data and ask the same questions of your market.
 
-> **One run per database.** Each simulation must run against its own freshly-restored copy of the seed database
-> — reusing a database across runs runs without error but produces numbers that won't line up. REPRODUCE.md
-> explains why; the tools above already handle it for you.
+> **One run per database.** Each simulation runs against its own freshly-minted database — the tooling
+> handles this for you (`migration_manager.py` mints one from the template in about a second).
 
 ## License
 

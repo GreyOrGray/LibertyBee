@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block body %}
+<p><a href="{{ url_for('projections', env=env) }}">&larr; parameter sets</a></p>
+<h2>{{ proj[1] }} <span class="hint">(ID {{ proj[0] }} &middot; {{ proj[3] }})</span></h2>
+{% if saved %}<div class="saved">Saved. {{ n_overrides }} override(s) stored — everything else
+  inherits the canonical default.</div>{% endif %}
+{% if not editable %}
+<div class="note"><b>This is a shipped canonical set — read-only.</b> The values below are the
+  published model. To experiment, clone it from the parameter-sets page; your clone stores only
+  what you change.</div>
+{% else %}
+<div class="note">Blank (or equal to the default) inherits the canonical value. These numbers are
+  not all the same kind of thing: some are <b>cited</b> to a named source, some are <b>declared</b>
+  judgments where the world offers no fittable number, some are engine <b>plumbing</b>, and some
+  are Liberty Bee's own <b>policy</b> choices. Read the basis column before you change one —
+  overriding a cited value means overriding that evidence, which is your right and your
+  responsibility; <b>changing a policy dial models a different organization, not a truer world</b>.
+  (The four basis labels: <code>reference/users_guide.md</code>.)</div>
+<div class="note"><b>The anti-flattery rule (read this before tuning anything):</b> calibrate to
+  your market's honest numbers, never to the numbers that make the model survive. If Detroit's
+  vacancy is 22%, put in 22.</div>
+{% endif %}
+
+<form method="post">
+{% for cat, params in ordered %}
+  <h3>{{ cat }} <span class="hint">{{ cats.get(cat, ('', 0))[0] }}</span></h3>
+  <table>
+    <tr><th style="width:14rem">Knob</th><th style="width:8rem">Value</th>
+        <th style="width:7rem">Default</th>
+        <th>Basis &middot; what this number is and where it comes from</th>
+        {% if editable %}<th style="width:13rem">Your source (if you change it)</th>{% endif %}</tr>
+    {% for name, default, dtype, desc, override, ovsrc in params %}
+    <tr>
+      <td><code>{{ cat }}.{{ name }}</code><div class="hint">{{ dtype }}</div></td>
+      <td>{% if editable %}
+        <input type="text" name="{{ cat }}::{{ name }}" value="{{ override or '' }}"
+               placeholder="{{ default }}">
+        {% else %}{{ override or default }}{% endif %}</td>
+      <td class="hint">{{ default }}</td>
+      <td class="desc" style="max-width:none">{{ desc }}</td>
+      {% if editable %}
+      <td><input type="text" name="src::{{ cat }}::{{ name }}" value="{{ ovsrc or '' }}"
+                 placeholder="e.g. county assessor 2026" style="width:12rem"></td>
+      {% endif %}
+    </tr>
+    {% endfor %}
+  </table>
+{% endfor %}
+{% if editable %}<button type="submit">Save overrides</button>{% endif %}
+</form>
+{% endblock %}

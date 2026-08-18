@@ -388,6 +388,7 @@ def ensure_environment_folder(envname: str) -> Path:
     config_path = env_path / "db_config.json"
     if not config_path.exists():
         db_config = {
+            "backend": "pyodbc",  # explicit — no env config relies on a code default
             "driver": SQL_DRIVER,
             "server": SQL_SERVER,
             "database": envname,
@@ -1289,11 +1290,12 @@ def main() -> str:
     parser.add_argument("--yes", action="store_true",
                         help="Confirm a --drop (without it, --drop only previews).")
     parser.add_argument("--pg", action="store_true",
-                        help=("PostgreSQL mode: mint (TEMPLATE + pending migrations), "
-                              "--envname (destructive named reset, ephemeral-only), --list, "
-                              "--drop, or --promote-template. Template = LB_PG_TEMPLATE "
-                              "(default libertybee_gold; the gold itself is built by "
-                              "pg_schema_cut.py, never here)."))
+                        help=("Deprecated no-op: PostgreSQL is the default. "
+                              "(Kept so existing invocations keep working.)"))
+    parser.add_argument("--mssql", action="store_true",
+                        help=("SQL Server mode (the pre-cutover legacy path): Gold-restore "
+                              "mint, --scratch/--baseline, --list, --drop. Dies at the "
+                              "SQL Server cutover."))
     parser.add_argument("--promote-template", type=str, default="",
                         help=("with --pg --envname <src>: rename an imported env to a named "
                               "corpus-base template (e.g. libertybee_salem_gold — Track A2)."))
@@ -1308,10 +1310,12 @@ def main() -> str:
 
         print(f"Baseline source: {args.baseline}")
 
-    if args.pg:
-        if args.scratch or args.baseline:
-            raise SystemExit("--pg does not combine with --scratch/--baseline "
-                             "(PG envs mint from templates only)")
+    if args.pg and args.mssql:
+        raise SystemExit("--pg and --mssql are mutually exclusive")
+
+    # PostgreSQL is the default engine; --mssql opts into the pre-cutover
+    # SQL Server path (--scratch/--baseline are SQL Server-only and imply it).
+    if not args.mssql and not (args.scratch or args.baseline):
         if args.list:
             pg_list_ephemeral()
             return ""
@@ -1328,6 +1332,10 @@ def main() -> str:
         return pg_create_and_prepare_test_env(
             label=args.label or (f"issue-{args.issue}" if args.issue else "")
             or (f"pr-{args.pr}" if args.pr else ""))
+
+    if args.pg and (args.scratch or args.baseline):
+        raise SystemExit("--scratch/--baseline are SQL Server-only "
+                         "(PG envs mint from templates)")
 
     if args.list:
         list_ephemeral()

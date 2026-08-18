@@ -192,7 +192,7 @@ python environmentscripts/migration_manager.py --list
 python environmentscripts/migration_manager.py --drop <name> --yes
 ```
 
-A **projection** is a named scenario: a starting-capital level plus any per-projection knob overrides (the V1 ladder is $5M–$8M, IDs 200–206; 220–222 are stress scenarios). Survival statistics come from sweeping many seeds per projection.
+A **projection** is a named scenario: a starting-capital level plus any per-projection knob overrides (the standard ladder spans $2M–$11M — IDs 200–209 with extensions 300–305; 220–222 are stress scenarios). Survival statistics come from sweeping many seeds per projection.
 
 ## 4. Reading the results honestly
 
@@ -204,12 +204,12 @@ A **projection** is a named scenario: a starting-capital level plus any per-proj
 
 ## 5. What the model does *not* do (known limitations)
 
-Stated plainly, because an honest model names its own edges. None of these affect the frozen 1.0 survival numbers unless noted; the full engineering list is in [`../v_0_3/phases/phase_1_9/engine_hygiene_findings.md`](../v_0_3/phases/phase_1_9/engine_hygiene_findings.md), and the mission-tension items are tracked as KDs.
+Stated plainly, because an honest model names its own edges. None of these affect the frozen survival record unless noted; the defects we know about — cause, status, and fix — live on the [known-issues ledger](https://libertybee.org/known-issues.html), and the mission-tension items are tracked there as KDs.
 
 - **Tenants don't have lives yet.** Hardship is a monthly probability, not a story; there are no second-order relations, no life events, no aging (ages are cosmetic, and a generated family can even have mismatched surnames). Deep per-tenant lives are the V0.4 tenant engine (#111) — the single biggest realism gap.
 - **Two eviction/deposit mechanics fight the mission and are flagged, not hidden:** eviction has **no cure period** (paying up during the 2-month window doesn't stop execution — KD-031), and a partially-funded installment deposit forfeits money already paid in on any early exit (KD-032). Both are documented tensions awaiting the tenant-engine era.
 - **The rent/market model is coarse:** market rent is `f(bedrooms)` plus a bathroom bump — no square footage, location, or condition. And in 1.0 the engine charges tenants off `BaseRent` while acquisition underwrites off the bathroom-adjusted `AdjustedRent` (#44), with a fractional-bath overpricing bug (KD-040) — both **acquisition-scoring-only in 1.0** (no tenant rent, no published number moves) and both fixed in V2.
-- **Some things never happen in V1:** `LATE` payment status is structurally never written (grace-window collection lands ON_TIME); staff are hired but never terminated; grants and the EIP are scaffolded but unimplemented (no code reads them); compliance remediation always succeeds.
+- **Some things never happen in the current model:** `LATE` payment status is structurally never written (grace-window collection lands ON_TIME); staff are hired but never terminated; grants and the EIP are scaffolded but unimplemented (no code reads them); compliance remediation always succeeds.
 - **Vacancy is steady-state.** Cyclical soft-market stress enters *only* through the #48 inflation regimes' vacancy deltas — there's no independent vacancy-shock model. Don't widen `PROP.VacancyFluctuationBand` to fake a downturn.
 
-*Guide vintage: **release 1.0, shipped publicly 2026-07-10** (post #100/#97/#48/#104 + the Phase-1.5 audit cleanup + Phase-1.8 income realism + Phase-1.10 tenant retention; baseline of record = the **V03R4** retention corpus, engine **0.5.0**, re-frozen 2026-07-08 — supersedes the 2026-07-06 V03R3 freeze). Registry snapshot: **328 global knobs through V00064** (322 at V00059; −1 release-hygiene V00060; +7 Phase-1.10 `RET.*` retention knobs at V00063). MARKET/ACQ/CMPL knob sections land in the v2 build-out (#141).*
+*Guide vintage: **the V2 release** (engine **0.6.0**; corpus of record = the frozen V2 baseline, **13,200 runs**, published 2026-07-28). Earlier baselines and what changed between them: [previous versions](https://libertybee.org/versions.html).*

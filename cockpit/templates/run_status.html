@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block body %}
+{% if r.state == 'running' %}<meta http-equiv="refresh" content="3">{% endif %}
+<p><a href="{{ url_for('run_page') }}">&larr; runs</a></p>
+<h2>Run {{ r.id }} <span class="hint">{{ r.env }} &middot; projection {{ r.projection }} &middot;
+  seed {{ r.seed }} &middot; {{ r.months }} months</span></h2>
+
+<p><b>State: {{ r.state }}</b>{% if r.state == 'running' %} — month {{ months }} of {{ r.months }}
+  ({{ pct }}%) <span class="hint">(refreshes every 3s)</span>{% endif %}</p>
+
+<div style="background:#f4f0e6;border-radius:5px;height:14px;max-width:640px">
+  <div style="background:#b8860b;border-radius:5px;height:14px;width:{{ pct }}%"></div>
+</div>
+
+{% if r.state == 'running' %}
+<form method="post" action="{{ url_for('run_cancel', run_id=r.id) }}" style="margin-top:0.8rem">
+  <button type="submit">Cancel run</button>
+  <span class="hint">safe — the environment is disposable</span>
+</form>
+{% elif r.state == 'completed' %}
+<p><a href="{{ url_for('results', run_id=r.id) }}"><b>Results &rarr;</b></a></p>
+{% elif r.state == 'failed' %}
+<div class="note">The run exited with an error — the log tail below has the story.</div>
+{% endif %}
+
+<h3>Log</h3>
+<pre style="background:#faf7f0;padding:0.8rem;overflow-x:auto;font-size:0.78rem;max-height:24rem">{{ tail }}</pre>
+{% endblock %}

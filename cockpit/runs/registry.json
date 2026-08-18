@@ -1,0 +1,98 @@
+[
+ {
+  "id": "70ea32e82d",
+  "pid": 15268,
+  "env": "libertybee_test_0012_myregion",
+  "projection": 200,
+  "seed": 12345,
+  "months": 240,
+  "state": "completed",
+  "started": "2026-08-20 11:01:53",
+  "returncode": 0
+ },
+ {
+  "id": "3d7c79751b",
+  "pid": 34868,
+  "env": "libertybee_test_0012_myregion",
+  "projection": 200,
+  "seed": 5,
+  "months": 240,
+  "state": "completed",
+  "started": "2026-08-20 09:53:32",
+  "returncode": 0
+ },
+ {
+  "id": "b6a205a718",
+  "pid": 12312,
+  "env": "libertybee_test_0012_myregion",
+  "projection": 200,
+  "seed": 4,
+  "months": 240,
+  "state": "completed",
+  "started": "2026-08-20 09:50:42",
+  "returncode": 0
+ },
+ {
+  "id": "2ce8640b36",
+  "pid": 22436,
+  "env": "libertybee_test_0012_myregion",
+  "projection": 200,
+  "seed": 3,
+  "months": 240,
+  "state": "completed",
+  "started": "2026-08-20 09:48:05",
+  "returncode": 0
+ },
+ {
+  "id": "a10f79c36f",
+  "pid": 17756,
+  "env": "libertybee_test_0012_myregion",
+  "projection": 200,
+  "seed": 2,
+  "months": 240,
+  "state": "completed",
+  "started": "2026-08-20 09:44:55",
+  "returncode": 0
+ },
+ {
+  "id": "fc73f3ed09",
+  "kind": "batch",
+  "env": "libertybee_test_0012_myregion",
+  "projection": 200,
+  "seed": "1-5",
+  "months": 240,
+  "state": "completed",
+  "started": "2026-08-20 09:42:29",
+  "members": [
+   "82456df100",
+   "a10f79c36f",
+   "2ce8640b36",
+   "b6a205a718",
+   "3d7c79751b"
+  ],
+  "done": 5,
+  "total": 5
+ },
+ {
+  "id": "82456df100",
+  "pid": 47720,
+  "env": "libertybee_test_0012_myregion",
+  "projection": 200,
+  "seed": 1,
+  "months": 240,
+  "state": "completed",
+  "started": "2026-08-20 09:42:29",
+  "returncode": 0
+ },
+ {
+  "id": "1246e7b298",
+  "pid": 31036,
+  "env": "libertybee_test_0012_myregion",
+  "projection": 200,
+  "seed": 12345,
+  "months": 240,
+  "state": "completed",
+  "started": "2026-08-20 09:20:52",
+  "returncode": 0
+ }
+]

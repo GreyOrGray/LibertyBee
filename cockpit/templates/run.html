@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block body %}
+<p><a href="{{ url_for('index') }}">&larr; environments</a></p>
+<h2>Run a simulation</h2>
+<div class="note">One run, one environment — environments are disposable copies, so nothing you
+  do here can damage anything. For statistical sweeps at scale, use the corpus tooling
+  (<code>regenerate_corpus.py</code>) — this page is for understanding single runs.</div>
+
+<form method="get" action="{{ url_for('run_page') }}">
+  <label>Environment:
+    <select name="env" onchange="this.form.submit()">
+      {% for e in envs %}<option value="{{ e }}" {% if e == sel %}selected{% endif %}>{{ e }}</option>{% endfor %}
+    </select></label>
+  <noscript><button type="submit">Load projections</button></noscript>
+</form>
+
+{% if sel %}
+<form method="post" style="margin-top:1rem">
+  <input type="hidden" name="env" value="{{ sel }}">
+  <label>Parameter set:
+    <select name="projection">
+      {% for pid, name, kind in projections %}
+      <option value="{{ pid }}" {% if pid == 200 %}selected{% endif %}>{{ pid }} — {{ name }} ({{ kind }})</option>
+      {% endfor %}
+    </select></label>
+  <label style="margin-left:0.8rem">Seed: <input type="text" name="seed" value="12345" style="width:5rem"></label>
+  <label style="margin-left:0.8rem">Months: <input type="text" name="months" value="240" style="width:4rem"></label>
+  <button type="submit" style="margin-left:0.8rem">Run</button>
+  <div class="hint" style="margin-top:0.4rem">Same seed + same parameters &rArr; the identical run,
+    to the penny — that's the reproducibility contract. 240 months &asymp; 2 minutes.</div>
+</form>
+
+<h3 style="margin-top:1.4rem">Batch (sequential seeds)</h3>
+<form method="post" action="{{ url_for('run_batch') }}">
+  <input type="hidden" name="env" value="{{ sel }}">
+  <label>Parameter set:
+    <select name="projection">
+      {% for pid, name, kind in projections %}
+      <option value="{{ pid }}" {% if pid == 200 %}selected{% endif %}>{{ pid }} — {{ name }}</option>
+      {% endfor %}
+    </select></label>
+  <label style="margin-left:0.8rem">First seed: <input type="text" name="seed_first" value="1" style="width:4rem"></label>
+  <label style="margin-left:0.8rem">Count: <input type="text" name="seed_count" value="5" style="width:3rem"></label>
+  <label style="margin-left:0.8rem">Months: <input type="text" name="months" value="240" style="width:4rem"></label>
+  <button type="submit" style="margin-left:0.8rem">Run batch</button>
+  <div class="hint" style="margin-top:0.4rem">One at a time, up to 50 seeds — a reading, not a
+    statistic. For real sweeps use the corpus tooling.</div>
+</form>
+{% endif %}
+
+{% if runs %}
+<h2>Runs</h2>
+<table>
+  <tr><th>When</th><th>Env</th><th>Projection</th><th>Seed</th><th>Months</th><th>State</th><th></th></tr>
+  {% for r in runs %}
+  <tr>
+    <td>{{ r.started }}</td><td>{{ r.env }}</td><td>{{ r.projection }}</td>
+    <td>{{ r.seed }}</td><td>{{ r.months }}</td><td>{{ r.state }}</td>
+    <td>{% if r.kind == 'batch' %}<a href="{{ url_for('batch_status', batch_id=r.id) }}">batch</a>
+      {% else %}<a href="{{ url_for('run_status', run_id=r.id) }}">status</a>
+      {% if r.state == 'completed' %}&middot; <a href="{{ url_for('results', run_id=r.id) }}">results</a>{% endif %}{% endif %}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+{% endblock %}

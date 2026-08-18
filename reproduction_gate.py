@@ -23,8 +23,8 @@ def conn(db):
 
 def fresh_env(label):
     cmd = [sys.executable, "environmentscripts/migration_manager.py", "--label", label]
-    if corpus_conn.is_pg():
-        cmd.insert(2, "--pg")  # template-minted PG env (the D5 worker path)
+    if not corpus_conn.is_pg():
+        cmd.insert(2, "--mssql")  # pre-cutover legacy path; PG is the default
     p = subprocess.run(cmd, cwd=REPO, capture_output=True, text=True, timeout=900)
     m = re.search(r"Test environment ready:\s*(\S+)", p.stdout)
     return m.group(1) if m else None
@@ -150,12 +150,15 @@ def main():
                     help="treat a missing v1.corpus_meta as failure (use for any corpus "
                          "generated after provenance stamping existed)")
     ap.add_argument("--pg", action="store_true",
-                    help="the corpus (and the rebuild envs) live on PostgreSQL")
+                    help="deprecated no-op: PostgreSQL is the default")
+    ap.add_argument("--mssql", action="store_true",
+                    help="the corpus (and the rebuild envs) live on SQL Server "
+                         "(pre-cutover legacy path)")
     ap.add_argument("--provenance-only", action="store_true",
                     help="run only the provenance checks and skip cell re-runs (fast)")
     args = ap.parse_args()
-    if args.pg:
-        corpus_conn.set_backend("psycopg")
+    if args.mssql:
+        corpus_conn.set_backend("pyodbc")
 
     cc = conn(args.corpus).cursor()
     print(f"Reproduction gate: corpus={args.corpus} [{corpus_conn.backend()}]")

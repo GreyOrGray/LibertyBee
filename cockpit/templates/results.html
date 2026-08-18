@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block body %}
+<p><a href="{{ url_for('run_status', run_id=r.id) }}">&larr; run</a></p>
+<h2>Results <span class="hint">{{ r.env }} &middot; projection {{ r.projection }} &middot;
+  seed {{ r.seed }} &middot; {{ n_months }} months</span></h2>
+
+<div class="{% if status == 'COMPLETED' %}saved{% else %}note{% endif %}">
+  <b>{{ 'Survived the full horizon' if status == 'COMPLETED' else 'Run status: ' + status }}</b>
+  — final Cash <b>${{ '{:,.2f}'.format(final_cash) }}</b> &middot;
+  CSF <b>${{ '{:,.2f}'.format(final_csf) }}</b>
+</div>
+
+<table style="max-width:34rem">
+  <tr><th>Leases signed</th><th>Properties acquired</th><th>Evictions</th></tr>
+  <tr><td>{{ leases }}</td><td>{{ props }}</td>
+      <td>{{ evictions }}{% if evictions == 0 %} <span class="hint">(none — the usual result)</span>{% endif %}</td></tr>
+</table>
+
+<h3>Cash &amp; Community Stability Fund, monthly</h3>
+<div class="hint" style="margin-bottom:0.3rem">
+  <span style="color:#A96A0C">&#9632;</span> Cash &nbsp;
+  <span style="color:#3E7A5E">&#9632;</span> CSF</div>
+{{ svg | safe }}
+<div class="hint" style="margin-top:0.5rem">Month-end balances from the run's own ledger. Re-run
+  the same seed and this chart reproduces exactly — that's the contract.</div>
+
+<h3>What this run assumed</h3>
+{% if assumptions %}
+<table>
+  <tr><th>Knob</th><th>Canonical default</th><th>This set's value</th><th>Source given</th></tr>
+  {% for cat, name, val, src, default in assumptions %}
+  <tr><td><code>{{ cat }}.{{ name }}</code></td><td class="hint">{{ default }}</td>
+      <td><b>{{ val }}</b></td><td class="desc" style="max-width:none">{{ src or '—' }}</td></tr>
+  {% endfor %}
+</table>
+<div class="hint">Overrides carried by parameter set {{ r.projection }} (run-selected, so this
+  list is what the run used).</div>
+{% else %}
+<p class="hint">Parameter set {{ r.projection }} carries no overrides — this run used the
+  canonical defaults throughout.</p>
+{% endif %}
+{% if town_override_count %}
+<div class="note">{{ town_override_count }} town-level override(s) exist in this environment
+  <b>now</b>. Town knobs are not stamped at run time — this is the environment's <b>current</b>
+  configuration, which may have changed since the run.</div>
+{% endif %}
+{% endblock %}
