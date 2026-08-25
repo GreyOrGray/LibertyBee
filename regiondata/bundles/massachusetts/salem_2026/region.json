@@ -1,11 +1,11 @@
 {
   "region": {
-    "name": "North Shore MA (MassGIS) \u2014 Lynn",
+    "name": "North Shore MA (MassGIS) \u2014 Salem (2026 panel basis)",
     "description": "Built from MassGIS statewide standardized assessor parcels (FY2026): address/year-built/unit-count/living-area observed; base_price = a DOR ratio-study market estimate (assessed / local assessed-to-sale ratio from recent sales); per-unit bedrooms assigned by quantile-mapping living-area/unit onto the ACS bedroom marginal (2019-23 5yr PUMS, Essex Co, 2-4 unit renters) so the region bedroom mix equals ACS; rents median-by-bedroom. Government + Census sourced, reproducible, redistributable; no scraped data.",
     "locale": {
       "country": "US",
       "state": "MA",
-      "primary_market": "Lynn"
+      "primary_market": "Salem"
     },
     "currency": "USD",
     "start_date": "2025-01-01",
@@ -13,35 +13,35 @@
     "provenance": "MassGIS Massachusetts_Property_Tax_Parcels FeatureServer + ACS 2019-23 5yr PUMS (bedroom marginal, sqft-quantile assignment); params held constant vs regions/salem_reference_v2; unit rents updated 2026-08-25 (towns-pack ratification): Zillow rental market trends per-bedroom, hand-pulled 2026-08-25, corroborated against Zillow ZORI City index (Jul 2026) and Zumper/RentCafe/Apartment List pulls of 2026-08-24; 4BR/5BR extrapolated from the town's own bedroom increment where the market published no figure (labeled convention). Ratified by Gray 2026-08-25; record: docs/v_0_3/phases/phase_1_12/towns_pack_research.md"
   },
   "counts": {
-    "buildings": 4977,
-    "units": 12706,
-    "price_town_calibrated_ratio": 4977,
+    "buildings": 2256,
+    "units": 5823,
+    "price_town_calibrated_ratio": 2256,
     "price_pooled_ratio": 0
   },
   "assessment_ratios": {
-    "LYNN": {
-      "ratio": 0.905,
-      "n": 218,
+    "SALEM": {
+      "ratio": 0.868,
+      "n": 87,
       "sales_since": "2024"
     },
-    "_pooled_recent": 0.905
+    "_pooled_recent": 0.868
   },
   "parameters": {
     "INC.EarnerMedianAnnual": {
-      "value": 40100,
-      "source": "Renter median household income $42,792 (ACS 2019-2023 5yr B25119_003E, Lynn MA) x Salem earner/household calibration 0.938."
+      "value": 55000.0,
+      "source": "Month-0 median INDIVIDUAL-earner annual income ($). Calibrated so the emergent HOUSEHOLD mixture \u2248 Salem renter median ~$58k (Census B25118 ACS 2024 5-yr). Registry-tunable per market (D3)."
     },
     "OPEX.PropertyTaxPerUnit": {
-      "value": 3388,
-      "source": "FY2025 residential rate $10.36/$1000 (MA DOR DLS Tax Rates by Class) x median per-unit assessed $327,055 (MassGIS FY2026 roll). Current basis."
+      "value": 3480,
+      "source": "Annual property tax $/unit. FY2025 residential rate x MassGIS FY2026 median per-unit AV, CURRENT basis (extended-scope ruling 2026-08-09); panel-Salem 2026 vintage \u2014 the frozen record keeps 2250"
     },
     "OPEX.InsurancePerUnit": {
-      "value": 1400,
-      "source": "MA small-building BOP proxy $1,400/unit (same basis as Salem; not town-differentiated)."
+      "value": 1400.0,
+      "source": "Annual insurance $/unit. MA small-building BOP proxy $1,300-1,500 (evidence_base SS4d; low-medium confidence, no unit-count segmentation; MA premiums +15-30%/yr since 2022)."
     },
     "PROP.VacancyRateBase": {
-      "value": 0.026,
-      "source": "Rental vacancy 2.6% \u2014 ACS 2020-2024 5yr B25003/B25004, computed (514 / 19,406), geoid 16000US2537490, pulled 2026-08-24; wide MOE on the numerator disclosed (+-32%). Ratified 2026-08-25."
+      "value": 0.019,
+      "source": "Steady-state vacancy rate \u2014 Salem ~1.9% (ACS all-units, evidence_base SS4a; managed-stock survey unavailable \u2014 recorded limitation). Feeds acquisition income scoring + anchors the fill-duration fluctu"
     },
     "RET.VacancyRefPct": {
       "value": 0.07,

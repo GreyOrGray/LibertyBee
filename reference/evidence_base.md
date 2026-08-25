@@ -107,10 +107,61 @@ For a Salem 2–8 unit building (~6-unit modal), `$/unit/yr` registry defaults (
 - **Owner-paid utilities ≈ $1,150–1,300/unit** — Salem **trash $309/unit/yr** (FY26, bldg-capped) + water/sewer ~$830/unit/yr (Salem $13.10/CCF × MA 65 gal/cap/day) + common electric ~$75–100/unit (bottom-up est). **⚠️ Excludes shared heat** — MA default assigns utilities to the landlord absent separate metering; Salem's ~99.6% pre-1978 stock may retain master-metered boilers → owner utilities materially higher if un-retrofitted. **Resolve the heat-metering assumption before finalizing** (biggest utilities risk). *(Salem trash/water; MassLandlords.)*
 - **Confidence:** tax high (rate+class parcel-verified); insurance low–medium (MA proxy, no unit-count segmentation, no pre-1978 loading found); utilities medium (trash/water solid, common-electric a guess, shared-heat unquantified). All are *effective-dated* (Salem rates change annually) — note the vintage in the registry.
 
+### 4e. Towns pack — North Shore per-town rents & vacancy (ratified 2026-08-25) → towns corpora
+
+Six non-Salem GIS towns (Peabody, Danvers, Beverly, Lynn, Swampscott, Marblehead) + a
+**salem_2026 panel variant** get their own market values for the demonstration corpora
+("our focus is Salem — but just to show you"). Full research record incl. every rejected
+alternative: `docs/v_0_3/phases/phase_1_12/towns_pack_research.md`.
+
+**Basis ruling (Gray, 2026-08-25):** engine market rents use the **current-listings family**
+(matches `AdjustedRent`'s meaning — today's asking rent — and Salem's shipped source
+family). ACS B25031 gross-rent medians measure a different quantity (sitting-tenant
+contract rents, 2020–24 lagged window; up to ~40% below asking in Peabody) and proved
+per-bedroom unreliable in 5 of 6 towns (non-monotonic inversions, MOEs to 84%) — recorded
+here as context, never engine input.
+
+**Rent values — Zillow rental market trends per-bedroom, hand-pulled 2026-08-25 (the
+`OnlineFacts` hand-research convention), corroborated by: Zillow ZORI City index (open
+research CSVs, Jul 2026 — all 7 towns present; ZORI÷Zillow-2BR = 0.96–1.08 in six towns),
+Zumper (2026-08-24 + 25, two pulls cell-identical) and RentCafe/Apartment List
+(2026-08-24).** Studio/1–4BR measured; **4BR (Peabody, Danvers) and all 5BR are
+Extrapolated** from the town's own bedroom increment (Salem's labeled convention; Danvers'
+measured 4BR $3,125 inverted below its 3BR and was ruled extrapolate-instead; Peabody's
+Zumper 4BR $8,258 was a flagged thin-sample outlier). Shipped values (studio/1/2/3/4/5BR):
+- **Peabody** 1,656/2,253/2,750/3,200/3,650ᴱ/4,100ᴱ · **Danvers** 1,625/2,100/2,873/3,400/3,927ᴱ/4,454ᴱ
+- **Beverly** 2,037/2,295/2,700/3,200/4,100/5,000ᴱ · **Lynn** 1,700/1,950/2,400/2,900/3,200/3,500ᴱ
+- **Swampscott** 2,200/2,632/2,800/3,995/5,150/6,305ᴱ · **Marblehead** 1,650/2,050/2,632/4,000/5,345/6,690ᴱ
+- **salem_2026 (panel)** 1,900/2,200/2,607/2,900/3,750/4,600ᴱ — the frozen record's basis
+  (§4b, ~2025 vintage) is untouched; **forward ruling: the next record-scale corpus builds
+  off the new numbers.** Panel basis also takes the B2 current-basis property tax
+  ($3,480/unit; the frozen record keeps $2,250).
+
+**Thin-market disclosures:** Marblehead's listings market was near-unmeasurable at pull
+time (Apartment List: zero active rentals; Zumper self-disclaimed) — its Zillow tiers are
+taken with that disclosed; its high 3–4BR + ZORI 1.18 ratio reads as a real big-home-tail
+premium in a wealthy SFH town, not smoothed. Swampscott similar but ZORI-consistent (1.08).
+
+**Vacancy (`PROP.VacancyRateBase`, ratified 2026-08-25):** ACS 2020–24 5yr B25003/B25004
+computed directly (vacant-for-rent ÷ [renter-occupied + vacant-for-rent], Census Reporter
+API, pulled 2026-08-24) where the sample supports it: **Peabody 3.0%** (236/7,938 — this
+VERIFIES §4a's previously-flagged secondary figure) · **Danvers 5.7%** (205/3,591) ·
+**Beverly 1.9%** (130/6,898 — independently corroborates the Salem value the bundle
+previously borrowed; MOE-band ~0.2–3.4% disclosed) · **Lynn 2.6%** (514/19,406, ±32%
+numerator MOE disclosed). **Swampscott + Marblehead: 3.0% regional** (the §10c
+regional-vacancy precedent) — Swampscott's own cell is noise (43±49; 57% of its vacants
+are seasonal/coastal) and Marblehead's figures conflict 2× (AHO 5% vs ACS-derived
+10.1%±10.4pts). `RET.MoverRegionalVacancyPct` stays regional 3.0% everywhere (§10c).
+
+**Unverified residue (named, not used):** Danvers HPP "3%" (draft PDF >10MB, unfetched) ·
+Swampscott 2016 HPP "~1%" (ACS 2009–13 vintage; PDFs 404/403). `housing.ma` is dead
+site-wide (TLS→Heroku, §4 archival note) — confirmed for Danvers/Lynn/Swampscott too.
+
 ### Sources (§4)
 - [City of Salem Housing Roadmap Report Card (Oct 22 2025)](https://www.salemma.gov/m/newsflash/Home/Detail/190) · [RentCafe Salem (Jun 2 2026)](https://www.rentcafe.com/average-rent-market-trends/us/ma/salem/) · [Zumper Salem (Jun 25 2026)](https://www.zumper.com/rent-research/salem-ma)
 - [MA rental vacancy 3.4%, Census HVS (Jan 2025)](https://tradingeconomics.com/united-states/rental-vacancy-rate-for-massachusetts-percent-a-na-fed-data.html) · [LocalHousingSolutions — healthy 7–8% (May 2024)](https://www.localhousingsolutions.org/analyze/interpreting-rental-vacancy-rates-for-small-and-midsize-cities/)
 - [Patch — Salem cost burden, 2016 ACS (Dec 2017)](https://patch.com/massachusetts/salem/one-two-salem-renters-rent-burdened-census) · [DataUSA — Salem](https://datausa.io/profile/geo/salem-ma/) · [ImagineSalem (2017)](https://imaginesalem.org/faqs-and-common-concerns)
+- **§4e (towns pack):** [Zillow ZORI City CSV (open research data, Jul 2026)](https://files.zillowstatic.com/research/public_csvs/zori/City_zori_uc_sfrcondomfr_sm_month.csv) (local copy `scratch/City_zori_uc_sfrcondomfr_sm_month.csv`) · Zillow rental market trends per town (hand-pulled 2026-08-25; zillow.com blocks automated fetch — human retrieval per the OnlineFacts convention) · Zumper/RentCafe/Apartment List town pages (2026-08-24 agent pulls, URLs in `towns_pack_research.md`) · Census Reporter API B25031/B25003/B25004, geoids 16000US2552490 (Peabody), 2516285 (Danvers), 2505595 (Beverly), 2537490 (Lynn), 2568680 (Swampscott), 2538435 (Marblehead), ACS 2020–2024 5-yr, pulled 2026-08-24.
 - **Archival status (2026-06-25):** the 3 flaky originals stay **blocked/dead** — [point2homes](https://www.point2homes.com/US/Average-Rent/MA/Salem.html) (403), [Census QuickFacts](https://www.census.gov/quickfacts/fact/table/salemcitymassachusetts/) (403), and **`housing.ma/salem/report` is likely permanently gone** (TLS/DNS misconfigured → unrelated Heroku apps; it's a [MAPC](https://github.com/MAPC/housingma) CHAS project). Their **data is recovered + archived above** from durable alternatives: [Census Reporter (Salem, GEOID 16000US2559105)](https://censusreporter.org/profiles/16000US2559105-salem-ma/), [DataUSA](https://datausa.io/profile/geo/salem-ma/), MAPC/CHAS (via cache). *(Wayback/AIBrowser unreachable from here; a human could snapshot the originals if true verbatim copies are wanted.)*
 
 ---
