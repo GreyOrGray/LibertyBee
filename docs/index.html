@@ -69,7 +69,7 @@
   {
    "@type": "Dataset",
    "name": "Liberty Bee living farm data",
-   "description": "Daily-updated aggregate of the living run farm: the released engine re-run on fresh seeds no cited run ever used, published only through an eleven-check tripwire gate and a human-merged pull request. Survival rates with confidence intervals, death-timing histograms, and provenance per rung.",
+   "description": "Aggregate of the living run farm (paused 2026-08-16 for the v3 re-baseline): the released engine re-run on fresh seeds no cited run ever used, published only through an eleven-check tripwire gate and a human-merged pull request. Survival rates with confidence intervals, death-timing histograms, and provenance per rung.",
    "url": "https://libertybee.org/",
    "license": "https://github.com/GreyOrGray/LibertyBee/blob/main/LICENSE",
    "creator": {
@@ -358,7 +358,7 @@
   cite a superseded baseline (Gray's V2 ruling: nothing stale ships).
 ============================================================================= -->
 <!-- MODEL-DATA v2 2026-08-06 · banner: engine 0.6.0, 13,200 runs (frozen, cited) + living-count span filled from live.json at render · src: V04R1 corpora + farm pipeline -->
-<div class="wip sans"><b>Liberty Bee V2.</b> The numbers and charts are real, from the frozen V2 corpus of record (engine 0.6.0 — 13,200 runs, zero failures, generated from the public repo with zero overrides) — the code and the full dataset are public, and every run reproduces from a seed. Everything's sourced in <a href="#sources">the ledger</a>. And the model hasn't stopped: a living series keeps running on fresh seeds<span id="lvBannerN"></span> — <a href="#live">updated daily below</a>.</div>
+<div class="wip sans"><b>Liberty Bee V2.</b> The numbers and charts are real, from the frozen V2 corpus of record (engine 0.6.0 — 13,200 runs, zero failures, generated from the public repo with zero overrides) — the code and the full dataset are public, and every run reproduces from a seed. Everything's sourced in <a href="#sources">the ledger</a>. Alongside it, a living series ran on fresh seeds<span id="lvBannerN"></span> — <a href="#live">paused 2026-08-16 for the v3 re-baseline; the full series stands below</a>.</div>
 
 <!-- ============ 01 · INTRO ============ -->
 <div class="hero wrap">
@@ -592,7 +592,7 @@
   <ul class="techlist">
     <li>Event-driven engine — every acquisition, lease, renewal, repair and rent change is a dated event, not an average</li>
     <li>Seeded RNG + RunID / BatchID run tracking — deterministic and reproducible: the same seed replays the same 20-year history to the penny, each run in its own freshly-restored database</li>
-    <li>A <b>frozen baseline</b> (named engine version, read-only) a skeptic can cite — beside a <b>living farm</b> that keeps running and only grows the evidence</li>
+    <li>A <b>frozen baseline</b> (named engine version, read-only) a skeptic can cite — beside a <b>living farm</b> that ran on fresh seeds and only grew the evidence (paused 2026-08-16 for the v3 re-baseline)</li>
     <li>Regime-based inflation, itemized Salem operating costs, zero-debt acquisition — the realism, not a toy</li>
   </ul>
   <div class="repo">
@@ -660,12 +660,14 @@
 <!-- MODEL-DATA v2 2026-08-05 · live death-timing heatmaps (deaths-per-100, fire ramp red→yellow, extinction-null cells, one shared scale) rendered from live.json per-rung death_year_histogram (living + frozen refs) · design spec: LibertyBeeDev#217 -->
 <!-- MODEL-DATA v2 2026-07-30 · live section RENDERED from data/live.json (tripwire-gated publishes); frozen refs = anchor rungs (n=500) + dd25_reference (n=150); intro cites 13,200 frozen · src: farm store via aggregate pipeline -->
 <section class="live-sec" id="live"><div class="wrap reveal">
-  <p class="eyebrow sans">Beyond the frozen baseline — live, not cited</p>
-  <h2>The model keeps running.</h2>
+  <p class="eyebrow sans">Beyond the frozen baseline — fresh seeds, not cited</p>
+  <h2>The model kept running.</h2>
   <p>Everything above this line is frozen — 13,200 runs across nine scenario ladders, every number
-  reproducible from a seed, and none of it will ever move. Everything below this line is
-  <b>alive</b>. The same released engine keeps running on a machine in the corner of a room, on
-  fresh seeds no cited run ever used — not to change the answer, but to keep measuring it.</p>
+  reproducible from a seed, and none of it will ever move. Everything below this line came from the
+  <b>living series</b>: the same released engine, re-run on a machine in the corner of a room, on
+  fresh seeds no cited run ever used — not to change the answer, but to keep measuring it. The
+  series is <b>paused</b> since <b>2026-08-16</b>, at 20,765 V2-era runs, while the v3 baseline is
+  cut; every number below stands as published.</p>
   <div id="lvBody"><p class="lv-unavail">Loading live data…</p></div>
   <p class="lv-methods">A living run: the released engine (<b>0.6.0</b>), a fresh seed no cited run ever used, a fresh
   database restored from the released Gold every time, keyed (scenario · engine · funding · seed).
@@ -786,14 +788,14 @@
     var vmax=heatVmax([d.frozen.rungs, std.rungs, d.frozen.dd25_reference.rungs, flv.rungs]);
     var stdN=(std.rungs&&std.rungs.length)?std.rungs[0].n:0;
     var flvN=(flv.rungs&&flv.rungs.length)?flv.rungs[0].n:0;
-    var l1=heatGrid('living \u2014 n\u2248'+stdN+' per level, growing daily', std.rungs, vmax);
-    var l2=heatGrid('living \u2014 n\u2248'+flvN+' per level, growing daily', flv.rungs, vmax);
+    var l1=heatGrid('living \u2014 n\u2248'+stdN+' per level (paused 2026-08-16)', std.rungs, vmax);
+    var l2=heatGrid('living \u2014 n\u2248'+flvN+' per level (paused 2026-08-16)', flv.rungs, vmax);
     if(!l1&&!l2) return '';
     return '<div class="lv-panel"><h3>Death timing \u2014 when the failures happen</h3>'
       +'<p class="pnote">Each row is a funding level; each cell is a year of the twenty-year run. '
       +'Color answers one question: <i>of 100 organizations starting at this level, how many failed '
       +'in this year?</i> The record grids are frozen alongside the baseline; the living grids '
-      +'accumulate daily against them. One color scale across all four grids \u2014 hover any cell '
+      +'accumulated against them until the 2026-08-16 pause. One color scale across all four grids \u2014 hover any cell '
       +'for exact counts.</p>'
       +'<div class="lv-legend" style="margin:2px 0 14px">'
       +'<span><span class="swb" style="background:#3A362A;border:1px solid rgba(237,234,224,.25)"></span>zero deaths that year \u2014 still alive</span>'
@@ -1046,7 +1048,7 @@
 </div></section>
 
 <footer class="wrap">
-  <p>Liberty Bee — a non-extractive housing model, simulated in the open. Baseline <b>V2</b> · engine <b>0.6.0</b> · <b>8,000</b> regime runs + <b>2,400</b> deep-discount (frozen corpus of record; V1's +100 static and +1,440 cliff remain on the version archive) · itemized cost model, regime inflation, retention model, zero-debt acquisition · reproducible from seed · plus a living series that ran to 5,903 fresh-seed runs, now paused while the next baseline is cut (see <i>the model keeps running</i>, above, and the <a href="versions.html">version archive</a>).</p>
+  <p>Liberty Bee — a non-extractive housing model, simulated in the open. Baseline <b>V2</b> · engine <b>0.6.0</b> · <b>8,000</b> regime runs + <b>2,400</b> deep-discount (frozen corpus of record; V1's +100 static and +1,440 cliff remain on the version archive) · itemized cost model, regime inflation, retention model, zero-debt acquisition · reproducible from seed · plus a living series that ran to 26,668 fresh-seed runs across two vintages (5,903 on V1 · 20,765 on V2), paused 2026-08-16 while the next baseline is cut (see <i>the model kept running</i>, above, and the <a href="versions.html">version archive</a>).</p>
   <p style="margin-top:10px">The code and the full dataset are on GitHub; every figure is cited in <a href="#sources">the ledger</a>. Nothing here is launch-capital guidance — it's what this model shows, under this market's assumptions, told honestly.</p>
   <p style="margin-top:14px;font-size:12px;">© 2026 Liberty Bee · open source under the <a href="https://github.com/GreyOrGray/LibertyBee/blob/main/LICENSE" target="_blank" rel="noopener">GNU AGPL-3.0</a> · bee icon by <a href="https://lucide.dev" target="_blank" rel="noopener">Lucide Lab</a> (ISC).</p>
 </footer>
