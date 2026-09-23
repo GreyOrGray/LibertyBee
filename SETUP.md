@@ -92,6 +92,7 @@ python app/src/master_test_runner.py --env <the_minted_env> --regression
 > dump (REPRODUCE.md §1). If you haven't restored it yet, skip this step and come back.
 
 ```
+$env:LB_PG_TEMPLATE = '<the corpus's matching gold template>'   # e.g. libertybee_salem2026_fwrd_gold — see REPRODUCE.md §3
 python reproduction_gate.py --corpus <restored_corpus_db>
 ```
 

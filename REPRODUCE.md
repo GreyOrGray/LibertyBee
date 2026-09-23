@@ -61,7 +61,12 @@ modified or unpublished tree is permanently marked and fails here — by design.
 
 ## 3. Re-run sampled cells (does it reproduce?)
 
+Every corpus was swept from its own seed template — `libertybee_<region>_<basis>_gold`,
+shipped alongside the corpora as release assets (restore one like any other dump). Point
+the gate's re-runs at the **matching** template, then run it:
+
 ```
+$env:LB_PG_TEMPLATE = 'libertybee_salem2026_fwrd_gold'
 python reproduction_gate.py --corpus libertybee_fwrd_salem2026
 ```
 
@@ -70,11 +75,20 @@ against the stored results. Determinism is exact — a surviving cell must match
 figure to the penny; a failed cell must die in the same month. **Expect:**
 `GATE PASSED: all N sampled cells reproduce from HEAD.`
 
+> **A wall of `DRIFT` (or `NO-PROJ`) instead?** That is the gate telling you the template
+> doesn't match — your re-runs simulated a different compensation basis or ladder than the
+> corpus was swept from, so every cell differs. Set `LB_PG_TEMPLATE` to the corpus's own
+> gold (fw/fwrd corpora pair with `libertybee_<region>_fw_gold` / `_fwrd_gold`; declared
+> corpora with `libertybee_<region>_gold`; the release notes list every pairing) and
+> re-run.
+
 ## 4. Re-run any single cell by hand
 
-Pick any row of `v1.run_summary`; its (ProjectionID, Seed) is the complete recipe:
+Pick any row of `v1.run_summary`; its (ProjectionID, Seed) is the complete recipe — minted
+from the corpus's matching template (§3), which `migration_manager.py` also honors:
 
 ```
+$env:LB_PG_TEMPLATE = 'libertybee_salem2026_fwrd_gold'
 python environmentscripts/migration_manager.py --label myrepro
 python app/src/simulation.py --env <the_minted_env> --projection-id <P> --months 240 --seed <S>
 ```
