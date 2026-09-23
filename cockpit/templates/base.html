@@ -21,10 +21,14 @@
     button { background: #b8860b; color: #fff; border: 0; padding: 0.5rem 1.1rem; border-radius: 5px;
              cursor: pointer; font-size: 0.95rem; }
     code { background: #f4f0e6; padding: 0.1rem 0.3rem; border-radius: 3px; }
+    .crumbs { font-size: 0.85rem; color: #8a8a8a; margin: -0.4rem 0 1rem; }
+    .crumbs a { text-decoration: none; }
+    .crumbs .sep { margin: 0 0.35rem; color: #c9c2b2; }
   </style>
 </head>
 <body>
-  <h1>🐝 Liberty Bee — Cockpit</h1>
+  <h1><a href="{{ url_for('index') }}" style="text-decoration:none">🐝 Liberty Bee — Cockpit</a></h1>
+  <nav class="crumbs">{% block crumbs %}{% endblock %}</nav>
   {% block body %}{% endblock %}
 </body>
 </html>

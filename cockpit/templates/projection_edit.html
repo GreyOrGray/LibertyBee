@@ -1,6 +1,6 @@
 {% extends "base.html" %}
+{% block crumbs %}<a href="{{ url_for('index') }}">home</a><span class="sep">&rsaquo;</span>{{ env }}<span class="sep">&rsaquo;</span><a href="{{ url_for('projections', env=env) }}">parameter sets</a><span class="sep">&rsaquo;</span>{{ proj[1] }}{% endblock %}
 {% block body %}
-<p><a href="{{ url_for('projections', env=env) }}">&larr; parameter sets</a></p>
 <h2>{{ proj[1] }} <span class="hint">(ID {{ proj[0] }} &middot; {{ proj[3] }})</span></h2>
 {% if saved %}<div class="saved">Saved. {{ n_overrides }} override(s) stored — everything else
   inherits the canonical default.</div>{% endif %}
@@ -34,9 +34,11 @@
       <td><code>{{ cat }}.{{ name }}</code><div class="hint">{{ dtype }}</div></td>
       <td>{% if editable %}
         <input type="text" name="{{ cat }}::{{ name }}" value="{{ override or '' }}"
-               placeholder="{{ default }}">
+               placeholder="{{ default if default is not none else 'required' }}">
         {% else %}{{ override or default }}{% endif %}</td>
-      <td class="hint">{{ default }}</td>
+      <td class="hint">{% if default is none %}<b>projection-defined</b> — this value
+        belongs to this set itself; there is no canonical default to fall back to
+        {% else %}{{ default }}{% endif %}</td>
       <td class="desc" style="max-width:none">{{ desc }}</td>
       {% if editable %}
       <td><input type="text" name="src::{{ cat }}::{{ name }}" value="{{ ovsrc or '' }}"

@@ -116,6 +116,22 @@ def validate_bundle(path, required):
     if "region" not in manifest or "parameters" not in manifest:
         errs.append("region.json must contain 'region' and 'parameters'")
 
+    # optional staffing wage localization (ruling 2026-09-01): the model's
+    # three employee-role pay bands are Massachusetts-basis reference data;
+    # a bundle scales them for its labor market via staffing.wage_index
+    staffing = manifest.get("staffing") or {}
+    if staffing:
+        widx = staffing.get("wage_index")
+        try:
+            widx = float(widx)
+        except (TypeError, ValueError):
+            errs.append("staffing.wage_index must be a number")
+            widx = None
+        if widx is not None and not (0.3 <= widx <= 3.0):
+            errs.append(f"staffing.wage_index {widx} outside sane range 0.3-3.0")
+        if "source" not in staffing:
+            errs.append("staffing block requires a 'source' citation")
+
     # buildings
     buildings, b_ids = [], set()
     with open(os.path.join(path, "buildings.csv"), encoding="utf-8-sig", newline="") as f:
@@ -321,6 +337,21 @@ def load_region(conn_info, buildings, units, manifest, bundle_name, defaults, pg
                         "WHERE Category=? AND Name=?", sval, cat, pname)
             if cur.rowcount:
                 national_used.append((name, spec.get("tier", "?")))
+
+        # staffing wage localization (ruling 2026-09-01): scale the three
+        # employee-role pay bands (base/cap/benefits together) for the region's
+        # labor market. Adopters may instead edit reference.EmployeeRole
+        # directly for per-role control — this is the coarse, citable knob.
+        staffing = manifest.get("staffing") or {}
+        if staffing.get("wage_index") is not None:
+            widx = float(staffing["wage_index"])
+            cur.execute("UPDATE reference.EmployeeRole SET "
+                        "BaseSalary=ROUND(BaseSalary*CAST(? AS decimal(12,4)), 0), "
+                        "SalaryCap=ROUND(SalaryCap*CAST(? AS decimal(12,4)), 0), "
+                        "BenefitsCost=ROUND(BenefitsCost*CAST(? AS decimal(12,4)), 0)",
+                        widx, widx, widx)
+            print(f"  staffing wage index applied: x{widx} "
+                  f"({staffing.get('source', 'no source')[:80]})")
 
         # provenance (DDL is the one structurally per-engine statement here)
         if pg:

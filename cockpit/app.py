@@ -147,6 +147,63 @@ def town_knobs(env):
                            saved=request.args.get("saved"))
 
 
+# ---------------------------------------------------------------- staffing
+
+@app.route("/region/<env>/staffing", methods=["GET", "POST"])
+def staffing(env):
+    """The salary knob (#258): the three EmployeeRole pay bands are DECLARED
+    policy (founder judgment of doable, mission-lean compensation), not market
+    data — this page makes them editable per environment, coarse (scale all by
+    a wage index) or fine (per-role base/cap/benefits)."""
+    db = _db(env)
+    errors = []
+    if request.method == "POST":
+        if request.form.get("apply_index"):
+            try:
+                idx = float(request.form.get("wage_index") or "")
+            except ValueError:
+                idx = None
+            if idx is None or not (0.3 <= idx <= 3.0):
+                errors.append("wage index must be a number between 0.3 and 3.0")
+            else:
+                db.execute_non_query(
+                    "UPDATE reference.EmployeeRole SET "
+                    "BaseSalary=ROUND(BaseSalary*CAST(? AS decimal(12,4)), 0), "
+                    "SalaryCap=ROUND(SalaryCap*CAST(? AS decimal(12,4)), 0), "
+                    "BenefitsCost=ROUND(BenefitsCost*CAST(? AS decimal(12,4)), 0)",
+                    (idx, idx, idx))
+                return redirect(url_for("staffing", env=env, saved=1))
+        else:
+            updates = []
+            for rid in request.form.getlist("role_id"):
+                vals = {}
+                for f in ("base", "cap", "benefits"):
+                    raw = (request.form.get(f"{f}::{rid}") or "").strip()
+                    try:
+                        vals[f] = float(raw)
+                    except ValueError:
+                        errors.append(f"role {rid}: {f} must be a number (got {raw!r})")
+                if len(vals) == 3:
+                    if vals["base"] <= 0 or vals["benefits"] < 0:
+                        errors.append(f"role {rid}: base must be > 0, benefits >= 0")
+                    elif vals["cap"] < vals["base"]:
+                        errors.append(f"role {rid}: salary cap below base salary")
+                    else:
+                        updates.append((vals["base"], vals["cap"], vals["benefits"], int(rid)))
+            if not errors:
+                for base, cap, ben, rid in updates:
+                    db.execute_non_query(
+                        "UPDATE reference.EmployeeRole SET BaseSalary=?, SalaryCap=?, "
+                        "BenefitsCost=? WHERE RoleID=?", (base, cap, ben, rid))
+                return redirect(url_for("staffing", env=env, saved=1))
+
+    roles = db.execute_query(
+        "SELECT RoleID, Role, BaseSalary, SalaryCap, BenefitsCost "
+        "FROM reference.EmployeeRole ORDER BY RoleID")
+    return render_template("staffing.html", env=env, roles=roles, errors=errors,
+                           saved=request.args.get("saved"))
+
+
 def _region_default(db, category, name):
     row = db.execute_query(
         "SELECT Value FROM reference.ParameterRegistryDefault WHERE Category=? AND Name=?",
@@ -219,13 +276,33 @@ def edit_projection(env, pid):
             drow = db.execute_query(
                 "SELECT Value, DataType FROM reference.ParameterRegistryDefault "
                 "WHERE Category=? AND Name=?", (cat, name))
+            src = (request.form.get(f"src::{cat}::{name}") or "").strip() or None
             if not drow:
-                continue  # unknown key — never invent registry rows from form data
+                # No registry default: a projection-DEFINED parameter (#252 —
+                # FIN.StartingFunds and kin; these define the set). Editable only
+                # if the projection already carries the row — never invent
+                # registry rows from form data — and never deletable to nothing:
+                # a parameter set without its StartingFunds is broken.
+                erow = db.execute_query(
+                    "SELECT Value, Description FROM reference.ParameterRegistryDefined "
+                    "WHERE ProjectionID=? AND Category=? AND Name=?", (pid, cat, name))
+                if not erow or not val:
+                    continue
+                cur_val, cur_desc = str(erow[0][0]), erow[0][1]
+                if val == cur_val and not src:
+                    continue  # untouched — preserve the row, description included
+                # lb-ba #9: a changed value never inherits prose describing the
+                # value it replaced; an unchanged value keeps its description.
+                new_desc = src if src else (cur_desc if val == cur_val else None)
+                db.execute_non_query(
+                    "UPDATE reference.ParameterRegistryDefined SET Value=?, Description=? "
+                    "WHERE ProjectionID=? AND Category=? AND Name=?",
+                    (val, new_desc, pid, cat, name))
+                continue
             default_val, dtype = str(drow[0][0]), drow[0][1]
             # the adopter's own provenance claim; blank persists as NULL, never a
             # placeholder — and never silently inherits prose describing a value
             # this override just replaced (lb-ba #9)
-            src = (request.form.get(f"src::{cat}::{name}") or "").strip() or None
             db.execute_non_query(
                 "DELETE FROM reference.ParameterRegistryDefined "
                 "WHERE ProjectionID=? AND Category=? AND Name=?", (pid, cat, name))
@@ -243,15 +320,25 @@ def edit_projection(env, pid):
         "SELECT Category, Name, Value, DataType, Description "
         "FROM reference.ParameterRegistryDefault ORDER BY Category, Name")
     overrides = {}
-    for c, n, v, d in db.execute_query(
-            "SELECT Category, Name, Value, Description FROM reference.ParameterRegistryDefined "
-            "WHERE ProjectionID = ?", (pid,)):
-        overrides[(c, n)] = (v, d)
+    for c, n, v, dt, d in db.execute_query(
+            "SELECT Category, Name, Value, DataType, Description "
+            "FROM reference.ParameterRegistryDefined WHERE ProjectionID = ?", (pid,)):
+        overrides[(c, n)] = (v, dt, d)
     grouped = {}
+    have_default = set()
     for c, n, v, dt, desc in defaults:
+        have_default.add((c, n))
         ov = overrides.get((c, n))
         grouped.setdefault(c, []).append(
-            (n, str(v), dt, desc or "", ov[0] if ov else None, ov[1] if ov else None))
+            (n, str(v), dt, desc or "", ov[0] if ov else None, ov[2] if ov else None))
+    # Projection-DEFINED parameters — no registry default exists (#252). These
+    # define the set (FIN.StartingFunds, SIM.EndDate, PROP.PropertyType); the
+    # old defaults-driven loop silently hid them, making the one parameter that
+    # sets a clone's funding rung invisible and uneditable.
+    for (c, n), (v, dt, d) in sorted(overrides.items()):
+        if (c, n) in have_default:
+            continue
+        grouped.setdefault(c, []).append((n, None, dt, d or "", str(v), d))
     ordered = sorted(grouped.items(), key=lambda kv: cats.get(kv[0], ("", 999))[1])
     return render_template("projection_edit.html", env=env, proj=proj[0], editable=editable,
                            ordered=ordered, cats=cats, n_overrides=len(overrides),
@@ -456,6 +543,90 @@ def run_cancel(run_id):
             pass
         _registry_update(run_id, state="cancelled")
     return redirect(url_for("run_status", run_id=run_id))
+
+
+# ---------------------------------------------------------------- corpus view
+
+_CORPUS_NAME = re.compile(r"^[a-z][a-z0-9_]{2,62}$")
+
+
+def _discover_corpora():
+    """Databases that actually contain a corpus (v1.run_summary exists).
+    Probes each candidate with a short timeout — a local tool talking to a
+    local server; a dozen quick connects is fine."""
+    import psycopg
+    kw = dict(host=os.environ.get("LB_PG_HOST", "localhost"),
+              port=int(os.environ.get("LB_PG_PORT", "5432")),
+              user=os.environ.get("LB_PG_USER", "libertybee"),
+              autocommit=True, connect_timeout=2)
+    found = []
+    try:
+        with psycopg.connect(dbname="postgres", **kw) as conn:
+            names = [r[0] for r in conn.execute(
+                "SELECT datname FROM pg_database WHERE NOT datistemplate "
+                "AND datname <> 'postgres' AND datname NOT LIKE 'libertybee_test\\_%' "
+                "ORDER BY datname")]
+        for n in names:
+            try:
+                with psycopg.connect(dbname=n, **kw) as c2:
+                    if c2.execute(
+                            "SELECT 1 FROM information_schema.tables "
+                            "WHERE table_schema = 'v1' AND table_name = 'run_summary'"
+                            ).fetchone():
+                        found.append(n)
+            except psycopg.Error:
+                continue
+    except psycopg.Error:
+        pass
+    return found
+
+
+@app.route("/corpus", methods=["GET", "POST"])
+def corpus_form():
+    if request.method == "POST":
+        name = (request.form.get("name") or request.form.get("pick") or "").strip().lower()
+        if not _CORPUS_NAME.match(name):
+            return render_template("error.html", title="Invalid corpus name",
+                                   detail="Corpus database names are lowercase "
+                                          "letters/digits/underscores."), 400
+        return redirect(url_for("corpus_view", name=name))
+    return render_template("corpus_form.html", corpora=_discover_corpora())
+
+
+@app.route("/corpus/<name>")
+def corpus_view(name):
+    """Read-only window onto a corpus database: provenance + per-rung fill +
+    survival as FLAT COUNTS (no interval theater — the site's published numbers
+    carry the statistics; this page watches a corpus fill)."""
+    if not _CORPUS_NAME.match(name):
+        abort(404)
+    import psycopg
+    try:
+        conn = psycopg.connect(
+            host=os.environ.get("LB_PG_HOST", "localhost"),
+            port=int(os.environ.get("LB_PG_PORT", "5432")),
+            user=os.environ.get("LB_PG_USER", "libertybee"),
+            dbname=name, autocommit=True, connect_timeout=5)
+    except psycopg.OperationalError as e:
+        return render_template("error.html", title="Corpus not reachable",
+                               detail=str(e)), 404
+    try:
+        meta = conn.execute(
+            "SELECT Scenario, HarnessCommit, HarnessDirty, StartedUTC "
+            "FROM v1.corpus_meta ORDER BY StartedUTC").fetchall()
+        rungs = conn.execute(
+            "SELECT Rung, COUNT(*), COALESCE(SUM(Survived), 0) "
+            "FROM v1.run_summary GROUP BY Rung ORDER BY Rung").fetchall()
+        total = sum(r[1] for r in rungs)
+    except psycopg.Error as e:
+        return render_template("error.html", title="Not a corpus database",
+                               detail=str(e)), 404
+    finally:
+        conn.close()
+    max_n = max((r[1] for r in rungs), default=0)
+    dirty = any(m[2] for m in meta)
+    return render_template("corpus.html", name=name, meta=meta, rungs=rungs,
+                           total=total, max_n=max_n, dirty=dirty)
 
 
 # ---------------------------------------------------------------- results

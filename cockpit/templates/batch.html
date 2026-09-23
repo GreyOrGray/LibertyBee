@@ -1,7 +1,7 @@
 {% extends "base.html" %}
+{% block crumbs %}<a href="{{ url_for('index') }}">home</a><span class="sep">&rsaquo;</span><a href="{{ url_for('run_page') }}">run</a><span class="sep">&rsaquo;</span>batch {{ b.id }}{% endblock %}
 {% block body %}
 {% if b.state == 'running' %}<meta http-equiv="refresh" content="5">{% endif %}
-<p><a href="{{ url_for('run_page') }}">&larr; runs</a></p>
 <h2>Batch {{ b.id }} <span class="hint">{{ b.env }} &middot; projection {{ b.projection }} &middot;
   seeds {{ b.seed }} &middot; {{ b.months }} months each</span></h2>
 

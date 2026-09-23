@@ -1,6 +1,6 @@
 {% extends "base.html" %}
+{% block crumbs %}<a href="{{ url_for('index') }}">home</a><span class="sep">&rsaquo;</span>{{ env }}<span class="sep">&rsaquo;</span>parameter sets{% endblock %}
 {% block body %}
-<p><a href="{{ url_for('index') }}">&larr; environments</a></p>
 <h2>Parameter sets &middot; {{ env }}</h2>
 <div class="note">A <b>parameter set</b> (projection) is a named bundle of model knobs a run
   selects with <code>--projection-id</code>. The shipped sets are the published canon —

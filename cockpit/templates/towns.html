@@ -1,6 +1,6 @@
 {% extends "base.html" %}
+{% block crumbs %}<a href="{{ url_for('index') }}">home</a><span class="sep">&rsaquo;</span>{{ env }}<span class="sep">&rsaquo;</span>town knobs{% endblock %}
 {% block body %}
-<p><a href="{{ url_for('index') }}">&larr; regions</a></p>
 <h2>Town knobs &middot; {{ env }}</h2>
 {% if saved %}<div class="saved">Saved. All four columns take effect in the engine — each property
   resolves by its town (blank inherits region-wide).</div>{% endif %}

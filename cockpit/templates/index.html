@@ -8,7 +8,8 @@
   <tr>
     <td><b>{{ r }}</b></td>
     <td><a href="{{ url_for('town_knobs', env=r) }}">town knobs</a> &middot;
-        <a href="{{ url_for('projections', env=r) }}">parameter sets</a></td>
+        <a href="{{ url_for('projections', env=r) }}">parameter sets</a> &middot;
+        <a href="{{ url_for('staffing', env=r) }}">staffing</a></td>
     <td><a href="{{ url_for('run_page', env=r) }}">run &rarr;</a></td>
   </tr>
   {% endfor %}
@@ -17,6 +18,9 @@
 <div class="note">No environments found under <code>environments/</code>. Mint one below, or import
   a region: <code>python region_importer.py --bundle regiondata/bundles/massachusetts/salem --label mytown</code></div>
 {% endif %}
+
+<p><a href="{{ url_for('corpus_form') }}">Watch a corpus &rarr;</a>
+  <span class="hint">provenance + per-rung fill for a restored or in-progress corpus</span></p>
 
 <form method="post" action="{{ url_for('mint') }}" style="margin:1rem 0">
   <input type="text" name="label" placeholder="label (e.g. mytest)">

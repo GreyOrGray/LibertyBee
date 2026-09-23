@@ -1,6 +1,6 @@
 {% extends "base.html" %}
+{% block crumbs %}<a href="{{ url_for('index') }}">home</a><span class="sep">&rsaquo;</span><a href="{{ url_for('run_page') }}">run</a><span class="sep">&rsaquo;</span><a href="{{ url_for('run_status', run_id=r.id) }}">{{ r.id }}</a><span class="sep">&rsaquo;</span>results{% endblock %}
 {% block body %}
-<p><a href="{{ url_for('run_status', run_id=r.id) }}">&larr; run</a></p>
 <h2>Results <span class="hint">{{ r.env }} &middot; projection {{ r.projection }} &middot;
   seed {{ r.seed }} &middot; {{ n_months }} months</span></h2>
 

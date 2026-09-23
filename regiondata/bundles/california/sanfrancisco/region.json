@@ -1,0 +1,56 @@
+{
+  "region": {
+    "name": "San Francisco CA (DataSF assessor roll)",
+    "description": "Built from DataSF's Assessor Historical Secured Property Tax Rolls (dataset wv5m-vpq2, PUBLIC DOMAIN/PDDL), 2025 closed roll, parcels with 2-8 units in residential multifamily classes (flats, duplexes, small apartments, TICs). Units, bedrooms, baths, sqft and year built are DIRECT assessor fields. PRICES ARE VENDOR-TIER, disclosed: CA Prop 13 + Rev&Tax Code s481 seal sale prices from public view, so no public ratio-study path exists; base_price = building sqft x broker median $/sqft by size bucket (Q2 2026 SF 2-4 unit market report: 2-unit $784/sqft, 3-4 unit $604/sqft; 5-8 unit buckets extrapolate the 3-4 figure, labeled convention). An adopter with MLS access should replace these prices. Property tax uses the D3 parameter approximation: FY2025-26 secured rate 1.18268% x acquisition price; Prop 13 caps basis growth at 2%/yr thereafter, so the model OVERSTATES later-year taxes - the conservative direction. One-time transfer tax (0.75% in the $1-5M bracket) is NOT modeled, disclosed. SF's rent ordinance (pre-1979 coverage) permits 1.6%/yr sitting-tenant increases; Liberty Bee's invariant is zero, strictly more protective - no additional compliance logic required. Rents: HUD FY2026 FMR by bedroom (metro 40th pct; the asking-market runs far above - ZORI $4,539 +23.2% Jul 2026 - and ACS sitting-tenant rents below; FMR is the citable middle, ruling D2). THIS BUNDLE IS A DEMONSTRATION with disclosed provenance.",
+    "locale": {
+      "country": "US",
+      "state": "CA",
+      "primary_market": "San Francisco"
+    },
+    "currency": "USD",
+    "start_date": "2026-01-01",
+    "prices_as_of": "Q2 2026 broker medians on 2025-roll building areas",
+    "provenance": "DataSF wv5m-vpq2 (PDDL; pulled via Socrata API 2026-08-31, cached datasf_rolls_2025.json) + HUD FY2026 FMR + ratified research docs/v_0_3/phases/phase_1_12/national_panel_research.md (D1-D8) and national_panel_sources.md. Ratified by Gray 2026-08-28."
+  },
+  "counts": {
+    "buildings": 28698,
+    "units": 89955,
+    "beds_synthesized_from_sqft": 19808,
+    "beds_sqft_calibration": {
+      "1": 860,
+      "2": 1220,
+      "3": 1591,
+      "4": 1934
+    },
+    "skipped": {
+      "non_residential_class": 3104,
+      "no_sqft": 247,
+      "dup_parcel": 0
+    }
+  },
+  "assessment_ratios": {
+    "_note": "not applicable - CA Prop 13 assessed values are acquisition-era and unusable for market estimation; prices are broker-tier $/sqft"
+  },
+  "parameters": {
+    "INC.EarnerMedianAnnual": {
+      "value": 104159,
+      "source": "Renter median household income $111,044 (ACS 2024 1yr B25119, SF county) x Salem earner/household calibration 0.938 (towns-pack convention)."
+    },
+    "OPEX.PropertyTaxPerUnit": {
+      "value": 9565,
+      "source": "D3 parameter approximation: FY2025-26 secured rate 1.18268% (sftreasurer.org, primary) x median per-unit acquisition price $808,726 from this universe. Prop 13 basis growth <=2%/yr means real-world later-year taxes run BELOW this flat knob - model overstates costs, the conservative direction. Disclosed."
+    },
+    "OPEX.InsurancePerUnit": {
+      "value": 1800,
+      "source": "DERIVED, weakest knob: Terner Center (UC Berkeley, Dec 2025) CA 2-4 unit avg $131/$100k insured value (2023 CDI data) applied to SF values -> $1,600-2,000 range; midpoint. No SF-specific published per-unit figure exists. Ratified as range-with-tier-label (D8)."
+    },
+    "PROP.VacancyRateBase": {
+      "value": 0.0672,
+      "source": "Rental vacancy 6.72% - ACS 2024 1yr B25003/B25004 computed (16,929 / 252,204), SF county, pulled 2026-08-27. DISCLOSED: 2026 market-survey vacancy is far tighter (~2.2-3.3%, tech-demand resurgence postdating the ACS vintage); ACS basis kept for cross-bundle convention (D4)."
+    }
+  },
+  "staffing": {
+    "wage_index": 1.062,
+    "source": "BASE pay bands are DECLARED values - the founder judgment of doable, mission-lean compensation, calibrated in the Salem (Boston-metro) context; they are NOT market wage data. This index is the CITED adjustment that transports that declared philosophy to another labor market: BLS OEWS May 2025 annual mean wages (oe.data.0.Current, pulled 2026-09-01; series OEUM<area>000000<occ>04), occupations 11-9141 property managers + 49-9071 maintenance + 11-3012 admin services managers, simple average of metro/Boston ratios. Area = San Francisco-Oakland MSA (41860). Metro grain is DELIBERATE (ratified 2026-09-03): staff hire from the metro labor pool and commute metro-wide, so the competitive wage is the metro rate. Adopters with better local wage data should override."
+  }
+}

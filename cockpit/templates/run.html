@@ -1,6 +1,6 @@
 {% extends "base.html" %}
+{% block crumbs %}<a href="{{ url_for('index') }}">home</a><span class="sep">&rsaquo;</span>run{% endblock %}
 {% block body %}
-<p><a href="{{ url_for('index') }}">&larr; environments</a></p>
 <h2>Run a simulation</h2>
 <div class="note">One run, one environment — environments are disposable copies, so nothing you
   do here can damage anything. For statistical sweeps at scale, use the corpus tooling
