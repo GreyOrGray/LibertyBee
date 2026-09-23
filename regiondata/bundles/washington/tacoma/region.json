@@ -1,0 +1,56 @@
+{
+  "region": {
+    "name": "Tacoma WA (Pierce County assessor)",
+    "description": "Built from Pierce County Assessor-Treasurer public bulk data (2026 roll): use codes 1202/1203/1204 identify duplex/triplex/fourplex exactly; the 5-8 unit slice comes from the per-building units field in improvement_builtas (which also supplies bedrooms, baths, sqft and year built DIRECTLY - no bedroom synthesis needed). base_price = assessed total / 0.9385, the median assessed-to-sale ratio computed from 278 arms-length warranty-deed sales of Tacoma small-multifamily parcels 2024-2026 in the county's public sale file (WA DOR Pierce 2024 ratio 0.909 as cross-check). City scoping: parcel lat/lng point-in-polygon vs the US Census TIGERweb boundary for Tacoma city (GEOID 5370000). Buildings are labeled by Pierce parcel number (auditable via the county's public lookup), never street address. Rents are HUD FY2026 Fair Market Rents by bedroom (all rent-source families agree within 10-20% in this market; ruling D1). Pierce County GIS Data Terms of Use (2026-05-29): data provided AS IS / WITH ALL FAULTS, no warranty; this bundle is not a product of Pierce County. THIS BUNDLE IS A DEMONSTRATION with disclosed provenance - someone with MLS access can and should build a better one.",
+    "locale": {
+      "country": "US",
+      "state": "WA",
+      "primary_market": "Tacoma"
+    },
+    "currency": "USD",
+    "start_date": "2026-01-01",
+    "prices_as_of": "2026 certified roll (TY2026 values)",
+    "provenance": "Pierce County Data Downloads (pulled 2026-08-29) + Census TIGERweb place boundary + HUD FY2026 FMR (City of Tacoma OEHR doc, primary) + ratified knob research: docs/v_0_3/phases/phase_1_12/national_panel_research.md (decisions D1-D8) and national_panel_sources.md (full citation register). Ratified by Gray 2026-08-28."
+  },
+  "counts": {
+    "buildings": 2341,
+    "units": 6774,
+    "beds_fallback_1br": 186,
+    "skipped": {
+      "no_coords": 7,
+      "outside": 6250,
+      "units_range": 793,
+      "no_value": 2
+    }
+  },
+  "assessment_ratios": {
+    "TACOMA": {
+      "ratio": 0.9385,
+      "n": 278,
+      "sales_since": "2024"
+    },
+    "_pooled_recent": 0.9385
+  },
+  "parameters": {
+    "INC.EarnerMedianAnnual": {
+      "value": 55226,
+      "source": "Renter median household income $58,876 (ACS 2020-2024 5yr B25119, Tacoma city, pulled 2026-08-27) x Salem earner/household calibration 0.938 (towns-pack convention)."
+    },
+    "OPEX.PropertyTaxPerUnit": {
+      "value": 2699,
+      "source": "~1.05% effective rate on market value (Ownwell Apr 2026, Tacoma median; WA DOR Pierce 2024 ratio-study consistent) x median per-unit market value $257,086 from this universe. Parcel-verified levy table was 403-gated - aggregator-computed rate, disclosed."
+    },
+    "OPEX.InsurancePerUnit": {
+      "value": 1050,
+      "source": "VENDOR-TIER midpoint of the 2-4 unit WA dwelling-policy range $600-$1,440/unit/yr (smartinsured Apr 2026; Steadily WA avg $1,427/property Jul 2026). CAVEAT: Cascadia earthquake coverage is a separate endorsement not confirmed in any figure. Ratified as range-with-tier-label (D8)."
+    },
+    "PROP.VacancyRateBase": {
+      "value": 0.04,
+      "source": "Rental vacancy 4.0% - ACS 2020-2024 5yr B25003/B25004 computed (1,703 / 42,843), Tacoma city, pulled 2026-08-27. Managed-stock market survey 6.7% (Apartment List 2026) informs the fluctuation band."
+    }
+  },
+  "staffing": {
+    "wage_index": 1.103,
+    "source": "BASE pay bands are DECLARED values - the founder judgment of doable, mission-lean compensation, calibrated in the Salem (Boston-metro) context; they are NOT market wage data. This index is the CITED adjustment that transports that declared philosophy to another labor market: BLS OEWS May 2025 annual mean wages (oe.data.0.Current, pulled 2026-09-01; series OEUM<area>000000<occ>04), occupations 11-9141 property managers + 49-9071 maintenance + 11-3012 admin services managers, simple average of metro/Boston ratios. Area = Seattle-Tacoma-Bellevue MSA (42660). Metro grain is DELIBERATE (ratified 2026-09-03): staff hire from the metro labor pool and commute metro-wide, so the competitive wage is the metro rate."
+  }
+}

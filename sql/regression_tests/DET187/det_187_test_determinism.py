@@ -36,6 +36,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import subprocess
 import sys
@@ -53,7 +54,12 @@ PASS = "\033[92mPASS\033[0m"
 FAIL = "\033[91mFAIL\033[0m"
 WARN = "\033[93mWARN\033[0m"
 
-GATE_ENV = "LibertyBee_Test_DET187_gate"
+# The gate env follows the BACKEND OF THE SUITE ENV under test (set in main()):
+# each engine gets its own singleton, so the mssql suite keeps gating mssql
+# until the cutover retires it, and the PG suite gates PG.
+GATE_ENV = "libertybee_test_det187_gate"          # psycopg (default)
+GATE_ENV_MSSQL = "LibertyBee_Test_DET187_gate"    # pyodbc (pre-cutover legacy)
+_GATE_MSSQL = False
 SIM_MONTHS = "24"
 SIM_SEED = "777"
 CONTROL_SEEDS = [11, 23, 47, 61, 89, 101, 131, 149, 173, 197, 211, 233]
@@ -79,10 +85,11 @@ def _sim(env: str, seed: str) -> int:
 
 
 def _build_env() -> bool:
-    r = subprocess.run(
-        [sys.executable, os.path.join(REPO_ROOT, "environmentscripts", "migration_manager.py"),
-         "--envname", GATE_ENV],
-        capture_output=True, text=True)
+    cmd = [sys.executable, os.path.join(REPO_ROOT, "environmentscripts", "migration_manager.py"),
+           "--envname", GATE_ENV]
+    if _GATE_MSSQL:
+        cmd.insert(2, "--mssql")
+    r = subprocess.run(cmd, capture_output=True, text=True)
     return r.returncode == 0
 
 
@@ -386,7 +393,17 @@ def main():
     parser.add_argument("--assert", dest="assert_mode", action="store_true")
     args = parser.parse_args()
 
-    print(f"#187 determinism gates — own env {GATE_ENV} (suite env {args.env} untouched)")
+    global GATE_ENV, _GATE_MSSQL
+    try:
+        with open(ENV_BASE + args.env + os.sep + "db_config.json") as fh:
+            suite_backend = json.load(fh).get("backend", "pyodbc")
+    except OSError:
+        suite_backend = "pyodbc"
+    if suite_backend != "psycopg":
+        GATE_ENV, _GATE_MSSQL = GATE_ENV_MSSQL, True
+
+    print(f"#187 determinism gates — own env {GATE_ENV} [{suite_backend}] "
+          f"(suite env {args.env} untouched)")
     print("=" * 78)
 
     if not _build_env():

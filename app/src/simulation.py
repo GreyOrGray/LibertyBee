@@ -1256,8 +1256,39 @@ def main():
     if not args.env:
         print(f"No environment supplied")
         sys.exit()
-    env_dir = os.path.dirname(APP_DIR) + "\\environments\\" + args.env  # Go up one level to app directory
-    configfile = env_dir + "\\db_config.json"
+
+    # Resolve --env against environments/: exact name wins; otherwise a label
+    # suffix that matches exactly one env resolves with a note (envs are minted
+    # as <prefix>_<NNNN>_<label>, and the label is what a human remembers).
+    # Ambiguous or unknown names fail with the candidates — never a raw traceback.
+    environments_root = os.path.join(os.path.dirname(APP_DIR), "environments")
+    env_name = args.env
+    if not os.path.isfile(os.path.join(environments_root, env_name, "db_config.json")):
+        # Only ephemeral test envs participate in fuzzy matching or suggestions —
+        # a shorthand must never resolve into (or advertise) a non-ephemeral DB.
+        available = sorted(
+            d for d in (os.listdir(environments_root) if os.path.isdir(environments_root) else [])
+            if os.path.isfile(os.path.join(environments_root, d, "db_config.json"))
+            and d.lower().startswith("libertybee_test_"))
+        matches = [d for d in available
+                   if d.lower().endswith("_" + args.env.lower()) or d.lower() == args.env.lower()]
+        if len(matches) == 1:
+            env_name = matches[0]
+            print(f"[env] resolved '{args.env}' -> {env_name}")
+        elif len(matches) > 1:
+            print(f"Environment '{args.env}' is ambiguous — matches: {', '.join(matches)}")
+            sys.exit(1)
+        else:
+            print(f"Environment '{args.env}' not found under environments/.")
+            if available:
+                print("Available: " + ", ".join(available))
+            else:
+                print("No environments exist yet — mint one: "
+                      "python environmentscripts/migration_manager.py --label <name>")
+            sys.exit(1)
+    args.env = env_name
+    env_dir = os.path.join(environments_root, env_name)
+    configfile = os.path.join(env_dir, "db_config.json")
 
     # Set up debug logging if requested
     tee_output = None

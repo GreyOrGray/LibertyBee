@@ -27,7 +27,7 @@ WORKERS = 8
 
 def one(proj, seed):
     env = f"LibertyBee_Test_KD193c_{proj}_{seed}"
-    r = subprocess.run([sys.executable, str(MM), "--envname", env],
+    r = subprocess.run([sys.executable, str(MM), "--mssql", "--envname", env],
                        capture_output=True, text=True, cwd=str(ROOT))
     if r.returncode != 0:
         return (proj, seed, "ENVFAIL", None)

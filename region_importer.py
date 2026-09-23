@@ -116,6 +116,22 @@ def validate_bundle(path, required):
     if "region" not in manifest or "parameters" not in manifest:
         errs.append("region.json must contain 'region' and 'parameters'")
 
+    # optional staffing wage localization (ruling 2026-09-01): the model's
+    # three employee-role pay bands are Massachusetts-basis reference data;
+    # a bundle scales them for its labor market via staffing.wage_index
+    staffing = manifest.get("staffing") or {}
+    if staffing:
+        widx = staffing.get("wage_index")
+        try:
+            widx = float(widx)
+        except (TypeError, ValueError):
+            errs.append("staffing.wage_index must be a number")
+            widx = None
+        if widx is not None and not (0.3 <= widx <= 3.0):
+            errs.append(f"staffing.wage_index {widx} outside sane range 0.3-3.0")
+        if "source" not in staffing:
+            errs.append("staffing block requires a 'source' citation")
+
     # buildings
     buildings, b_ids = [], set()
     with open(os.path.join(path, "buildings.csv"), encoding="utf-8-sig", newline="") as f:
@@ -196,13 +212,13 @@ def validate_bundle(path, required):
 TOWNS = ("Salem", "Beverly", "Peabody", "Marblehead", "Lynn", "Danvers")
 
 
-def create_base_db(label, pg=False):
+def create_base_db(label, pg=True):
     """Fresh base env; returns (db_name, conn_info).
-    SQL Server: Gold restore + migrations, conn_info = pyodbc string.
-    PG (--pg): template mint via migration_manager --pg, conn_info = dict."""
+    PG (default): template mint via migration_manager, conn_info = dict.
+    SQL Server (--mssql): Gold restore + migrations, conn_info = pyodbc string."""
     cmd = [sys.executable, MIGRATION_MANAGER, "--label", label]
-    if pg:
-        cmd.insert(2, "--pg")
+    if not pg:
+        cmd.insert(2, "--mssql")
     out = subprocess.run(cmd, capture_output=True, text=True)
     print(out.stdout[-600:])
     if out.returncode != 0:
@@ -322,6 +338,21 @@ def load_region(conn_info, buildings, units, manifest, bundle_name, defaults, pg
             if cur.rowcount:
                 national_used.append((name, spec.get("tier", "?")))
 
+        # staffing wage localization (ruling 2026-09-01): scale the three
+        # employee-role pay bands (base/cap/benefits together) for the region's
+        # labor market. Adopters may instead edit reference.EmployeeRole
+        # directly for per-role control — this is the coarse, citable knob.
+        staffing = manifest.get("staffing") or {}
+        if staffing.get("wage_index") is not None:
+            widx = float(staffing["wage_index"])
+            cur.execute("UPDATE reference.EmployeeRole SET "
+                        "BaseSalary=ROUND(BaseSalary*CAST(? AS decimal(12,4)), 0), "
+                        "SalaryCap=ROUND(SalaryCap*CAST(? AS decimal(12,4)), 0), "
+                        "BenefitsCost=ROUND(BenefitsCost*CAST(? AS decimal(12,4)), 0)",
+                        widx, widx, widx)
+            print(f"  staffing wage index applied: x{widx} "
+                  f"({staffing.get('source', 'no source')[:80]})")
+
         # provenance (DDL is the one structurally per-engine statement here)
         if pg:
             cur.execute("""CREATE TABLE IF NOT EXISTS dbo._region_provenance
@@ -360,8 +391,11 @@ def main():
     ap.add_argument("--label", default="region", help="ephemeral-DB label (default: region)")
     ap.add_argument("--validate-only", action="store_true", help="validate the bundle and stop")
     ap.add_argument("--pg", action="store_true",
-                    help="load into a PostgreSQL env (minted from the libertybee_gold template)")
+                    help="deprecated no-op: PostgreSQL is the default")
+    ap.add_argument("--mssql", action="store_true",
+                    help="load into a SQL Server env (pre-cutover legacy path)")
     args = ap.parse_args()
+    use_pg = not args.mssql
 
     defaults = load_defaults()
     print(f"Validating bundle: {args.bundle}")
@@ -374,11 +408,11 @@ def main():
     if args.validate_only:
         return
 
-    db, conn = create_base_db(args.label, pg=args.pg)
+    db, conn = create_base_db(args.label, pg=use_pg)
     print(f"Loading region into {db} …")
     applied, unknown, national_used = load_region(
         conn, buildings, units, manifest, os.path.basename(args.bundle.rstrip("/\\")), defaults,
-        pg=args.pg)
+        pg=use_pg)
     print(f"OK — universe replaced ({len(buildings)}/{len(units)}); {applied} parameters applied")
     if national_used:
         print(f"  WARNING: {len(national_used)} region parameter(s) absent from the bundle were filled")

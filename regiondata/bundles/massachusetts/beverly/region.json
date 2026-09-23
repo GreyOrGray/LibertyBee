@@ -10,7 +10,7 @@
     "currency": "USD",
     "start_date": "2025-01-01",
     "prices_as_of": "FY2026 assessor roll",
-    "provenance": "MassGIS Massachusetts_Property_Tax_Parcels FeatureServer + ACS 2019-23 5yr PUMS (bedroom marginal, sqft-quantile assignment); params held constant vs regions/salem_reference_v2"
+    "provenance": "MassGIS Massachusetts_Property_Tax_Parcels FeatureServer + ACS 2019-23 5yr PUMS (bedroom marginal, sqft-quantile assignment); params held constant vs regions/salem_reference_v2; unit rents updated 2026-08-25 (towns-pack ratification): Zillow rental market trends per-bedroom, hand-pulled 2026-08-25, corroborated against Zillow ZORI City index (Jul 2026) and Zumper/RentCafe/Apartment List pulls of 2026-08-24; 4BR/5BR extrapolated from the town's own bedroom increment where the market published no figure (labeled convention). Ratified by Gray 2026-08-25; record: docs/v_0_3/phases/phase_1_12/towns_pack_research.md"
   },
   "counts": {
     "buildings": 1235,
@@ -41,7 +41,7 @@
     },
     "PROP.VacancyRateBase": {
       "value": 0.019,
-      "source": "Steady-state vacancy rate \u2014 Salem ~1.9% (ACS all-units, evidence_base SS4a; managed-stock survey unavailable \u2014 recorded limitation). Feeds acquisition income scoring + anchors the fill-duration fluctu"
+      "source": "Rental vacancy 1.9% \u2014 ACS 2020-2024 5yr B25003/B25004, computed (130 / 6,898), geoid 16000US2505595, pulled 2026-08-24. Independently corroborates the Salem value this bundle previously borrowed as a recorded limitation. Wide MOE disclosed (~0.2-3.4%). Ratified 2026-08-25."
     },
     "RET.VacancyRefPct": {
       "value": 0.07,

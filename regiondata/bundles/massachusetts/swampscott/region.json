@@ -10,7 +10,7 @@
     "currency": "USD",
     "start_date": "2025-01-01",
     "prices_as_of": "FY2026 assessor roll",
-    "provenance": "MassGIS Massachusetts_Property_Tax_Parcels FeatureServer + ACS 2019-23 5yr PUMS (bedroom marginal, sqft-quantile assignment); params held constant vs regions/salem_reference_v2"
+    "provenance": "MassGIS Massachusetts_Property_Tax_Parcels FeatureServer + ACS 2019-23 5yr PUMS (bedroom marginal, sqft-quantile assignment); params held constant vs regions/salem_reference_v2; unit rents updated 2026-08-25 (towns-pack ratification): Zillow rental market trends per-bedroom, hand-pulled 2026-08-25, corroborated against Zillow ZORI City index (Jul 2026) and Zumper/RentCafe/Apartment List pulls of 2026-08-24; 4BR/5BR extrapolated from the town's own bedroom increment where the market published no figure (labeled convention). Ratified by Gray 2026-08-25; record: docs/v_0_3/phases/phase_1_12/towns_pack_research.md"
   },
   "counts": {
     "buildings": 465,
@@ -40,8 +40,8 @@
       "source": "MA small-building BOP proxy $1,400/unit (same basis as Salem; not town-differentiated)."
     },
     "PROP.VacancyRateBase": {
-      "value": 0.019,
-      "source": "Steady-state vacancy rate \u2014 Salem ~1.9% (ACS all-units, evidence_base SS4a; managed-stock survey unavailable \u2014 recorded limitation). Feeds acquisition income scoring + anchors the fill-duration fluctu"
+      "value": 0.03,
+      "source": "Rental vacancy 3.0% \u2014 REGIONAL Essex/North Shore figure (evidence_base SS10c precedent): Swampscott's own ACS cell is statistical noise (43+-49 vacant-for-rent; honest range ~0-5.8%) and 57% of its vacants are seasonal/coastal. Disclosed fallback, not a town measurement. Ratified 2026-08-25."
     },
     "RET.VacancyRefPct": {
       "value": 0.07,

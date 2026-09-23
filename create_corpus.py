@@ -159,11 +159,13 @@ def main():
     ap.add_argument("--force", action="store_true",
                     help="rebuild even if the corpus already holds runs (drops the database)")
     ap.add_argument("--pg", action="store_true",
-                    help="create the corpus on PostgreSQL (corpus_schema_pg.sql)")
+                    help="deprecated no-op: PostgreSQL is the default")
+    ap.add_argument("--mssql", action="store_true",
+                    help="create the corpus on SQL Server (pre-cutover legacy path)")
     args = ap.parse_args()
     db = args.corpus
 
-    if args.pg:
+    if not args.mssql:
         lowered = db.lower()
         if lowered != db:
             print(f"note: PG folds unquoted names to lowercase — using [{lowered}]")

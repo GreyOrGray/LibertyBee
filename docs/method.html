@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Liberty Bee — method: how it's built, how to check it</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<meta name="description" content="An open Monte Carlo simulation testing whether below-market, tenant-protective housing can stay solvent over 20 years. Reproducible to the penny; code + data public.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://libertybee.org/">
+<meta property="og:title" content="Liberty Bee — a non-extractive housing model">
+<meta property="og:description" content="An open Monte Carlo simulation testing whether below-market, tenant-protective housing can stay solvent over 20 years. Reproducible to the penny; code + data public.">
+<meta property="og:image" content="https://libertybee.org/social-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Liberty Bee — a non-extractive housing model">
+<meta name="twitter:description" content="An open Monte Carlo simulation testing whether below-market, tenant-protective housing can stay solvent over 20 years. Reproducible to the penny; code + data public.">
+<meta name="twitter:image" content="https://libertybee.org/social-card.png">
+<link rel="canonical" href="https://libertybee.org/">
+<!-- MODEL-DATA v3 2026-09-22 · JSON-LD cites 89,800 runs / 44 datasets / engine 0.6.0 + the archived live.json · final: project mothballed · src: v3 release + farm archive -->
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@graph": [
+  {
+   "@type": "WebSite",
+   "@id": "https://libertybee.org/#website",
+   "name": "Liberty Bee",
+   "url": "https://libertybee.org/",
+   "description": "An open Monte Carlo simulation testing whether below-market, tenant-protective housing can stay solvent over 20 years. Reproducible to the penny; code + data public.",
+   "publisher": {
+    "@id": "https://libertybee.org/#org"
+   }
+  },
+  {
+   "@type": "Organization",
+   "@id": "https://libertybee.org/#org",
+   "name": "Liberty Bee",
+   "url": "https://libertybee.org/"
+  },
+  {
+   "@type": "Dataset",
+   "name": "Liberty Bee V3 corpus of record",
+   "description": "89,800 simulated 20-year housing-operation runs across 44 frozen datasets: nine regions and three compensation bases, including the 2026 Salem record at 500 seeds per funding level and the 2025 vintage as historical comparison. Engine 0.6.0; every run reproducible from its seed via the published engine and reproduction gate. Development mothballed fall 2026 with the record complete.",
+   "url": "https://github.com/GreyOrGray/LibertyBee/releases",
+   "license": "https://github.com/GreyOrGray/LibertyBee/blob/main/LICENSE",
+   "creator": {
+    "@id": "https://libertybee.org/#org"
+   },
+   "isBasedOn": "https://github.com/GreyOrGray/LibertyBee",
+   "keywords": [
+    "housing",
+    "affordable housing",
+    "Monte Carlo simulation",
+    "nonprofit sustainability",
+    "open data",
+    "below-market rent"
+   ],
+   "distribution": [
+    {
+     "@type": "DataDownload",
+     "encodingFormat": "application/octet-stream",
+     "contentUrl": "https://github.com/GreyOrGray/LibertyBee/releases",
+     "description": "44 reproducible corpus datasets with SHA-256 checksums, attached at the v3 release"
+    }
+   ]
+  },
+  {
+   "@type": "Dataset",
+   "name": "Liberty Bee living farm data",
+   "description": "Archive of the living run farm (closed 2026-08-16 at 20,765 runs; preserved as published): the released engine re-run on fresh seeds no cited run ever used, published only through an eleven-check tripwire gate and a human-merged pull request. Survival rates with confidence intervals, death-timing histograms, and provenance per rung.",
+   "url": "https://libertybee.org/",
+   "license": "https://github.com/GreyOrGray/LibertyBee/blob/main/LICENSE",
+   "creator": {
+    "@id": "https://libertybee.org/#org"
+   },
+   "distribution": [
+    {
+     "@type": "DataDownload",
+     "encodingFormat": "application/json",
+     "contentUrl": "https://libertybee.org/data/live.json",
+     "description": "Data contract: https://libertybee.org/data/schema.md"
+    }
+   ]
+  },
+  {
+   "@type": "SoftwareSourceCode",
+   "name": "Liberty Bee simulation engine",
+   "codeRepository": "https://github.com/GreyOrGray/LibertyBee",
+   "programmingLanguage": "Python",
+   "runtimePlatform": "Python 3.12 + SQL Server",
+   "version": "0.6.0",
+   "license": "https://github.com/GreyOrGray/LibertyBee/blob/main/LICENSE",
+   "author": {
+    "@id": "https://libertybee.org/#org"
+   }
+  }
+ ]
+}
+</script>
+<!-- analytics: Umami (cookieless, privacy-friendly) -->
+<script defer src="https://cloud.umami.is/script.js" data-website-id="62c97540-eb96-42f0-8c22-4040df1f03d0"></script>
+<style>
+  :root{
+    --paper:#FBFAF7; --ink:#15130C; --ink-soft:#4A4638; --line:#E4DECF; --card:#FFF;
+    --amber:#A96A0C; --amber-soft:#F3E7CF; --survive:#3E7A5E; --die:#A6462F; --honey:#E8B84B;
+    --shadow:0 1px 2px rgba(21,19,12,.04),0 10px 30px rgba(21,19,12,.07); --maxw:680px;
+  }
+  /* Light theme only — theme switching intentionally disabled (viewer dark-mode is ignored). */
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{margin:0;background:var(--paper);color:var(--ink);line-height:1.62;
+    font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;-webkit-font-smoothing:antialiased;}
+  .sans{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px;}
+  .eyebrow{font-family:ui-sans-serif,system-ui,sans-serif;font-weight:700;letter-spacing:.13em;text-transform:uppercase;font-size:12px;color:var(--amber);margin:0 0 14px;}
+  h1{font-size:clamp(32px,6vw,54px);line-height:1.08;letter-spacing:-.02em;margin:0;text-wrap:balance;font-weight:600;}
+  h2{font-size:clamp(25px,4vw,36px);line-height:1.15;letter-spacing:-.012em;margin:0 0 18px;text-wrap:balance;font-weight:600;}
+  p{margin:0 0 18px;font-size:18px;} p.big{font-size:21px;color:var(--ink-soft);} p.big b{color:var(--ink);}
+  p.reasonlab{font-family:ui-sans-serif,system-ui,sans-serif;font-weight:700;font-size:15px;letter-spacing:.01em;color:var(--amber);margin:0 0 12px;}
+  p.sidenote{font-size:15px;color:var(--ink-soft);border-left:3px solid var(--line);padding:4px 0 4px 16px;margin:16px 0 0;}
+  p.sidenote b{color:var(--ink);}
+  a{color:var(--amber);}
+  .ph{font-family:ui-sans-serif,system-ui,sans-serif;font-weight:600;font-size:.9em;color:var(--amber);background:var(--amber-soft);padding:0 6px;border-radius:4px;border-bottom:1px dashed var(--amber);white-space:nowrap;}
+  sup.cite{font-size:.6em;font-weight:700;line-height:0;}
+  sup.cite a{font-family:ui-sans-serif,system-ui,sans-serif;color:var(--amber);text-decoration:none;padding:0 1px;}
+  sup.cite a:hover{text-decoration:underline;}
+
+  .wip{background:var(--amber-soft);color:var(--ink);font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;text-align:center;padding:8px 16px;border-bottom:1px solid var(--line);}
+  .wip b{color:var(--amber);}
+
+  /* chapter divider */
+  .chapter{border-top:2px solid var(--amber);background:var(--card);}
+  .chapter .wrap{padding:50px 24px;display:flex;align-items:baseline;gap:20px;}
+  .chapter .cnum{font-family:ui-sans-serif,system-ui,sans-serif;font-size:clamp(44px,10vw,84px);font-weight:800;line-height:.85;color:var(--amber);letter-spacing:-.04em;font-variant-numeric:tabular-nums;flex:0 0 auto;}
+  .chapter .clab{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--amber);margin:0 0 6px;}
+  .chapter h2{font-size:clamp(24px,4.4vw,36px);margin:0;font-weight:700;letter-spacing:-.018em;}
+  .chapter p.csub{color:var(--ink-soft);margin:12px 0 0;font-size:17px;}
+
+  /* hero */
+  .hero{min-height:82vh;display:flex;flex-direction:column;justify-content:center;padding:60px 0 40px;}
+  .mark{font-family:ui-sans-serif,system-ui,sans-serif;font-weight:700;letter-spacing:.16em;text-transform:uppercase;font-size:12px;color:var(--amber);display:flex;align-items:center;gap:8px;margin-bottom:30px;}
+  .mark .dot{width:8px;height:8px;border-radius:50%;background:var(--honey);box-shadow:0 0 0 4px var(--amber-soft);}
+  .hero p.sub{font-size:clamp(18px,2.4vw,21px);color:var(--ink-soft);margin:26px 0 0;}
+  .cue{font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;color:var(--amber);letter-spacing:.08em;margin-top:40px;animation:bob 2s ease-in-out infinite;}
+  @keyframes bob{0%,100%{transform:translateY(0);}50%{transform:translateY(5px);}}
+
+  section{padding:60px 0;}
+  section.beat{border-top:1px solid var(--line);}
+  .reveal{opacity:0;transform:translateY(22px);transition:opacity .7s ease,transform .7s ease;}
+  .reveal.in{opacity:1;transform:none;}
+
+  /* big stat */
+  .megastat{font-size:clamp(56px,13vw,120px);line-height:.95;font-weight:700;letter-spacing:-.03em;color:var(--amber);font-variant-numeric:tabular-nums;}
+  .megastat.g{color:var(--survive);}
+
+  .refuse{list-style:none;padding:0;margin:22px 0 0;}
+  .refuse li{padding:16px 0;border-bottom:1px solid var(--line);font-size:19px;display:flex;gap:14px;align-items:baseline;}
+  .refuse li:last-child{border-bottom:none;}
+  .refuse .no{font-family:ui-sans-serif,system-ui,sans-serif;font-weight:700;color:var(--die);font-size:13px;letter-spacing:.06em;text-transform:uppercase;flex:0 0 auto;padding-top:3px;}
+
+  /* data grid (the market underneath) */
+  .datagrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:26px 0 0;}
+  .datacell{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:var(--shadow);}
+  .datacell .dn{font-size:26px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
+  .datacell .dl{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px;color:var(--ink-soft);margin-top:5px;line-height:1.4;}
+  @media(max-width:560px){.datagrid{grid-template-columns:1fr 1fr;}}
+
+  .callout{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--amber);border-radius:10px;padding:18px 20px;margin:22px 0 0;box-shadow:var(--shadow);}
+  .callout.honest{border-left-color:var(--die);}
+  .callout .k{font-family:ui-sans-serif,system-ui,sans-serif;font-weight:700;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--amber);}
+  .callout.honest .k{color:var(--die);}
+  .callout p{margin:8px 0 0;font-size:17px;}
+
+  /* the "what this is not" scope box */
+  .scope{background:var(--card);border:1px solid var(--line);border-top:4px solid var(--die);border-radius:12px;padding:22px 24px;margin:0 0 4px;box-shadow:var(--shadow);}
+  .scope .k{font-family:ui-sans-serif,system-ui,sans-serif;font-weight:700;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--die);margin-bottom:10px;}
+  .scope h2{font-size:clamp(22px,3.6vw,30px);}
+  .scope p{font-size:17px;}
+  .scope p:last-child{margin-bottom:0;}
+
+  /* sticky scrolly for the S-curve */
+  .scrolly{position:relative;}
+  .sticky{position:sticky;top:0;height:100vh;display:flex;align-items:center;justify-content:center;}
+  .figure{width:100%;max-width:520px;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:20px 20px 12px;}
+  .figure canvas{width:100%;height:auto;display:block;}
+  .figcap{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12.5px;color:var(--ink-soft);text-align:center;margin-top:8px;}
+  .readout{font-family:ui-sans-serif,system-ui,sans-serif;text-align:center;margin-bottom:8px;}
+  .readout .rn{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;} .readout .rl{font-size:12.5px;color:var(--ink-soft);}
+  .steps{position:relative;z-index:2;pointer-events:none;}
+  .step{min-height:78vh;display:flex;align-items:center;}
+  .step .box{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;box-shadow:var(--shadow);max-width:400px;pointer-events:auto;opacity:.35;transition:opacity .4s;}
+  .step.on .box{opacity:1;}
+  .step .box p{margin:0;font-size:17px;}
+  .step .box .lab{font-family:ui-sans-serif,system-ui,sans-serif;font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;}
+
+  /* cliff heatmap */
+  .cliff{display:grid;grid-template-columns:auto repeat(6,1fr);gap:3px;margin:24px 0 8px;font-family:ui-sans-serif,system-ui,sans-serif;font-size:11px;}
+  .cliff .cell{aspect-ratio:1.6;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-variant-numeric:tabular-nums;}
+  .cliff .rowlab,.cliff .collab{color:var(--ink-soft);display:flex;align-items:center;justify-content:center;font-weight:600;}
+  .cliffnote{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px;color:var(--ink-soft);text-align:center;}
+
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:24px 0 0;}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;box-shadow:var(--shadow);}
+  .stat .n{font-size:28px;font-weight:700;letter-spacing:-.02em;} .stat .n.g{color:var(--survive);} .stat .n.a{color:var(--amber);}
+  .stat .lab{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12.5px;color:var(--ink-soft);margin-top:6px;line-height:1.4;}
+  @media(max-width:560px){.stats{grid-template-columns:1fr;}}
+
+  /* data charts + bars */
+  .chartcard{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:20px 20px 12px;margin:24px 0 0;}
+  .chartcard canvas{width:100%;height:auto;display:block;}
+  /* chart captions — smaller + muted so they never read as body text (matches .figcap/.cliffnote) */
+  .chartcap{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12.5px;line-height:1.5;color:var(--ink-soft);text-align:center;margin-top:10px;}
+  .chartcard .chartcap{margin-top:12px;padding-top:11px;border-top:1px solid var(--line);}
+  .barlist{margin:22px 0 0;font-family:ui-sans-serif,system-ui,sans-serif;font-size:12.5px;}
+  .barrow{display:flex;align-items:center;gap:10px;margin:3px 0;}
+  .barrow .bl{width:46px;text-align:right;color:var(--ink-soft);flex:0 0 auto;font-variant-numeric:tabular-nums;}
+  .barrow .bar{height:15px;background:var(--amber);border-radius:3px;min-width:2px;}
+  .barrow.knee .bar{background:var(--survive);}
+  .barrow .bv{color:var(--ink-soft);flex:0 0 auto;font-variant-numeric:tabular-nums;min-width:28px;}
+  .ladder{display:flex;gap:8px;margin:24px 0 8px;align-items:flex-end;}
+  .ladstep{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;}
+  .ladstep .lbar{width:100%;background:var(--amber);border-radius:5px 5px 0 0;}
+  .ladstep .lpct{font-family:ui-sans-serif,system-ui,sans-serif;font-weight:700;font-size:15px;color:var(--amber);}
+  .ladstep .llab{font-family:ui-sans-serif,system-ui,sans-serif;font-size:11px;color:var(--ink-soft);text-align:center;}
+  .tcssplit{display:flex;height:46px;border-radius:8px;overflow:hidden;margin:22px 0 12px;font-family:ui-sans-serif,system-ui,sans-serif;font-size:12.5px;font-weight:700;}
+  .tcssplit div{display:flex;align-items:center;justify-content:center;color:#fff;min-width:0;overflow:hidden;white-space:nowrap;}
+  .tcslegend{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12.5px;color:var(--ink-soft);display:flex;gap:18px;flex-wrap:wrap;}
+  .tcslegend span{display:flex;align-items:center;gap:6px;} .tcslegend i{width:11px;height:11px;border-radius:2px;display:inline-block;flex:0 0 auto;}
+
+  ul.ledger{list-style:none;padding:0;margin:20px 0 0;}
+  ul.ledger li{padding:12px 0 12px 30px;position:relative;border-bottom:1px solid var(--line);font-size:17px;}
+  ul.ledger li::before{content:"✓";position:absolute;left:0;top:12px;color:var(--survive);font-weight:700;}
+  ul.ledger li em{color:var(--ink-soft);}
+  .honest-list{list-style:none;padding:0;margin:20px 0 0;}
+  .honest-list li{padding:16px 0;border-bottom:1px solid var(--line);font-size:17px;} .honest-list li:last-child{border-bottom:none;}
+  .honest-list b{display:block;margin-bottom:4px;}
+
+  /* tech chapter */
+  ul.techlist{list-style:none;padding:0;margin:20px 0 0;}
+  ul.techlist li{padding:12px 0 12px 28px;position:relative;border-bottom:1px solid var(--line);font-size:16px;font-family:ui-sans-serif,system-ui,sans-serif;}
+  ul.techlist li:last-child{border-bottom:none;}
+  ul.techlist li::before{content:"›";position:absolute;left:4px;top:11px;color:var(--amber);font-weight:700;}
+  .repo{display:flex;gap:12px;flex-wrap:wrap;margin:22px 0 0;}
+  .repo a{font-family:ui-sans-serif,system-ui,sans-serif;font-size:15px;font-weight:600;text-decoration:none;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 18px;box-shadow:var(--shadow);color:var(--ink);}
+  .repo a b{color:var(--amber);}
+
+  /* sources ledger */
+  .sources ol{list-style:none;counter-reset:s;padding:0;margin:22px 0 0;}
+  .sources li{counter-increment:s;padding:13px 0 13px 36px;position:relative;border-bottom:1px solid var(--line);font-size:14.5px;line-height:1.55;font-family:ui-sans-serif,system-ui,sans-serif;color:var(--ink-soft);}
+  .sources li::before{content:counter(s);position:absolute;left:0;top:13px;font-weight:800;color:var(--amber);font-variant-numeric:tabular-nums;}
+  .sources li b{color:var(--ink);}
+  .sources li a{font-weight:600;}
+  .stag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:2px 6px;border-radius:4px;margin-right:7px;white-space:nowrap;}
+  .stag.pub{background:var(--amber-soft);color:var(--amber);}
+  .stag.mod{background:var(--survive);color:#fff;}
+  .track{opacity:.65;}
+
+  /* FAQ accordion */
+  .faq details{border:1px solid var(--line);border-radius:12px;background:var(--card);margin:12px 0 0;box-shadow:var(--shadow);}
+  .faq summary{list-style:none;cursor:pointer;padding:17px 20px;font-weight:700;font-size:18px;display:flex;justify-content:space-between;align-items:center;gap:14px;}
+  .faq summary::-webkit-details-marker{display:none;}
+  .faq summary::after{content:"+";font-family:ui-sans-serif,system-ui,sans-serif;color:var(--amber);font-weight:700;font-size:24px;line-height:1;flex:0 0 auto;}
+  .faq details[open] summary::after{content:"\2013";}
+  .faq summary:focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:12px;}
+  .faq .ans{padding:0 20px 20px;font-size:16.5px;color:var(--ink-soft);}
+  .faq .ans p{margin:0 0 12px;} .faq .ans p:last-child{margin:0;}
+  .faq .ans b{color:var(--ink);}
+
+  /* the personal close — warm, distinct */
+  .close-sec{background:var(--amber-soft);border-top:1px solid var(--line);}
+  .close-sec .wrap{padding-top:74px;padding-bottom:74px;}
+  .close-sec p{font-size:20px;}
+  .close-sec .first{font-size:clamp(40px,8vw,72px);font-weight:700;letter-spacing:-.03em;margin:0 0 26px;line-height:1;}
+  .close-sec .beat2{font-size:clamp(23px,3.4vw,30px);font-weight:600;line-height:1.32;margin:28px 0;}
+  .close-sec .thesis{font-size:clamp(32px,6vw,52px);font-weight:700;color:var(--amber);letter-spacing:-.025em;margin:30px 0;line-height:1.02;}
+  .close-sec .take{font-size:20px;} .close-sec .take b{color:var(--ink);}
+
+  footer{border-top:1px solid var(--line);padding:30px 0 70px;color:var(--ink-soft);font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;line-height:1.7;}
+
+  /* ===== the live section — hard-walled: live, not cited ===== */
+  .live-sec{--lv-card:#221F15;--lv-line:#3A3626;--lv-text:#EDEAE0;--lv-soft:#B5B0A0;
+    --lv-live:#7FB4C9;--lv-flavor:#B49BD6;
+    background:var(--ink);color:var(--lv-text);border-top:3px solid var(--lv-live);
+    border-bottom:3px solid var(--lv-live);padding:64px 0 56px;}
+  .live-sec .eyebrow{color:var(--lv-live);letter-spacing:.15em;}
+  .live-sec h2{color:var(--lv-text);}
+  .live-sec p{color:var(--lv-soft);} .live-sec p b{color:var(--lv-text);}
+  .lv-asof{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px;letter-spacing:.05em;
+    color:var(--lv-live);text-transform:uppercase;}
+  .lv-tally{background:var(--lv-card);border:1px solid var(--lv-line);border-radius:8px;
+    padding:26px 28px;margin:30px 0 8px;}
+  .lv-tally .row{display:flex;flex-wrap:wrap;align-items:baseline;gap:14px;font-variant-numeric:tabular-nums;}
+  .lv-tally .fz{font-family:ui-sans-serif,system-ui,sans-serif;font-size:30px;font-weight:700;color:var(--lv-text);}
+  .lv-tally .lv{font-family:ui-sans-serif,system-ui,sans-serif;font-size:54px;font-weight:800;color:var(--lv-live);line-height:1;}
+  .lv-tally .lab{font-size:14px;color:var(--lv-soft);font-family:ui-sans-serif,system-ui,sans-serif;}
+  .lv-tally .sub{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:16px;padding-top:14px;
+    border-top:1px solid var(--lv-line);font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;color:var(--lv-soft);}
+  .lv-tally .sub b{color:var(--lv-text);font-variant-numeric:tabular-nums;}
+  .lv-panel{background:var(--lv-card);border:1px solid var(--lv-line);border-radius:8px;
+    padding:24px 28px;margin:26px 0;}
+  .lv-panel h3{font-family:ui-sans-serif,system-ui,sans-serif;font-size:14px;font-weight:700;
+    letter-spacing:.08em;text-transform:uppercase;margin:0 0 4px;color:var(--lv-text);}
+  .lv-panel .pnote{font-size:14px;color:var(--lv-soft);margin:0 0 18px;font-family:ui-sans-serif,system-ui,sans-serif;}
+  .lv-panel.flavor{border-left:3px solid var(--lv-flavor);}  /* aligned with the standard panel (Gray, 2026-07-30) — the border+header carry the distinction */
+  .lv-panel.flavor h3{color:var(--lv-flavor);}
+  .lvhm-sub{font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;font-weight:700;
+    color:var(--lv-text);letter-spacing:.04em;margin:8px 0 2px;}
+  .lvhm-title{font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px;color:var(--lv-soft);margin:6px 0 3px;}
+  .lvhm{display:grid;grid-template-columns:auto repeat(20,1fr);gap:1px;margin:0 0 6px;}
+  .lvhm .hyl{font:10px ui-monospace,Consolas,monospace;color:var(--lv-soft);text-align:center;}
+  .lvhm .hrl{font:10px ui-monospace,Consolas,monospace;color:var(--lv-soft);
+    display:flex;align-items:center;justify-content:flex-end;padding-right:5px;}
+  .lvhm .hc{height:9px;border-radius:1px;background:#221F15;}
+  .hx{background:repeating-linear-gradient(45deg,rgba(181,176,160,.38) 0 2px,rgba(181,176,160,.06) 2px 5px) !important;}
+  .live-sec svg text{font-family:ui-sans-serif,system-ui,sans-serif;}
+  .lv-legend{display:flex;flex-wrap:wrap;gap:6px 20px;font-family:ui-sans-serif,system-ui,sans-serif;
+    font-size:12px;color:var(--lv-soft);margin:12px 0 0;align-items:center;}
+  .lv-legend .sw{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:6px;}
+  .lv-legend .swb{display:inline-block;width:18px;height:10px;vertical-align:middle;margin-right:6px;border-radius:2px;}
+  .lv-strips{display:grid;grid-template-columns:52px 1fr 92px;gap:5px 12px;align-items:center;
+    font-family:ui-sans-serif,system-ui,sans-serif;font-size:12px;font-variant-numeric:tabular-nums;margin-top:14px;}
+  .lv-strips .rl{color:var(--lv-soft);text-align:right;}
+  .lv-strips .bar{height:8px;background:#2E2A1C;border-radius:4px;overflow:hidden;}
+  .lv-strips .bar i{display:block;height:100%;border-radius:4px;}
+  .lv-strips .bar i.std{background:var(--lv-live);} .lv-strips .bar i.flv{background:var(--lv-flavor);}
+  .lv-strips .n{color:var(--lv-soft);text-align:right;}
+  .lv-note{border:1px dashed var(--lv-line);border-radius:8px;padding:18px 22px;margin:26px 0 0;}
+  .lv-note .tag{font-family:ui-sans-serif,system-ui,sans-serif;font-size:11px;font-weight:700;
+    letter-spacing:.12em;text-transform:uppercase;color:var(--lv-soft);margin:0 0 10px;}
+  .lv-note p{font-size:15px;margin-bottom:12px;} .lv-note p:last-child{margin-bottom:0;}
+  .lv-note .kd{font-style:normal;border-top:1px solid var(--lv-line);padding-top:12px;}
+  .lv-note .kd b{color:var(--lv-text);}
+  .lv-methods{font-family:ui-sans-serif,system-ui,sans-serif;font-size:13px;color:var(--lv-soft);
+    border-top:1px solid var(--lv-line);margin-top:34px;padding-top:16px;}
+  .lv-methods b{color:var(--lv-text);} .lv-methods a{color:var(--lv-live);}
+  .lv-unavail{font-family:ui-sans-serif,system-ui,sans-serif;font-size:14px;color:var(--lv-soft);
+    border:1px dashed var(--lv-line);border-radius:8px;padding:16px 20px;margin-top:26px;}
+  @media (max-width:560px){
+    .lv-panel{padding:16px 12px;} .lv-panel.flavor{margin-left:8px;}
+    .lv-tally{padding:18px 16px;} .lv-tally .lv{font-size:38px;} .lv-tally .fz{font-size:24px;}
+    .lv-strips{grid-template-columns:44px 1fr 80px;}
+  }
+
+  @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none;}.cue{animation:none;}}
+</style>
+<style>
+  .cap{font:12.5px ui-sans-serif,system-ui,sans-serif;color:var(--ink-soft);text-align:left;margin:10px 2px 4px;line-height:1.5;}
+  .topnav{position:sticky;top:0;z-index:60;background:var(--paper);border-bottom:1px solid var(--line);}
+  .topnav .nwrap{max-width:var(--maxw);margin:0 auto;padding:11px 24px;display:flex;gap:20px;flex-wrap:wrap;align-items:center;}
+  .topnav a{font-size:13px;font-weight:600;text-decoration:none;color:var(--ink-soft);letter-spacing:.02em;}
+  .topnav a:hover{color:var(--amber);}
+  .topnav a.cur{color:var(--amber);}
+  .topnav .bee{font-weight:800;color:var(--ink);margin-right:2px;}
+  .subnav{max-width:var(--maxw);margin:0 auto;padding:0 24px 9px;display:flex;gap:16px;flex-wrap:wrap;}
+  .subnav a{font-size:12px;font-weight:600;text-decoration:none;color:var(--ink-soft);opacity:.75;}
+  .subnav a.on{color:var(--amber);opacity:1;}
+  .progress{height:3px;background:var(--amber);width:0;transition:width .1s linear;}
+  .pagehead{border-top:2px solid var(--amber);background:var(--card);}
+  .pagehead .wrap{padding:46px 24px;}
+  .godeep{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin:26px 0 0;}
+  .godeep a{display:block;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;box-shadow:var(--shadow);text-decoration:none;color:var(--ink);}
+  .godeep a b{color:var(--amber);font-family:ui-sans-serif,system-ui,sans-serif;}
+  .godeep a span{display:block;font-size:14.5px;color:var(--ink-soft);margin-top:6px;font-family:ui-sans-serif,system-ui,sans-serif;}
+  @media(max-width:560px){.godeep{grid-template-columns:1fr;}}
+  /* chapter identity by color band — numerals retired (Gray, 2026-08-24).
+     Tints are ambient; the divider label + subnav highlight stay the readable signal. */
+  .band-sand{background:#F6F2E9;}
+  .band-clay{background:#F7EDE8;}
+  .band-amberw{background:#F3E7CF;}
+  .band-stone{background:#F1F0EA;}
+  .band-green{background:#EEF3EE;}
+  .band .chapter{background:transparent;}
+  .band section.beat{border-top-color:rgba(21,19,12,.08);}
+  .totop{position:fixed;right:18px;bottom:18px;z-index:70;width:42px;height:42px;border-radius:50%;
+    background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow);color:var(--amber);
+    font-size:20px;font-weight:700;display:none;align-items:center;justify-content:center;
+    text-decoration:none;font-family:ui-sans-serif,system-ui,sans-serif;}
+  .totop.show{display:flex;}
+</style>
+</head>
+<body>
+
+<nav class="topnav"><div class="nwrap sans"><span class="bee">🐝 Liberty Bee</span><a href="index.html">Story</a><a href="method.html" class="cur">Method</a><a href="faq.html">FAQ</a><a href="sources.html">Sources</a><a href="known-issues.html">Known issues</a><a href="versions.html">Versions</a></div><div class="subnav sans"><a href="#built" data-spy="built">How it's built</a><a href="#market" data-spy="market">The market</a><a href="#inflation" data-spy="inflation">Inflation</a><a href="#compensation" data-spy="compensation">Compensation</a><a href="#mistakes" data-spy="mistakes">Our mistakes</a><a href="#limits" data-spy="limits">The limits</a><a href="#roadmap" data-spy="roadmap">Not finished</a></div><div class="progress" id="pgbar"></div></nav>
+<div class="band band-stone">
+<!-- ============ 04 · TECH & RECEIPTS ============ -->
+<div class="chapter" id="chapter4"><div class="wrap"><div>
+  <p class="clab">The tech, and the receipts</p>
+  <h2>Don't trust it. Check it.</h2>
+  <p class="csub">How it's built, where the code lives, and every number's source.</p>
+</div></div></div>
+<section class="beat" id="built"><div class="wrap reveal">
+  <p class="eyebrow sans">How it's built</p>
+  <h2>Reproducible to the penny, from a seed.</h2>
+  <p>Liberty Bee is an event-driven Monte-Carlo simulation engine — <b>Python 3.12 + SQL Server</b> — that plays out 240 months of housing operations per run: acquisitions, leases, renewals, maintenance events, inflation regimes, tenant retention. Every random draw comes from a recorded seed, so any run — a survival, a death, one tenant's discount schedule — can be reproduced exactly by anyone with the code.</p>
+  <ul class="techlist">
+    <li>Event-driven engine — every acquisition, lease, renewal, repair and rent change is a dated event, not an average</li>
+    <li>Seeded RNG + RunID / BatchID run tracking — deterministic and reproducible: the same seed replays the same 20-year history to the penny, each run in its own freshly-restored database</li>
+    <li>A <b>frozen baseline</b> (named engine version, read-only) a skeptic can cite — beside a <b>living farm</b> that ran on fresh seeds and only grew the evidence (closed with V2; preserved in the version archive)</li>
+    <li>Regime-based inflation; itemized operating costs calibrated on Salem and repriced from each region’s own data; regional wages; zero-debt acquisition — the realism, not a toy</li>
+  </ul>
+  <div class="repo">
+    <a href="https://github.com/GreyOrGray/LibertyBee" target="_blank" rel="noopener"><b>Take the code →</b> github.com/GreyOrGray/LibertyBee</a>
+    <a href="https://github.com/GreyOrGray/LibertyBee/releases" target="_blank" rel="noopener"><b>The frozen dataset →</b> GitHub Release</a>
+  </div>
+  <p style="margin-top:22px">Take it. Change the assumptions you doubt. Run it against your own city. If we got something wrong, this is how you'll prove it. And this is how you'll let me know: <a href="mailto:libertybeegray@gmail.com">libertybeegray@gmail.com</a></p>
+</div></section>
+<section class="beat" id="market"><div class="wrap reveal">
+  <p class="eyebrow sans">Under the hood — the property market</p>
+  <h2>It buys from a real, moving market.</h2>
+  <p>Liberty Bee doesn't hand itself buildings. It runs a simulated property market that behaves like a real one: listings appear and disappear on a daily clock — more of them in the busy season — each priced from real local sales data and sized by real unit counts. Every building carries a days-on-market and a hold-period drawn from real distributions, so some sell fast, some linger, and owners sit on a property for years before it comes up again.</p>
+  <p>Against that market the operator does what a careful buyer does: watch what's available, value each property on its rents and its condition, and buy it <em>outright</em> when the numbers work and the cash is there. There's no auto-granted portfolio — every acquisition is a decision the model has to be able to afford, which is exactly why the starting-capital question has a hard floor.</p>
+  <p>The market's inputs — prices, rents, listing volume, days-on-market, seasonality, how long owners hold — are all calibrated from <b>public real-estate and housing-market data</b> for the Salem area. Where a number is a local market observation rather than an official statistic, we treat it as a calibration input, not a published claim — the goal is a market that <em>behaves</em> like Salem's, not a listings database.</p>
+</div></section>
+<section class="beat" id="inflation"><div class="wrap reveal">
+  <p class="eyebrow sans">Under the hood — inflation</p>
+  <h2>The economy doesn't move in a straight line, so neither does the model.</h2>
+  <p>Plenty of housing models pick one inflation number — say 3% a year — and let it ride. That single assumption can make an operator look invincible: a steady rate never produces a bad year. The world doesn't work that way. Neither does our simulation.</p>
+  <p>Instead, the model treats the economy as a set of <b>regimes</b> — calm stretches, rent surges, financial downturns, post-shock recoveries — and moves between them month to month, the way real markets do. And critically, everything inflates on <em>its own</em> track: rents, operating costs, property values, and vacancy don't march in lockstep. We model that because that decoupling is exactly what hurts a real operator — in a downturn, property values fall and vacancy climbs while taxes and insurance keep rising anyway. So we model it honestly.</p>
+  <p>The regimes are calibrated from real federal inflation and housing-price history. There have been only a couple of genuine crises in the last forty years — too few to simply resample — so <b>how often a downturn strikes is a modeling decision we made to the best of our ability</b>, not a statistic we can pretend to have measured. When we say "every market regime, calm to crash" that means something here, because the model has to survive surges and crashes, not one flattering straight line.</p>
+</div></section>
+<section class="beat" id="compensation"><div class="wrap reveal">
+  <p class="eyebrow sans">Compensation — how the deal got its numbers</p>
+  <h2>Priced honestly, the original deal failed. So we changed the deal.</h2>
+  <p>Earlier versions of this model ran on two subsidies at once, and one of them was hidden. The visible one was the tenant deal: sign 10% below market, deepening by 5, 5, and 10 points at years 3, 6, and 10. The hidden one was payroll: staff pay was set at what the founder was personally prepared to live on — a declared value, not market data. The simulations survived because someone was quietly underwriting them out of their own paycheck.</p>
+  <p>So we repriced the labor and reran everything. At each region's own market wages (BLS metro medians to hire, 75th-percentile caps for a career, 25% benefits), the old configuration stops working: <b>at real market pay, the original Salem model has no clean survival floor anywhere up to $11M</b>, and at metro-median pay the Massachusetts floors climb by $1.5&ndash;3M each, and San Francisco's by about $4M. Paying people fairly is not a rounding error — the founder's sacrifice had been worth more than $4.5M of starting capital.</p>
+  <p>The current deal is what survived honest pricing: sign <b>5%</b> below market, deepen <b>3/3/5</b> at the same year-3/6/10 marks, keep the 10% timely-payment credit, and pay real regional wages. In Salem that model holds from <b>$7M</b> — five hundred thousand dollars more than the founder-sacrifice original needed. Every generation of this reckoning ships as a reproducible corpus in the release, so you can check the fork we took — or take the other one, knowing its price.</p>
+  <p>The discount axis was tested to its limits too: at the subsidized pay basis, no funding level we tested &mdash; up to $11M &mdash; guaranteed survival past a <b>40% discount</b>. Deeper generosity doesn't just cost more; past a point it stops being purchasable at all. The full sweep behind that &mdash; every discount depth from 15% to 50% off, at every funding level, on both the 2025 and 2026 records &mdash; ships in the release datasets for anyone who wants the dose-response data.</p>
+  <p class="sidenote">Wage basis: BLS OEWS May 2025, each region's own metro. Metro-area medians are deliberate — staff hire from the metro labor pool, and parts of a metro naturally run above or below the metro median. The cockpit's staffing page is the adjustment tool if your labor market differs.</p>
+</div></section>
+<section class="beat" id="mistakes"><div class="wrap reveal">
+  <!-- MODEL-DATA v2 2026-07-28 · defect exhibits (no numbers except lead $750 cap = historical fact); tracks known-issues.html -->
+<p class="eyebrow sans">Built the hard way</p>
+  <h2>We went looking for our own mistakes.</h2>
+  <p>A model is only worth trusting if the people building it tried to break it. So we did — and when we found something wrong, it went on the page, even when the fix made our numbers <em>worse.</em> A sample of what we caught:</p>
+  <ul class="ledger">
+    <li>A real operating cost the org was quietly <em>not</em> being charged — <em>now charged, and it made survival harder.</em></li>
+    <li>Qualifying applicants against a stale, too-low rent — <em>now checked against the real rent; same standard, honestly applied.</em></li>
+    <li>Renewals that were a blind coin-flip — <em>now a real retention model grounded in the deal and the market.</em></li>
+    <li>A rent bug that accidentally <em>under</em>-charged some tenants — <em>we told you anyway; it happened to favor the tenant.</em></li>
+    <li>Lead-paint "assessment" that could never actually fail — abatement was unreachable code and lead costs quietly capped at <b>$750 a building</b> — <em>now a real assessment at purchase, with real abatement costs the org must afford or walk away from. It reshaped which buildings the model buys, and it made the mid-funding rungs die more honestly.</em></li>
+  </ul>
+  <p class="sidenote" style="margin-top:18px">The full list — every defect we knew about at close, its cause, and its fix status — lives on <a href="known-issues.html"><b>the known-issues ledger</b></a>. It stands as the final honesty ledger of the project.</p>
+</div></section>
+<section class="beat" id="limits"><div class="wrap reveal">
+  <p class="eyebrow sans">The honest fence — in full</p>
+  <h2>What the model doesn't know, exactly.</h2>
+  <p>A model that only tells you its wins isn't a model, it's a pitch. An honest model names its own edges. None of these move the survival record; all of them bound what it can claim. The defects we know about — cause, status, fix — live on <a href="known-issues.html">the known-issues ledger</a>; these are <em>limits</em>, not bugs.</p>
+  <ul class="honest-list">
+    <li><b>Bedroom count is the only thing that sets a unit's market rent.</b> In the current universe that means <b>6 distinct market rents across 5,823 units</b> — every 1-bedroom carries the same median, every 2-bedroom the same, and so on. No square footage, location, or condition signal. And no bathroom signal either: public parcel data publishes no bathroom counts, so every unit defaults to one bath and the engine's bath-pricing channel is a no-op in this world. Rents do move through time — the inflation regimes reprice at signing — but at any moment, all units with the same bedroom count share one market rent. Import your own region with per-unit observed rents and the model uses them verbatim.</li>
+    <li><b>Tenants don't have lives yet.</b> Hardship is a monthly probability, not a trajectory: no job loss, no new baby, no aging (ages are cosmetic). Evictions are correspondingly rare — the planned tenant engine turns them into the honest end of a real story, and it's the single biggest realism gap.</li>
+    <li><b>Two mechanics fight the mission, and are flagged rather than hidden:</b> eviction has no cure period, and a partially-funded installment deposit forfeits money already paid on early exit. Both are documented tensions awaiting the tenant-engine era — on the ledger, not buried.</li>
+    <li><b>Some things never happen in the current model:</b> late-payment status is structurally never written (grace-window collection lands on-time); staff are hired but never terminated; grants and the community-initiatives program are scaffolded but unread; compliance remediation always succeeds.</li>
+    <li><b>Vacancy is steady-state.</b> Cyclical soft-market stress enters only through the inflation regimes' vacancy deltas — there is no independent vacancy-shock model, and widening the fluctuation band doesn't honestly fake one.</li>
+  </ul>
+</div></section>
+<section class="beat" id="roadmap"><div class="wrap reveal">
+  <p class="eyebrow sans">Where it isn’t finished — and where it was headed</p>
+  <h2>It’s not done. Here’s exactly where — and what was next.</h2>
+  <p>Development wrapped here: the project is <b>mothballed with the record complete</b>. But the roadmap was real, and it stays published — for a future version of this project, or for whoever picks the model up first. What was next:</p>
+  <ul class="honest-list">
+    <li><b>Hardship is a probability, not yet a life.</b> Evictions are rare here — <b>98.4% of surviving runs at the $7M floor record zero</b> — partly because the model doesn't yet follow a single household year to year. The planned tenant engine does exactly that, so an eviction becomes the honest end of a real trajectory, not a dice roll.</li>
+<li><b>Deep discounts at honest wages.</b> The discount-depth ladders were measured at the founder-subsidy pay basis; re-running them on the fair-wage model is a knob-only sweep away, and would price the deep end of generosity honestly.</li>
+    <li><b>EIP — the mission beyond the rent roll.</b> A future version could model an <em>Experimental Initiatives Program</em>: once housing and reserves are secure, surplus funding cultural preservation, reuse of historic buildings, artist and caretaker residencies, tenant-led place-making. Hard-gated — housing always comes first.</li>
+    <li><b>Grant simulations.</b> This baseline assumes <em>no</em> grants at all. A future version can model them as an acquisition accelerator — never operating life support — to show how much faster the mission scales when someone does write the check.</li>
+    <li><b>"Survived" is solvency — we never invented a "mission score."</b> Whether the mission was served isn't one number, so we didn't fake one. We show the concrete things instead: what tenants saved, what stayed local, how many were housed and for how long.</li>
+  </ul>
+  <p style="color:var(--ink-soft);font-style:italic;margin-top:22px">The model isn't flawless. What we stand behind is the direction it was built in: every pass made it more real and more mission-true — even when that was less flattering to us.</p>
+</div></section>
+</div>
+<div class="wrap" style="text-align:center;padding:10px 0 4px;">
+  <img src="emblem.png" alt="Liberty Bee" style="width:158px;height:auto;">
+</div>
+<footer class="wrap">
+  <p>Liberty Bee — a non-extractive housing model, simulated in the open. Baseline <b>V3</b> · engine <b>0.6.0</b> · <b>89,800</b> runs across <b>nine regions</b> and <b>three compensation bases</b> — 44 frozen corpora of record, the 2025 vintage kept alongside as the historical comparison (V1 and V2 remain on the version archive) · itemized cost model, regime inflation, retention model, zero-debt acquisition, regional wages · reproducible from seed · plus a living series that ran to 26,668 fresh-seed runs across two vintages (5,903 on V1 · 20,765 on V2), closed with V2 and preserved in the <a href="versions.html">version archive</a>.</p>
+  <p style="margin-top:10px">The code and the full dataset are on GitHub; every figure is cited in <a href="sources.html">the ledger</a>. Nothing here is launch-capital guidance — it's what this model shows, under this market's assumptions, told honestly.</p>
+  <p style="margin-top:14px;font-size:12px;">© 2026 Liberty Bee · open source under the <a href="https://github.com/GreyOrGray/LibertyBee/blob/main/LICENSE" target="_blank" rel="noopener">GNU AGPL-3.0</a> · bee icon by <a href="https://lucide.dev" target="_blank" rel="noopener">Lucide Lab</a> (ISC).</p>
+</footer>
+<script>
+(function(){
+  var root=document.documentElement;
+  // reveal on scroll
+  var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting)e.target.classList.add('in');});},{threshold:.15});
+  document.querySelectorAll('.reveal').forEach(function(el){io.observe(el);});
+
+  function css(v){return getComputedStyle(root).getPropertyValue(v).trim();}
+
+  // REAL regime survival (engine 0.6.0, 8,000 runs): [starting capital $M, survival fraction]
+})();
+</script>
+<script>
+(function(){
+  // reading progress
+  var bar=document.getElementById('pgbar');
+  function prog(){
+    var h=document.documentElement, max=h.scrollHeight-h.clientHeight;
+    if(bar) bar.style.width=(max>0?(100*h.scrollTop/max):0)+'%';
+    var tt=document.getElementById('totop');
+    if(tt) tt.classList.toggle('show', h.scrollTop>1600);
+  }
+  window.addEventListener('scroll', prog, {passive:true}); prog();
+  // scrollspy: highlight the chapter strip + reflect position in the URL
+  var links=[].slice.call(document.querySelectorAll('.subnav a[data-spy]'));
+  if(links.length){
+    var ids=links.map(function(a){return a.getAttribute('data-spy');});
+    var secs=ids.map(function(i){return document.getElementById(i);}).filter(Boolean);
+    var spy=new IntersectionObserver(function(es){
+      es.forEach(function(e){
+        if(e.isIntersecting){
+          var id=e.target.id;
+          links.forEach(function(a){a.classList.toggle('on', a.getAttribute('data-spy')===id);});
+          if(history.replaceState) history.replaceState(null,'','#'+id);
+        }
+      });
+    },{rootMargin:'-25% 0px -65% 0px'});
+    secs.forEach(function(s){spy.observe(s);});
+  }
+})();
+</script>
+<a href="#" class="totop" id="totop" aria-label="Back to top" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;">&uarr;</a>
+</body>
+</html>

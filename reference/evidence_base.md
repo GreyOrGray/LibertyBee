@@ -13,7 +13,7 @@ Each section is a **modeling topic**:
 - **What it informs in LB** — the parameter / decision + the tracking issue (#NN).
 - **Confidence & caveats** — where sources disagree, where data is thin, where a domain expert should verify.
 
-Working research notes (the full agent syntheses) live under `scratch/analysis/`; **this doc is the durable, reviewable record** and is self-contained (the sources are here, not only in scratch). When a decision cites a number, it should be traceable to a row here.
+Working research notes (the full agent syntheses) live in the dev archive; **this doc is the durable, reviewable record** and is self-contained (the sources are here, not only in scratch). When a decision cites a number, it should be traceable to a row here.
 
 For **flaky / paywalled / official sources** that may disappear, the load-bearing figures are quoted **verbatim** here so the data survives link-rot — archival is part of the job; a public, data-backed model can't rest on dead links.
 
@@ -107,10 +107,61 @@ For a Salem 2–8 unit building (~6-unit modal), `$/unit/yr` registry defaults (
 - **Owner-paid utilities ≈ $1,150–1,300/unit** — Salem **trash $309/unit/yr** (FY26, bldg-capped) + water/sewer ~$830/unit/yr (Salem $13.10/CCF × MA 65 gal/cap/day) + common electric ~$75–100/unit (bottom-up est). **⚠️ Excludes shared heat** — MA default assigns utilities to the landlord absent separate metering; Salem's ~99.6% pre-1978 stock may retain master-metered boilers → owner utilities materially higher if un-retrofitted. **Resolve the heat-metering assumption before finalizing** (biggest utilities risk). *(Salem trash/water; MassLandlords.)*
 - **Confidence:** tax high (rate+class parcel-verified); insurance low–medium (MA proxy, no unit-count segmentation, no pre-1978 loading found); utilities medium (trash/water solid, common-electric a guess, shared-heat unquantified). All are *effective-dated* (Salem rates change annually) — note the vintage in the registry.
 
+### 4e. Towns pack — North Shore per-town rents & vacancy (ratified 2026-08-25) → towns corpora
+
+Six non-Salem GIS towns (Peabody, Danvers, Beverly, Lynn, Swampscott, Marblehead) + a
+**salem_2026 panel variant** get their own market values for the demonstration corpora
+("our focus is Salem — but just to show you"). Full research record incl. every rejected
+alternative: `docs/v_0_3/phases/phase_1_12/towns_pack_research.md`.
+
+**Basis ruling (Gray, 2026-08-25):** engine market rents use the **current-listings family**
+(matches `AdjustedRent`'s meaning — today's asking rent — and Salem's shipped source
+family). ACS B25031 gross-rent medians measure a different quantity (sitting-tenant
+contract rents, 2020–24 lagged window; up to ~40% below asking in Peabody) and proved
+per-bedroom unreliable in 5 of 6 towns (non-monotonic inversions, MOEs to 84%) — recorded
+here as context, never engine input.
+
+**Rent values — Zillow rental market trends per-bedroom, hand-pulled 2026-08-25 (the
+`OnlineFacts` hand-research convention), corroborated by: Zillow ZORI City index (open
+research CSVs, Jul 2026 — all 7 towns present; ZORI÷Zillow-2BR = 0.96–1.08 in six towns),
+Zumper (2026-08-24 + 25, two pulls cell-identical) and RentCafe/Apartment List
+(2026-08-24).** Studio/1–4BR measured; **4BR (Peabody, Danvers) and all 5BR are
+Extrapolated** from the town's own bedroom increment (Salem's labeled convention; Danvers'
+measured 4BR $3,125 inverted below its 3BR and was ruled extrapolate-instead; Peabody's
+Zumper 4BR $8,258 was a flagged thin-sample outlier). Shipped values (studio/1/2/3/4/5BR):
+- **Peabody** 1,656/2,253/2,750/3,200/3,650ᴱ/4,100ᴱ · **Danvers** 1,625/2,100/2,873/3,400/3,927ᴱ/4,454ᴱ
+- **Beverly** 2,037/2,295/2,700/3,200/4,100/5,000ᴱ · **Lynn** 1,700/1,950/2,400/2,900/3,200/3,500ᴱ
+- **Swampscott** 2,200/2,632/2,800/3,995/5,150/6,305ᴱ · **Marblehead** 1,650/2,050/2,632/4,000/5,345/6,690ᴱ
+- **salem_2026 (panel)** 1,900/2,200/2,607/2,900/3,750/4,600ᴱ — the frozen record's basis
+  (§4b, ~2025 vintage) is untouched; **forward ruling: the next record-scale corpus builds
+  off the new numbers.** Panel basis also takes the B2 current-basis property tax
+  ($3,480/unit; the frozen record keeps $2,250).
+
+**Thin-market disclosures:** Marblehead's listings market was near-unmeasurable at pull
+time (Apartment List: zero active rentals; Zumper self-disclaimed) — its Zillow tiers are
+taken with that disclosed; its high 3–4BR + ZORI 1.18 ratio reads as a real big-home-tail
+premium in a wealthy SFH town, not smoothed. Swampscott similar but ZORI-consistent (1.08).
+
+**Vacancy (`PROP.VacancyRateBase`, ratified 2026-08-25):** ACS 2020–24 5yr B25003/B25004
+computed directly (vacant-for-rent ÷ [renter-occupied + vacant-for-rent], Census Reporter
+API, pulled 2026-08-24) where the sample supports it: **Peabody 3.0%** (236/7,938 — this
+VERIFIES §4a's previously-flagged secondary figure) · **Danvers 5.7%** (205/3,591) ·
+**Beverly 1.9%** (130/6,898 — independently corroborates the Salem value the bundle
+previously borrowed; MOE-band ~0.2–3.4% disclosed) · **Lynn 2.6%** (514/19,406, ±32%
+numerator MOE disclosed). **Swampscott + Marblehead: 3.0% regional** (the §10c
+regional-vacancy precedent) — Swampscott's own cell is noise (43±49; 57% of its vacants
+are seasonal/coastal) and Marblehead's figures conflict 2× (AHO 5% vs ACS-derived
+10.1%±10.4pts). `RET.MoverRegionalVacancyPct` stays regional 3.0% everywhere (§10c).
+
+**Unverified residue (named, not used):** Danvers HPP "3%" (draft PDF >10MB, unfetched) ·
+Swampscott 2016 HPP "~1%" (ACS 2009–13 vintage; PDFs 404/403). `housing.ma` is dead
+site-wide (TLS→Heroku, §4 archival note) — confirmed for Danvers/Lynn/Swampscott too.
+
 ### Sources (§4)
 - [City of Salem Housing Roadmap Report Card (Oct 22 2025)](https://www.salemma.gov/m/newsflash/Home/Detail/190) · [RentCafe Salem (Jun 2 2026)](https://www.rentcafe.com/average-rent-market-trends/us/ma/salem/) · [Zumper Salem (Jun 25 2026)](https://www.zumper.com/rent-research/salem-ma)
 - [MA rental vacancy 3.4%, Census HVS (Jan 2025)](https://tradingeconomics.com/united-states/rental-vacancy-rate-for-massachusetts-percent-a-na-fed-data.html) · [LocalHousingSolutions — healthy 7–8% (May 2024)](https://www.localhousingsolutions.org/analyze/interpreting-rental-vacancy-rates-for-small-and-midsize-cities/)
 - [Patch — Salem cost burden, 2016 ACS (Dec 2017)](https://patch.com/massachusetts/salem/one-two-salem-renters-rent-burdened-census) · [DataUSA — Salem](https://datausa.io/profile/geo/salem-ma/) · [ImagineSalem (2017)](https://imaginesalem.org/faqs-and-common-concerns)
+- **§4e (towns pack):** [Zillow ZORI City CSV (open research data, Jul 2026)](https://files.zillowstatic.com/research/public_csvs/zori/City_zori_uc_sfrcondomfr_sm_month.csv) (dev-archive local copy) · Zillow rental market trends per town (hand-pulled 2026-08-25; zillow.com blocks automated fetch — human retrieval per the OnlineFacts convention) · Zumper/RentCafe/Apartment List town pages (2026-08-24 agent pulls, URLs in `towns_pack_research.md`) · Census Reporter API B25031/B25003/B25004, geoids 16000US2552490 (Peabody), 2516285 (Danvers), 2505595 (Beverly), 2537490 (Lynn), 2568680 (Swampscott), 2538435 (Marblehead), ACS 2020–2024 5-yr, pulled 2026-08-24.
 - **Archival status (2026-06-25):** the 3 flaky originals stay **blocked/dead** — [point2homes](https://www.point2homes.com/US/Average-Rent/MA/Salem.html) (403), [Census QuickFacts](https://www.census.gov/quickfacts/fact/table/salemcitymassachusetts/) (403), and **`housing.ma/salem/report` is likely permanently gone** (TLS/DNS misconfigured → unrelated Heroku apps; it's a [MAPC](https://github.com/MAPC/housingma) CHAS project). Their **data is recovered + archived above** from durable alternatives: [Census Reporter (Salem, GEOID 16000US2559105)](https://censusreporter.org/profiles/16000US2559105-salem-ma/), [DataUSA](https://datausa.io/profile/geo/salem-ma/), MAPC/CHAS (via cache). *(Wayback/AIBrowser unreachable from here; a human could snapshot the originals if true verbatim copies are wanted.)*
 
 ---
@@ -191,10 +242,10 @@ For a Salem 2–8 unit building (~6-unit modal), `$/unit/yr` registry defaults (
 
 ## 9. Applicant / household income — levels, structure & growth → #154 / KD-018 (Phase 1.8 income realism)
 
-**Why this section exists.** The publish re-sweep exposed that applicant incomes were a **static, non-inflating** draw from `reference.IncomeBand` (LOW $30–45k / MED $45–75k / HIGH $75–120k / VERY_HIGH $120–200k) while rent compounds at turnover — so the honest #154 30%-screen rejected an ever-growing share (109/211 early → 3,437/3,500 late), starving occupancy into a structural deficit (the "never reaches 100%" S-curve tail). This section grounds the replacement: a **time-varying, correctly-leveled, household-composition-aware** income model. Full research: `../v_0_3/phases/phase_1_8/research_findings.md`; all sources: [`inflation_income/sources_and_references.md`](inflation_income/sources_and_references.md).
+**Why this section exists.** The publish re-sweep exposed that applicant incomes were a **static, non-inflating** draw from `reference.IncomeBand` (LOW $30–45k / MED $45–75k / HIGH $75–120k / VERY_HIGH $120–200k) while rent compounds at turnover — so the honest #154 30%-screen rejected an ever-growing share (109/211 early → 3,437/3,500 late), starving occupancy into a structural deficit (the "never reaches 100%" S-curve tail). This section grounds the replacement: a **time-varying, correctly-leveled, household-composition-aware** income model. Full research: `../v_0_3/phases/phase_1_8/research_findings.md`; all sources: `inflation_income/sources_and_references.md` (dev archive; load-bearing sources are linked inline here).
 
 ### 9a. Salem renter income — the re-level anchor
-- **Census B25118 (Tenure by Household Income), ACS 2024 5-yr — two independent pulls agree to the household** (Gray's data.census.gov export [`inflation_income/ACSDT5Y2024.B25118-2026-07-05T140610.csv`](inflation_income/ACSDT5Y2024.B25118-2026-07-05T140610.csv) + Cate's keyless Census Reporter mirror): **Salem renter households 10,194**, distribution — <$25k **26.7%** (cum), <$50k 44.6%, <$75k 60.6% (**median ≈ $58k**), <$100k 73.5%, <$150k 89.1%, **≥$150k 10.9%**. **Owners** by contrast are **40% ≥$150k** — the stark owner/renter split that mandates calibrating the applicant pool to *renters*.
+- **Census B25118 (Tenure by Household Income), ACS 2024 5-yr — two independent pulls agree to the household** (Gray's data.census.gov export `ACSDT5Y2024.B25118` (2026-07-05 export, dev archive) + Cate's keyless Census Reporter mirror): **Salem renter households 10,194**, distribution — <$25k **26.7%** (cum), <$50k 44.6%, <$75k 60.6% (**median ≈ $58k**), <$100k 73.5%, <$150k 89.1%, **≥$150k 10.9%**. **Owners** by contrast are **40% ≥$150k** — the stark owner/renter split that mandates calibrating the applicant pool to *renters*.
 - Salem all-household median income **$85,153**, poverty **12.1%**, homeownership **49.7%** (DataUSA/ACS 2024) — the town isn't destitute; the story is the squeezed renter, not mass poverty.
 - **LB decision:** applicant pool levels to **renters (~$58k median), not all households ($85k)**. Current bands are mis-leveled both ways — the **$30k floor excludes ~27% of real renters** (sub-$25k), and the **$200k ceiling misses a real tail** (10.9% of renters ≥$150k; citywide 13% of *all* households ≥$200k, top-5% mean ~$396k — Neilsberg/ACS). Replace hard static bands with a **smooth distribution reweighted toward the target range**, widened at both ends.
 
@@ -219,7 +270,7 @@ For a Salem 2–8 unit building (~6-unit modal), `$/unit/yr` registry defaults (
 
 **Confidence.** SOLID: Salem renter distribution (two independent pulls exact, official ACS 2024 5-yr); wage percentiles (EPI primary CSV); household structure (multi-source triangulated); HUD AMI dollars (municipal-PDF-sourced, cross-corroborated); rent cross-check (3 current sources). **DECISION not statistic** (lb-ba to ratify): the honesty-dial magnitude + per-regime income loadings, the couple-correlation value, the tail cap, and the applicant-pool truncation. **Genuine gaps (flag as assumptions, don't invent):** roommate inter-earner income correlation (no data → independent draws); renter-only percentile-by-year detail (Census binary XLS, not pulled).
 
-**Sources.** Full log with status flags: [`inflation_income/sources_and_references.md`](inflation_income/sources_and_references.md). Load-bearing: [Census B25118 ACS 2024 5-yr](https://data.census.gov) (in-repo export + [Census Reporter mirror](https://censusreporter.org/profiles/16000US2559105-salem-ma/)); [EPI State of Working America Data Library](https://data.epi.org) (bulk CSV); FRED [CPIAUCSL](https://fred.stlouisfed.org/series/CPIAUCSL) / [CUUR0000SEHA](https://fred.stlouisfed.org/series/CUUR0000SEHA) / [MEHOINUSA672N](https://fred.stlouisfed.org/series/MEHOINUSA672N); [HUD Income Limits](https://www.huduser.gov/portal/datasets/il.html); [JCHS SOTN 2025](https://www.jchs.harvard.edu/state-nations-housing-2025); [Schwartz 2010](https://pmc.ncbi.nlm.nih.gov/articles/PMC2908420/) / [Gonalons-Pons & Schwartz 2017](https://pmc.ncbi.nlm.nih.gov/articles/PMC6048969/); [BLS OEWS](https://www.bls.gov/oes/); [Census FINC-01](https://www.census.gov/data/tables/time-series/demo/income-poverty/cps-finc/finc-01.html); [DataUSA Salem](https://datausa.io/profile/geo/salem-ma/); [Zumper](https://www.zumper.com/rent-research/salem-ma) / [RentCafe](https://www.rentcafe.com/average-rent-market-trends/us/ma/salem/).
+**Sources.** Full log with status flags: `inflation_income/sources_and_references.md` (dev archive; load-bearing sources are linked inline here). Load-bearing: [Census B25118 ACS 2024 5-yr](https://data.census.gov) (in-repo export + [Census Reporter mirror](https://censusreporter.org/profiles/16000US2559105-salem-ma/)); [EPI State of Working America Data Library](https://data.epi.org) (bulk CSV); FRED [CPIAUCSL](https://fred.stlouisfed.org/series/CPIAUCSL) / [CUUR0000SEHA](https://fred.stlouisfed.org/series/CUUR0000SEHA) / [MEHOINUSA672N](https://fred.stlouisfed.org/series/MEHOINUSA672N); [HUD Income Limits](https://www.huduser.gov/portal/datasets/il.html); [JCHS SOTN 2025](https://www.jchs.harvard.edu/state-nations-housing-2025); [Schwartz 2010](https://pmc.ncbi.nlm.nih.gov/articles/PMC2908420/) / [Gonalons-Pons & Schwartz 2017](https://pmc.ncbi.nlm.nih.gov/articles/PMC6048969/); [BLS OEWS](https://www.bls.gov/oes/); [Census FINC-01](https://www.census.gov/data/tables/time-series/demo/income-poverty/cps-finc/finc-01.html); [DataUSA Salem](https://datausa.io/profile/geo/salem-ma/); [Zumper](https://www.zumper.com/rent-research/salem-ma) / [RentCafe](https://www.rentcafe.com/average-rent-market-trends/us/ma/salem/).
 
 ---
 
@@ -288,6 +339,50 @@ DMQ (NBER w24181, 2019); Sieg & Yoon (*QE* 2020, NBER w26015); Olsen (*JPE* 1972
 
 ---
 
+## 12. Portability — generic US-national defaults for region-scoped params → Phase 1.12.2b
+
+For adopters modeling a non-Salem market: a region bundle that omits a bucket-2 parameter inherits
+a **generic US-national default** (with an importer warning), never Salem's value. Machine-readable
+in `region_defaults.json`; the importer applies + warns; the guide is `regions/README.md`.
+
+**Cited national defaults** (stable, dated national statistics):
+- **`MARKET.DaysOnMarket_Mean` = 56.1 days** — FRED `MEDDAYONMARUS` (Median Days on Market, US), 2023–2025 average.
+- **Listing-volume / days-on-market / price seasonality** (three 12-month indices, mean 1.0) — FRED `ACTLISCOUUS` / `MEDDAYONMARUS` / `MEDLISPRIUS` (US, NSA, Realtor.com), 2023–2025, month-average ÷ overall-average (the same method as the §8 Salem calibration; window is post the Oct-2022 Realtor.com methodology break, so internally consistent).
+- **`RET.VacancyRefPct` = 7.0%** — US rental vacancy rate, Census Housing Vacancy Survey / FRED `RRVRUSQ156N` (7.0% Q2 2025; 7.3% Q2 2026).
+- **`INF.Surge_PropertyMean` = 0.12** — S&P CoreLogic Case-Shiller US National HPI calendar-year gains 2020 +10.4% / 2021 +18.8% / 2022 +5.8% (CAGR ~11.5%).
+- **`INF.Surge_OpExMean` = 0.07** — S&P Global Market Intelligence homeowners/property insurance, ~+47% cumulative 2020–2025 (CAGR ~8%); 0.07 as the conservative blended-OpEx figure (insurance is the fastest line; tax/R&M lag).
+
+**Reasoned proxies** (no direct national statistic for the exact concept; documented as such):
+- **`PROP.VacancyRateBase` = 0.05** — RealPage/NMHC professionally-managed multifamily occupancy ~94.3–95.4% (2024–Q3 2025). Proxies "a well-run operator's own vacancy" and sits below the ~7% market aggregate as the concept requires. (Salem's 1.9% is the whole-market ACS rate — an anomalously tight sub-market, a poor national default.)
+- **`RET.MoverRegionalVacancyPct` = 0.07** — no national analog to Salem's regional-tightening story; defaulted equal to the national balanced-market rate. (Census HVS Q2 2026 alt: principal-cities 8.0% / suburbs 6.9% if an urban/suburban lean is wanted.)
+
+**Snapshot note:** the FRED figures are a dated snapshot (pulled 2026-08-07 over the windows above), cited like the Salem constants — re-pull to refresh. Each value's tier (cited vs reasoned-proxy) travels with it in `region_defaults.json` and in the importer's warning.
+
+---
+
+## 13. V3 site ledger — the 2026-09 pulls behind `sources.html` → site src-1 / 4 / 5 / 17 / 19
+
+The public site's source ledger calls this doc its full-provenance backing ("this ledger is the site's window onto it"). The V3 truth pass (2026-09-22) rewrote the ledger against the current model; this section records the retrievals behind the rewritten **public-data** claims, verbatim against link-rot. The ledger's **model-output** entries (src-9/10/11/16/18/20) are corpus measurements — their provenance is the released datasets themselves (SHA-256-checksummed, reproducible from seed) plus the parameter records shipped inside each one.
+
+### 13a. The squeeze chart — rent vs. renter income, 2017–2026 (src-17)
+- **Rent series:** Zillow ZORI, **ZIP-level** file (`Zip_zori_uc_sfrcondomfr_sm_month.csv`, Zillow Research open CSV — the ZIP sibling of §4e's City file), ZIP **01970 = Salem**, June value per year: **2017 $1,771 · 2018 $1,870 · 2019 $1,961 · 2020 $1,977 · 2021 $2,099 · 2022 $2,341 · 2023 $2,498 · 2024 $2,620 · 2025 $2,685 · 2026 $2,731** (latest month 2026-07: $2,730). Series + collection notes archived in the dev tree (`squeeze_data.py`, pulled 2026-09-17); the values above are the complete series as used.
+- **Income series:** ACS 5-yr **B25119_003** (median household income, *renter*-occupied), Salem city (GEOID 1600000US2559105), one value per release vintage 2015–2024, pulled keylessly 2026-09-17 via the data.census.gov table API (`https://data.census.gov/api/access/data/table?id=ACSDT5Y{year}.B25119&g=160XX00US2559105`): **2015 $39,546 ±3,217 → 2020 $36,966 ±10,099 → 2022 $54,871 ±10,404 → 2024 $57,935 ±12,770** (full series + MOEs in the dev archive; the 2024 value cross-checked exact against the Census Reporter API). ⚠️ 5-yr windows overlap and MOEs are wide — level claims are robust, year-over-year trend claims are **not** (disclosed on-site).
+- **Composition caveat** (why the site doesn't read the income surge as relief): the B25070 burden shares below held near 55% straight through it.
+
+### 13b. Renter cost burden — ACS B25070 direct (src-5)
+- Same table API, table **B25070**, Salem city, per release vintage. Share of burden-computed renter households paying **30%+** of income: **2017 50.9% → mid-surge 54.9% → 2024 54.9%** (site rounds to 55%). **Severe** burden (50%+): **2017 27.4% → 2024 30.6%** — above its pre-surge level. Pulled 2026-09.
+- §4c's MAPC/CHAS **46% / 52%** figures stand as the differently-computed corroboration; the site now cites the ACS-direct numbers, so this entry is the site-facing one.
+
+### 13c. The below-market 2BR + the 77% affordability computation (src-4 / src-1)
+- **$2,906/mo** market 2BR — Salem 2026 current-listings median, hand-pulled Zillow per-bedroom listings (OnlineFacts convention; zillow.com blocks automated fetch), corroborated by the ZORI City index and Zumper/RentCafe (§4b's $2,800 Zumper read, Jun 2026). This is the market-rent basis carried inside the released `salem2026` region bundle — the site and the model quote one number.
+- **77%** can't-afford share (src-1): the **B25118** (ACS 2024 5-yr) renter-income distribution — 10,194 renter households, the same table §9a pulled 2026-07, re-pulled via the table API 2026-09 — against the modeled below-market 2BR: $2,906 × 0.95 signing discount = **$2,761/mo** → income needed at the 30% line ≈ **$110k/yr** → share of renter households below it **76.8%**, rounded 77%.
+
+### 13d. Fair-wage inputs — BLS OEWS May 2025 (src-19)
+- Bulk flat file `oe.data.0.Current` (download.bls.gov); series `OEUM<area7>000000<occ6><13|14>`; occupations **11-9141** property management / **11-3012** administration / **49-9071** maintenance. Declared rules: hire-in = metro **median**, career cap = **p75**, benefits **25%** of base.
+- Boston metro (14460 — covers Salem + the six towns), median/p75: PM **$106,050 / $130,770** · admin **$120,670 / $157,000** · maintenance **$59,670 / $73,000**. Seattle–Tacoma (42660) and SF–Oakland (41860) values, plus the full method and the grand table they fed, live in the shipped basis builders: `fw_build.py` / `fwrd_build.py` (repo root), and inside every fw/fwrd corpus's parameter records.
+
+---
+
 ## Topics not yet researched (residual gaps)
 
 The V0.3-realism topics (§1–§11) are now sourced. Remaining thin spots to firm up during implementation:
@@ -305,7 +400,8 @@ The V0.3-realism topics (§1–§11) are now sourced. Remaining thin spots to fi
 - **Institutional / statutory:** NAA Income/Expense IQ; IREM Income/Expense IQ; Fannie Mae SBL (reserves); HUD Keating Memo; Fair Housing Act (familial status, 1988); California Gov. Code §12955; IPMC §404; Terner Center (UC Berkeley).
 - **Legal / fair-housing:** AJ Johnson Consulting; Equal Rights Center; Fair Housing Council of Oregon; Pettit Law Group; Fair Housing Forum.
 - **Practitioner / market:** Jake & Gino; Harborside Partners; Multifamily Insiders; PropRise; HelloData; Adventures in CRE; Multifamily.loans; Multifamily Dive; Salary.com.
-- **Local market (Salem, MA):** City of Salem Housing Roadmap Report Card; RentCafe; Zumper; Census HVS / ACS; LocalHousingSolutions; Patch (2016 ACS); DataUSA; ImagineSalem. *(Flaky / needs browser-fallback archival: point2homes, housing.ma, Census QuickFacts.)*
-- **Income & wages (§9, Phase 1.8):** Census B25118 (ACS 2024 5-yr) + Census Reporter; EPI State of Working America (wage percentiles); FRED (CPI / rent-CPI / real median income / ECI); HUD Income Limits (Boston HMFA); JCHS State of the Nation's Housing 2025; CBPP; Census FINC-01; BLS OEWS + Employment Characteristics of Families; Pew; Schwartz / Gonalons-Pons / Dunatchik / Greenwood / Eika (assortative mating); MassINC Gateway Cities Housing Monitor; Neilsberg; DataUSA; Zumper / RentCafe. **Full status-flagged log: [`inflation_income/sources_and_references.md`](inflation_income/sources_and_references.md).**
+- **Local market (Salem, MA):** City of Salem Housing Roadmap Report Card; RentCafe; Zumper; Census HVS / ACS; LocalHousingSolutions; Patch (2016 ACS); DataUSA; ImagineSalem; Zillow ZORI ZIP CSV + data.census.gov table API B25119/B25070/B25118 (§13, keyless, 2026-09). *(Flaky / needs browser-fallback archival: point2homes, housing.ma, Census QuickFacts.)*
+- **Wages (fair-wage program, §13d):** BLS OEWS May 2025 bulk flat file (`oe.data.0.Current`) — Boston / Seattle–Tacoma / SF–Oakland metros, occupations 11-9141 / 11-3012 / 49-9071; full log in `compensation_research.md`.
+- **Income & wages (§9, Phase 1.8):** Census B25118 (ACS 2024 5-yr) + Census Reporter; EPI State of Working America (wage percentiles); FRED (CPI / rent-CPI / real median income / ECI); HUD Income Limits (Boston HMFA); JCHS State of the Nation's Housing 2025; CBPP; Census FINC-01; BLS OEWS + Employment Characteristics of Families; Pew; Schwartz / Gonalons-Pons / Dunatchik / Greenwood / Eika (assortative mating); MassINC Gateway Cities Housing Monitor; Neilsberg; DataUSA; Zumper / RentCafe. **Full status-flagged log: `inflation_income/sources_and_references.md` (dev archive; load-bearing sources are linked inline here).**
 
 *Full per-source URLs are inline in each section above.*

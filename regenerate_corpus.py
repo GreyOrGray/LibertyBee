@@ -650,7 +650,10 @@ def main():
     p.add_argument("--drip-gap", type=float, default=20.0,
                    help="inter-run gap while dripping (with --throttle)")
     p.add_argument("--pg", action="store_true",
-                   help="corpus + workers on PostgreSQL (LB_CORPUS_BACKEND override)")
+                   help="deprecated no-op: PostgreSQL is the default")
+    p.add_argument("--mssql", action="store_true",
+                   help="corpus + workers on SQL Server (pre-cutover legacy path; "
+                        "LB_CORPUS_BACKEND override)")
     p.add_argument("--checks", default=None,
                    help="comma-separated corpus checks to run during the sweep, or "
                         "'all' / 'none'. Overrides corpus_checks/checks.json. "
@@ -659,8 +662,8 @@ def main():
                    help="run enabled checks after every N completed runs "
                         "(default: the 'every' value in checks.json, else 250)")
     args = p.parse_args()
-    if args.pg:
-        corpus_conn.set_backend("psycopg")
+    if args.mssql:
+        corpus_conn.set_backend("pyodbc")
 
     init_worker_pool(args.workers)
     central_db = args.corpus
