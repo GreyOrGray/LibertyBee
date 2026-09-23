@@ -9,6 +9,11 @@ buildings, no tenants — it is a rigorous, reproducible argument that the idea 
 simulated market pressure, from calm to crash. Every number on the site comes out of this engine, and every
 run reproduces exactly from a seed.
 
+> **This is a finished record.** Development wrapped in the fall of 2026 — the site explains why, in the
+> author's own words. The release stands at **89,800 runs across 44 corpora**: three compensation bases ×
+> nine regions, every corpus checksummed and reproducible from seed via the tools in this repo. Nothing
+> here needs a maintainer to be checked — that's the point.
+
 ## What's here
 
 - **`SETUP.md`** — start here: PostgreSQL + Python, restore the seed databases, run your first
@@ -26,9 +31,15 @@ run reproduces exactly from a seed.
   - `create_corpus.py` + `regenerate_corpus.py` — build an empty corpus database, then sweep it;
     provenance-stamped, refuses to masquerade as a record from a modified tree
   - `corpus_checks/` — the in-flight honesty checks that run *during* a sweep, documented and extendable
-- **`regiondata/`** — the shipped region bundles (government-sourced: MassGIS + Census ACS) and the
-  how-to for building a bundle from **your own** market's data
+- **`regiondata/`** — the ten shipped region bundles (all government-sourced: MassGIS + Census ACS for
+  the Massachusetts eight, Pierce County for Tacoma, DataSF for San Francisco), the as-run **adapters**
+  that built the non-MA universes (`regiondata/adapters/`), and the how-to for building a bundle from
+  **your own** market's data
 - **`region_importer.py`** — load any region bundle into a fresh database and run the model on it
+- **`fw_build.py` / `fwrd_build.py`** — the scripts that created the fair-wage compensation bases
+  (BLS OEWS May 2025 metro wages) from the declared baseline
+- **`sql/regression_tests/`** — the full regression suite (`app/src/master_test_runner.py --regression`):
+  every shipped behavioral fix travels with the regression test that proves it
 - **`environmentscripts/migration_manager.py`** — mint/list/drop ephemeral databases from the seed
   template (~1 second each; every run gets a fresh one)
 
@@ -50,4 +61,4 @@ run a modified version — even as a hosted service — you must make your sourc
 
 ## Contact
 
-Questions, corrections, or capital: **gray@libertybee.org**
+Questions, corrections, or capital: **libertybeegray@gmail.com**

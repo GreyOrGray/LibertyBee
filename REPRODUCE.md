@@ -4,30 +4,45 @@ Every published number traces to a corpus of simulated runs, and every run repro
 seed. This document is the skeptic's path: restore the record, verify what generated it, and
 re-run any part of it yourself. Setup first: [SETUP.md](SETUP.md).
 
-> **[AT FREEZE — placeholders resolved when the v3 corpus ships]:** corpus dump asset name,
-> sha256, total run count, and the exact public commit the corpus cites. Until then this
-> document describes the mechanism; the release notes carry the numbers.
-
 ## What the record is
 
-The v3 corpus: **[AT FREEZE: N] twenty-year (240-month) simulated runs** across 16 funding
-rungs (projections 200–209, 300–305) and the deep-discount ladders, generated on PostgreSQL
-from the clean-provenance Salem universe (MassGIS parcels + Census ACS — see
-`regiondata/README.md`), by the published engine at commit **[AT FREEZE: sha]**, with zero
-override flags.
+**89,800 twenty-year (240-month) simulated runs across 44 released corpora** — three
+compensation bases × nine regions, generated on PostgreSQL by the published engine
+(**0.6.0**, public commit **`71b8b81`**), with zero override flags. The bases:
 
-## 1. Restore the corpus (the dataset)
+- **declared** (`libertybee_v3_*`) — the original founder-subsidy pay basis, plus its
+  deep-discount ladders;
+- **fw** (`libertybee_fw_*`) — fair wages: each region's own metro median hire-in with
+  75th-percentile career caps (BLS OEWS May 2025; see `fw_build.py`);
+- **fwrd** (`libertybee_fwrd_*`) — fair wages plus the leaner tenant deal the site
+  headlines (5% signing, 3/3/5% tenure reductions, 10% credit).
 
-Download `libertybee_v3_corpus.dump` **[AT FREEZE: exact asset name]** from the release,
-verify its sha256 against the release notes, then:
+The regions: Salem 2026 (the record), the 2025 Salem vintage (kept as the historical
+comparison), six North Shore towns, Tacoma, and San Francisco — each universe built from
+government data (MassGIS + ACS; Pierce County; DataSF — see `regiondata/README.md` and
+`regiondata/adapters/`). Each corpus is a full funding ladder (up to 23 levels, $2M–$20M)
+at up to 500 seeds per rung. The headline corpus is **`libertybee_fwrd_salem2026`**
+(23 rungs × 500 seeds = 11,500 runs — the $7M clean floor on the front page).
+
+## 1. Restore a corpus (the dataset)
+
+Each corpus ships as `libertybee_<basis>_<region>.dump` on the release, with its sha256 in
+the matching `SHA256SUMS_*.txt`. Verify, then restore — the headline corpus as the example:
 
 ```
-& "C:\Program Files\PostgreSQL\18\bin\createdb.exe"   -h localhost -U libertybee -w libertybee_v3_baseline
-& "C:\Program Files\PostgreSQL\18\bin\pg_restore.exe" -h localhost -U libertybee -w -d libertybee_v3_baseline libertybee_v3_corpus.dump
+Get-FileHash libertybee_fwrd_salem2026.dump -Algorithm SHA256   # compare to SHA256SUMS_corpora_fwrd.txt
+& "C:\Program Files\PostgreSQL\18\bin\createdb.exe"   -h localhost -U libertybee -w libertybee_fwrd_salem2026
+& "C:\Program Files\PostgreSQL\18\bin\pg_restore.exe" -h localhost -U libertybee -w -d libertybee_fwrd_salem2026 libertybee_fwrd_salem2026.dump
 ```
+
+> **Split volumes.** Three dumps exceed the release-asset size limit and ship as numbered
+> parts (`<name>.dump.part1`, `.part2`, …): `libertybee_fwrd_salem2026`,
+> `libertybee_v3_baseline`, `libertybee_v3_salem2026`. Reassemble before restoring —
+> `cmd /c copy /b "x.dump.part1"+"x.dump.part2" "x.dump"` — then verify the assembled
+> file's sha256 as above (the checksums are for the whole dumps).
 
 The whole record is now queryable — run-level results in `v1.run_summary`, full per-run detail
-in the other `v1.*` tables:
+in the other `v1.*` tables (in the fw/fwrd corpora, `Rung` is the starting capital in dollars):
 
 ```sql
 SELECT Rung, COUNT(*), AVG(CASE WHEN Survived = 1 THEN 1.0 ELSE 0 END) AS survival
@@ -37,7 +52,7 @@ FROM v1.run_summary GROUP BY Rung ORDER BY Rung;
 ## 2. Verify provenance (what generated this?)
 
 ```
-python reproduction_gate.py --corpus libertybee_v3_baseline --provenance-only
+python reproduction_gate.py --corpus libertybee_fwrd_salem2026 --provenance-only
 ```
 
 Checks the corpus's own stamps: the scenario, the harness commit (a public commit you can
@@ -47,7 +62,7 @@ modified or unpublished tree is permanently marked and fails here — by design.
 ## 3. Re-run sampled cells (does it reproduce?)
 
 ```
-python reproduction_gate.py --corpus libertybee_v3_baseline
+python reproduction_gate.py --corpus libertybee_fwrd_salem2026
 ```
 
 Samples cells, re-runs each **from your checkout** in a freshly minted database, and compares
@@ -69,7 +84,7 @@ Compare the final summary against the stored row. Same seed ⇒ same run, to the
 ## 5. Regenerate at any scale
 
 The corpus machinery ships in this repo (`create_corpus.py`, `regenerate_corpus.py` — see
-SETUP.md §8). Regenerate a rung, a ladder, or the entire corpus; the in-flight checks and
+SETUP.md §9). Regenerate a rung, a ladder, or the entire corpus; the in-flight checks and
 provenance stamps run for you exactly as they ran for us.
 
 ## 6. Change the assumptions (turn the knobs)

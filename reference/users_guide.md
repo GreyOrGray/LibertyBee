@@ -212,4 +212,4 @@ Stated plainly, because an honest model names its own edges. None of these affec
 - **Some things never happen in the current model:** `LATE` payment status is structurally never written (grace-window collection lands ON_TIME); staff are hired but never terminated; grants and the EIP are scaffolded but unimplemented (no code reads them); compliance remediation always succeeds.
 - **Vacancy is steady-state.** Cyclical soft-market stress enters *only* through the #48 inflation regimes' vacancy deltas — there's no independent vacancy-shock model. Don't widen `PROP.VacancyFluctuationBand` to fake a downturn.
 
-*Guide vintage: **the V2 release** (engine **0.6.0**; corpus of record = the frozen V2 baseline, **13,200 runs**, published 2026-07-28). Earlier baselines and what changed between them: [previous versions](https://libertybee.org/versions.html).*
+*Guide vintage: **the V3 release** (engine **0.6.0**; the record = 89,800 runs across 44 corpora — three compensation bases × nine regions, 2026; headline corpus `libertybee_fwrd_salem2026`). Earlier baselines and what changed between them: [previous versions](https://libertybee.org/versions.html).*

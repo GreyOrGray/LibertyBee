@@ -78,6 +78,14 @@ python app/src/simulation.py --env <the_minted_env> --projection-id 200 --months
 **Expect (the anchor):** `Cash burned: $4,012,108.96`, `Final annual payroll: $287,500.0000` —
 to the penny. If you see these numbers, your install reproduces the published engine exactly.
 
+Want more than the anchor? The full regression suite ships in `sql/regression_tests/`:
+
+```
+python app/src/master_test_runner.py --env <the_minted_env> --regression
+```
+
+**Expect:** `OK ALL TESTS PASSED` (31 modules) — every shipped behavioral fix, proven against your install.
+
 ## 6. Validate against the record
 
 > **Needs the released corpus first** — the record's database, restored from its release-asset
@@ -127,6 +135,10 @@ python create_corpus.py --corpus <name>                # the corpus schema, veri
 $env:LB_PG_TEMPLATE = 'libertybee_salem_gold'               # workers mint from the corpus base
 python regenerate_corpus.py --corpus <name> --scenario standard --seeds 1-N --rungs 200-209,300-305 --workers 4
 ```
+
+(The rung set above is the declared-basis standard ladder; the fair-wage corpora ran extended
+ladders to $20M. Every released corpus's own scenario and rung set is in its provenance stamps —
+`reproduction_gate.py --corpus <name> --provenance-only` prints them.)
 
 Corpora of record are generated from a **clean checkout of a published commit** — the sweep
 refuses modified or unpublished trees by design, and any override permanently marks the corpus

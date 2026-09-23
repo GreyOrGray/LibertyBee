@@ -3,7 +3,7 @@
 **Status:** ✅ Canon (X.5.2) — consolidated 2026-06-08 from the locked-V1 ruleset (scattered phase docs + `v1_locked_parameters.md`), `SYSTEM_REFERENCE.md`, the Proposal extract, and owner rulings (issue #16).
 **Scope:** The **current, authoritative rules**. The *why* is in [`concept_and_philosophy.md`](concept_and_philosophy.md); the *mechanics/schema* are in `docs/v_0_1/SYSTEM_REFERENCE.md` + the Technical Bibles. Numeric parameters live in the three-table param store — **`reference.ParameterRegistryDefault`** (defaults) and **`reference.ParameterRegistryDefined`** (per-projection overrides), with **`reference.Projection`** carrying projection identity (EAV since Phase 1.2.3b, split at V00071; read-once + fail-loud). The legacy `reference.ProjectionParameters` wide table was dropped at V00070. **The real-world evidence behind these numbers — "says who?" — is catalogued in [`evidence_base.md`](evidence_base.md).**
 
-> **Status:** the policy surface is **registry-driven + fail-loud** (numeric parameters live in the registry tables named above). The rules below reflect **current engine behavior**. **The corpus of record is the frozen V2 baseline** (engine **0.6.0**, 13,200 runs, published 2026-07-28) — current headline numbers live on [libertybee.org](https://libertybee.org) and the [versions archive](https://libertybee.org/versions.html). The headline-numbers section below (§6 area) preserves the **1.0 record** as it shipped; its V2 refresh from the corpus of record is pending. Inline **⚠️KD** tags point to still-open *design* questions or known deferrals — tracked on the [known-issues ledger](https://libertybee.org/known-issues.html) — **not** broken code.
+> **Status:** the policy surface is **registry-driven + fail-loud** (numeric parameters live in the registry tables named above). The rules below reflect **current engine behavior**. **The record is the V3 release** (engine **0.6.0**, 89,800 runs across 44 corpora — three compensation bases × nine regions, 2026) — current headline numbers live on [libertybee.org](https://libertybee.org) and the [versions archive](https://libertybee.org/versions.html). The headline-numbers section below (§6 area) preserves the **1.0 record** as it shipped, as history. Inline **⚠️KD** tags point to still-open *design* questions or known deferrals — tracked on the [known-issues ledger](https://libertybee.org/known-issues.html) — **not** broken code.
 
 ---
 
@@ -212,14 +212,15 @@ Growth is **not** mandatory for baseline success; the model is **not** graded by
 
 ### The frozen 1.0 baseline — headline numbers (SUPERSEDED — preserved as the 1.0 record)
 
-> **The current record is the V2 baseline** (13,200 runs, engine 0.6.0) — see
+> **The current record is the V3 release** (89,800 runs across 44 corpora — three
+> compensation bases × nine regions, engine 0.6.0, 2026) — see
 > [libertybee.org](https://libertybee.org) for its numbers and the
 > [versions archive](https://libertybee.org/versions.html) for how the baselines compare.
-> This section preserves the 1.0 record exactly as it shipped; its V2 refresh is pending.
+> This section preserves the 1.0 record exactly as it shipped, as history.
 
 *Source: the **1.0 baseline** (`LibertyBee_V03R4_Baseline`, 800 Regime runs = 16 rungs × 50 seeds, + `_Static` 100 + `_Cliff` 1,440 flavor; retention engine **0.5.0**; re-frozen 2026-07-08, shipped publicly 2026-07-10; numbers recomputed from the corpus DB 2026-07-11). **Framing is binding** (§6 (a)–(d) + the guardrails below): the headline is the **stochastic Regime** curve, never Static; state numbers as a **model result under Salem-area assumptions**, not launch-capital guidance.*
 
-**★ Entry-ticket sentence (locked, public-facing):** *"Under Salem-area assumptions, this model reaches reliable 20-year survival around **$4.5M** of starting capital; below roughly **$3M** it usually fails — a result of the cost model, not fundraising guidance."* Lead $4.5M; the knee is ~$3M — under the retention engine it is the **coin-flip point** (54%), no longer 72%.
+**★ Entry-ticket sentence (the 1.0-era locked sentence — SUPERSEDED):** *"Under Salem-area assumptions, this model reaches reliable 20-year survival around **$4.5M** of starting capital; below roughly **$3M** it usually fails — a result of the cost model, not fundraising guidance."* Lead $4.5M; the knee is ~$3M — under the retention engine it is the **coin-flip point** (54%), no longer 72%. *(The V3 public answer is the three-basis comparison — "it depends" — with the fair-wage-reduced-deal Salem floor at **$7M**; see the site.)*
 
 **Survival S-curve** (16 rungs × 50 seeds, every inflation regime; survival = positive Cash+CSF **and** a full 240-month span):
 
