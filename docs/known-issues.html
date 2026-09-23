@@ -28,101 +28,86 @@
   a{color:var(--amber);}
   .back{font-family:ui-sans-serif,system-ui,sans-serif;font-size:14px;}
 </style>
+<style>
+  .cap{font:12.5px ui-sans-serif,system-ui,sans-serif;color:var(--ink-soft);text-align:left;margin:10px 2px 4px;line-height:1.5;}
+  .topnav{position:sticky;top:0;z-index:60;background:var(--paper);border-bottom:1px solid var(--line);}
+  .topnav .nwrap{max-width:var(--maxw);margin:0 auto;padding:11px 24px;display:flex;gap:20px;flex-wrap:wrap;align-items:center;}
+  .topnav a{font-size:13px;font-weight:600;text-decoration:none;color:var(--ink-soft);letter-spacing:.02em;}
+  .topnav a:hover{color:var(--amber);}
+  .topnav a.cur{color:var(--amber);}
+  .topnav .bee{font-weight:800;color:var(--ink);margin-right:2px;}
+  .subnav{max-width:var(--maxw);margin:0 auto;padding:0 24px 9px;display:flex;gap:16px;flex-wrap:wrap;}
+  .subnav a{font-size:12px;font-weight:600;text-decoration:none;color:var(--ink-soft);opacity:.75;}
+  .subnav a.on{color:var(--amber);opacity:1;}
+  .progress{height:3px;background:var(--amber);width:0;transition:width .1s linear;}
+  .pagehead{border-top:2px solid var(--amber);background:var(--card);}
+  .pagehead .wrap{padding:46px 24px;}
+  .godeep{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin:26px 0 0;}
+  .godeep a{display:block;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;box-shadow:var(--shadow);text-decoration:none;color:var(--ink);}
+  .godeep a b{color:var(--amber);font-family:ui-sans-serif,system-ui,sans-serif;}
+  .godeep a span{display:block;font-size:14.5px;color:var(--ink-soft);margin-top:6px;font-family:ui-sans-serif,system-ui,sans-serif;}
+  @media(max-width:560px){.godeep{grid-template-columns:1fr;}}
+  /* chapter identity by color band — numerals retired (Gray, 2026-08-24).
+     Tints are ambient; the divider label + subnav highlight stay the readable signal. */
+  .band-sand{background:#F6F2E9;}
+  .band-clay{background:#F7EDE8;}
+  .band-amberw{background:#F3E7CF;}
+  .band-stone{background:#F1F0EA;}
+  .band-green{background:#EEF3EE;}
+  .band .chapter{background:transparent;}
+  .band section.beat{border-top-color:rgba(21,19,12,.08);}
+  .totop{position:fixed;right:18px;bottom:18px;z-index:70;width:42px;height:42px;border-radius:50%;
+    background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow);color:var(--amber);
+    font-size:20px;font-weight:700;display:none;align-items:center;justify-content:center;
+    text-decoration:none;font-family:ui-sans-serif,system-ui,sans-serif;}
+  .totop.show{display:flex;}
+</style>
+<style>:root{--maxw:680px}</style>
 </head>
 <body>
+
+<nav class="topnav"><div class="nwrap sans"><span class="bee">🐝 Liberty Bee</span><a href="index.html">Story</a><a href="method.html">Method</a><a href="faq.html">FAQ</a><a href="sources.html">Sources</a><a href="known-issues.html" class="cur">Known issues</a><a href="versions.html">Versions</a></div><div class="progress" id="pgbar"></div></nav>
 <div class="wrap">
-  <p class="back"><a href="index.html">← libertybee.org</a></p>
+  <p class="back"></p>
   <p class="eyebrow">The open defect ledger</p>
   <h1>Known issues in the released model.</h1>
   <p>Honesty without flattery is the whole point, so the defects we know about are listed here —
-  plainly, with their causes — and each stays listed until a future baseline resolves it. The
+  plainly, with their causes — and each stays listed until a future baseline resolves it &mdash; and with the project mothballed after V3, the open entries below now wait for whoever cuts that baseline. The
   frozen 1.0 numbers are never edited in place; a fix always means a new, fully re-run baseline.
-  Issues found by the <a href="index.html">living farm</a> (the model that keeps running) are
-  tagged accordingly.</p>
+  </p>
 
-  <div class="card" id="kd-042">
-    <h2>KD-042 — acquisition gate prices current costs only<span class="tag farm">found by the living farm</span><span class="tag v2">fix: next baseline</span></h2>
-    <p class="meta">Found 2026-07-12, one day after the living farm started · status: root cause verified, remediation expected in the next baseline</p>
-    <p>The engine's acquisition safety gate checks an organization's cash against its <em>current</em>
-    monthly operating costs — but nothing prices the incoming carrying costs of the properties being
-    acquired. During the startup grace window (when current costs are payroll-only), a rare week-one
-    ladder of attractive listings lets an organization legally commit ~92–96% of its capital before its
-    first rents arrive. Every purchase is individually legal under the released gate; the failures are
-    purely institutional — zero evictions, no rent hikes, no tenant harmed on the way down.</p>
-    <p><strong>Version history.</strong> <em>v1 (current):</em> affected. The full census as the living
-    farm found it — standard series: 2 failures at $5.5M (months 3–4), 1 at $6.0M (month 5), 1 at
-    $5.0M (month 4), 1 at the $4.5M extension rung (month 5); deep-discount series: 2 at $5.5M
-    (months 3–4), the same seeds as the standard pair — the gap is independent of rent policy, because
-    it lives on the buy side. Each failure was replayed to the penny to confirm the mechanism: 6–7
-    properties bought in the opening weeks, acquisitions accounting for 92–96% of every dollar spent,
-    zero gate refusals. <em>v2 (next baseline):</em> remediation expected — a forward-looking gate that
-    prices in-pipeline obligations, including expected onboarding costs, before committing.</p>
-    <p><strong>Reproduce it on v1 today:</strong> restore the published Gold backup and run
-    <code>simulation.py --projection-id 201 --seed 128 --months 240</code> (dies month 3) or
-    <code>--projection-id 200 --seed 247</code> (dies month 4). <strong>Verify the fix when v2
-    ships:</strong> the same commands on the v2 baseline should carry the same organizations to
-    month 240 without insolvency — that claim publishes here, checkable, the day the v2 engine does.</p>
+  <p>Five divergences found while V1 and V2 were live &mdash; the acquisition gate&rsquo;s forward-pricing gap (caught by the living farm), the uncharged lead deleading, plan-dependent determinism, the unadjusted rent basis, and the fractional-bath overpricing &mdash; were fixed in V3; each fix ships with the regression test that proves it. Their full histories live in the project repository&rsquo;s issue register.</p>
+
+  <p class="meta" style="margin-top:38px;font-weight:700;font-size:14px">Open at the close of development &mdash; V3 ships with these known and documented:</p>
+
+  <div class="card" id="kd-246">
+    <h2>Corpora don&rsquo;t name the world that built them<span class="tag v2" style="background:#F3E7CF;color:#8A5A00">open at close</span></h2>
+    <p class="meta">Found 2026-08-22 (the gate incident that proved a corpus innocent) &middot; register #246 &middot; status: mitigated, not fixed</p>
+    <p>A result dataset&rsquo;s run records carry no fingerprint of the property universe that
+    produced them &mdash; so a reproduction check pointed at the wrong universe fails loudly but
+    can&rsquo;t say <em>why</em>. The shipped mitigation: the reproduction gate refuses to run
+    without an explicit universe declaration. The real fix &mdash; a universe fingerprint stamped
+    into every dataset&rsquo;s metadata &mdash; was scoped for the version after this one — for whoever cuts it.</p>
   </div>
 
-  <div class="card" id="kd-193">
-    <h2>Lead deleading is never charged<span class="tag v2">fix: next baseline</span></h2>
-    <p class="meta">Root cause KD-043 (lead chain unreachable) + KD-193 (assessment sequencing) · status: fixed in the v2 engine, disclosed for v1</p>
-    <p>Massachusetts law requires lead remediation ("deleading") for pre-1978 rental housing, and about
-    <strong>99.6% of Salem's stock is pre-1978</strong> — so for this portfolio deleading is the norm, not
-    the exception. In the 1.0 engine the abatement step is <em>unreachable</em>: a work-classification bug
-    leaves it as dead code, so across the entire released corpus it fires <strong>zero times</strong>. The
-    consequence is that 1.0 never charges the deleading a real pre-1978 acquisition would legally incur, so
-    its operating costs — and therefore its survival numbers — are optimistic on this one axis. No tenant is
-    affected; the gap is purely an unmodeled cost.</p>
-    <p><strong>Version history.</strong> <em>v1 (current):</em> affected — abatement is dead code, zero work
-    items in the corpus, deleading cost absent. <em>v2 (next baseline):</em> remediation expected — the lead
-    chain is made reachable and recalibrated to Massachusetts DPH / MassHousing figures (KD-043), and the
-    risk assessment is moved to <em>due diligence</em>, so the organization prices the actual abatement cost
-    before it commits and can decline a property it cannot solvently carry (KD-193). Making lead real
-    surfaced that a cost committed blindly <em>after</em> closing would itself sink mid-size organizations —
-    which is precisely why the assessment now happens before the purchase, not after.</p>
-    <p><strong>Reproduce it on v1 today:</strong> restore the published Gold backup, run
-    <code>simulation.py --projection-id 206 --seed 99 --months 240</code>, and query
-    <code>simulation.ComplianceWorkItem WHERE WorkType = 'LEAD_ABATEMENT'</code> — zero rows. <strong>Verify
-    the fix when v2 ships:</strong> the same query on a v2 run returns calibrated lead-abatement work items,
-    and the acquisition ledger shows lead priced at due diligence — that claim publishes here, checkable, the
-    day the v2 engine does.</p>
+  <div class="card" id="kd-248">
+    <h2>The bath-pricing channel is untestable on the shipped universe<span class="tag v2" style="background:#F3E7CF;color:#8A5A00">open at close</span></h2>
+    <p class="meta">Found 2026-08-23 (the clean-universe test canary) &middot; register #248 &middot; status: open</p>
+    <p>Public parcel data publishes no bathroom counts, so every unit in the shipped universe
+    defaults to one bath &mdash; and the engine&rsquo;s bath-pricing code path never exercises.
+    Its regression gates <em>skip loudly</em> rather than pass silently. The fix, for whoever picks it up: a
+    deliberately awkward synthetic fixture (multi-bath units, two towns, messy labels) that
+    restores full gating on any universe.</p>
   </div>
 
-  <div class="card" id="kd-187">
-    <h2>Determinism in v1 is plan-dependent<span class="tag v2">fix: next baseline</span></h2>
-    <p class="meta">Found 2026-07-14 by an internal byte-identity gate · status: fixed in the v2 engine, disclosed for v1</p>
-    <p>v1 results are reproducible to the cent on the pinned environment — the published Gold backup,
-    the published engine, the documented SQL Server setup. That was verified before release and still
-    holds. What we have since found: a handful of internal queries feed random draws to entities in
-    whatever row order SQL Server returns, without an explicit ordering. On the pinned environment the
-    query plans are stable and every same-seed run is identical. On a <em>materially different</em>
-    environment — a newer SQL Server, different statistics or indexes — the optimizer may legally
-    return rows in a different order, and a same-seed run can then take a different but equally valid
-    path through the model. Neither path is wrong; the run would simply no longer match our published
-    run byte-for-byte.</p>
-    <p>If you are reproducing v1 exactly, use the pinned environment as documented in REPRODUCE. The
-    v2 engine removes this at the root: every order-sensitive query imposes an explicit deterministic
-    ordering, enforced by a tracked determinism gate that includes a negative control — a test that
-    demonstrably fails on the defect it guards against. We found this with our own validation tooling
-    and are disclosing it because reproducibility claims should say precisely what they claim.</p>
-  </div>
-
-  <div class="card" id="issue-44">
-    <h2>Rent charged from the unadjusted column<span class="tag v2">fix: next baseline</span></h2>
-    <p class="meta">Found 2026-07-06 in pre-release audit · disclosed in the baseline-of-record documents</p>
-    <p>The 1.0 engine charges tenants from <code>BaseRent</code> while acquisition underwriting uses
-    <code>AdjustedRent</code>. In the released model this is acquisition-scoring-only — no tenant rent
-    and no published survival number is affected — and in at least one case it <em>under</em>charged
-    tenants. Ruled for the next baseline's engine rework.</p>
-  </div>
-
-  <div class="card" id="kd-040">
-    <h2>KD-040 — fractional bathrooms overpriced by the rent generator<span class="tag v2">fix: next baseline</span></h2>
-    <p class="meta">Found 2026-07-06 in pre-release audit · disclosed in the baseline-of-record documents</p>
-    <p>The synthetic rent generator prices a half-bath at 7.5% instead of the intended 5%.
-    Acquisition-scoring-only in 1.0; no tenant rent and no published survival number moves.
-    Ruled for the next baseline.</p>
+  <div class="card" id="kd-inert">
+    <h2>Three knobs that never bind<span class="tag v2" style="background:#F3E7CF;color:#8A5A00">open at close</span></h2>
+    <p class="meta">Found 2026-07-20 (parameter-model audit) &middot; register KD-037, #195, KD-022 &middot; status: open, results-neutral</p>
+    <p>Three configuration knobs look load-bearing and aren&rsquo;t: the late-fee percentage is
+    structurally unreachable (the trigger counts only fully missed payments), the credit
+    hardship-redemption cap names a ceiling that never binds under shipped values, and the
+    grant/EIP parameters are read by nothing &mdash; those programs stayed on the roadmap.
+    None of this moves any published number; it&rsquo;s named so nobody tunes a dead dial.</p>
   </div>
 
   <p style="font-size:14px;color:var(--ink-soft)">Full engineering detail for every issue lives in the
@@ -133,5 +118,6 @@
   note showing how to reproduce the defect on the old version and how to verify the fix on the new one
   — the fix claim ships only when it is checkable.</p>
 </div>
+<script id="pgbar-mini">(function(){var b=document.getElementById('pgbar');if(!b)return;function u(){var d=document.documentElement;var m=d.scrollHeight-d.clientHeight;b.style.width=(m>0?(d.scrollTop||document.body.scrollTop)/m*100:0)+'%';}window.addEventListener('scroll',u,{passive:true});u();})();</script>
 </body>
 </html>
